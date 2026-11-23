@@ -54,6 +54,9 @@ import com.example.core.database.AyahTranslationEntity
 import com.example.core.database.TafsirSourceEntity
 import com.example.ui.theme.banglaSafeBodyStyle
 
+private val TAFSIR_TAG_REGEX = Regex("<[^>]+>")
+private val TAFSIR_NEWLINES_REGEX = Regex("\n{2,}")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TafsirSheet(
@@ -189,15 +192,17 @@ fun TafsirSheet(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        val cleanBody = activeTafsir.tafsirHtmlOrMarkdown
-                            .replace(Regex("<[^>]+>"), "\n")
-                            .replace("&quot;", "\"")
-                            .replace("&#39;", "'")
-                            .replace("&rsquo;", "’")
-                            .replace("&nbsp;", " ")
-                            .replace("&amp;", "&")
-                            .replace(Regex("\n{2,}"), "\n\n")
-                            .trim()
+                        val cleanBody = remember(activeTafsir.tafsirHtmlOrMarkdown) {
+                            activeTafsir.tafsirHtmlOrMarkdown
+                                .replace(TAFSIR_TAG_REGEX, "\n")
+                                .replace("&quot;", "\"")
+                                .replace("&#39;", "'")
+                                .replace("&rsquo;", "’")
+                                .replace("&nbsp;", " ")
+                                .replace("&amp;", "&")
+                                .replace(TAFSIR_NEWLINES_REGEX, "\n\n")
+                                .trim()
+                        }
                         val isRtlTafsir = activeTafsir.languageCode.lowercase() in setOf("ar", "ur")
                         CompositionLocalProvider(
                             LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr

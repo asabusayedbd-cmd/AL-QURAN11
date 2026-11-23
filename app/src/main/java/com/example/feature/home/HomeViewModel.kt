@@ -15,11 +15,16 @@ import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.UserPreferences
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -47,6 +52,7 @@ data class HomeUiState(
     val tasbeehPhraseIndex: Int = 0
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val database: NoorDatabase,
     private val preferencesRepository: PreferencesRepository
@@ -57,18 +63,27 @@ class HomeViewModel(
 
     private val _tasbeehPhraseIdx = MutableStateFlow(0)
 
-    private val verseOfTheDayFlow = flow {
-        // Verified curated rotating Ayahs bundled locally in starter dataset
+    private val chosenVotdKey: String = run {
         val keys = listOf("2:255", "1:5", "2:201", "3:8", "103:3", "112:1")
         val dayIdx = ((System.currentTimeMillis() / 86_400_000L) % keys.size).toInt()
-        val chosenKey = keys[dayIdx]
-        val ayah = quranDao.getAyahByKey(chosenKey) ?: quranDao.getAyahByKey("1:1")
-        if (ayah != null) {
-            val surah = quranDao.getSurah(ayah.surahId)
-            val translations = quranDao.getTranslationsForAyah(ayah.id)
-            emit(Triple(ayah, surah, translations))
+        keys[dayIdx]
+    }
+
+    private val verseOfTheDayFlow = combine(
+        quranDao.observeAyahByKey(chosenVotdKey),
+        quranDao.observeAyahByKey("1:1")
+    ) { primary, fallback ->
+        primary ?: fallback
+    }.flatMapLatest { ayah ->
+        if (ayah == null) {
+            flowOf(null)
         } else {
-            emit(null)
+            combine(
+                quranDao.observeSurah(ayah.surahId),
+                quranDao.observeAyahTranslations(listOf(ayah.id))
+            ) { surah, translations ->
+                Triple(ayah, surah, translations)
+            }
         }
     }
 
@@ -135,11 +150,13 @@ class HomeViewModel(
             hijriDate = hijri,
             tasbeehPhraseIndex = phraseIdx
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = HomeUiState()
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = HomeUiState()
+        )
 
     fun incrementTasbeeh() {
         viewModelScope.launch {

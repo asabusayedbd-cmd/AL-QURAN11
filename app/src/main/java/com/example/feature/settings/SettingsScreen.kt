@@ -1,5 +1,7 @@
 package com.example.feature.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +57,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,7 +66,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.NoorThemeMode
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.example.ui.components.QariPickerModalSheet
+
+import java.util.Locale
 
 private val UI_LANGUAGES = listOf(
     "en" to "English",
@@ -77,7 +84,14 @@ private val UI_LANGUAGES = listOf(
 private val WBW_LANGUAGES = listOf(
     "bn" to "বাংলা (WBW)",
     "en" to "English (WBW)",
-    "ur" to "اردو (WBW)"
+    "ur" to "اردو (WBW)",
+    "id" to "Indonesian (WBW)",
+    "tr" to "Türkçe (WBW)",
+    "fr" to "Français (WBW)",
+    "de" to "Deutsch (WBW)",
+    "ru" to "Русский (WBW)",
+    "hi" to "हिन्दी (WBW)",
+    "ta" to "தமிழ் (WBW)"
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -92,7 +106,19 @@ fun SettingsScreen(
     var translationLangFilter by remember { mutableStateOf("ALL") }
     var tafsirLangFilter by remember { mutableStateOf("ALL") }
 
-    val activeReciter = state.reciters.firstOrNull { it.id == state.preferences.activeReciterId }
+    val activeReciter = remember(state.reciters, state.preferences.activeReciterId) {
+        state.reciters.firstOrNull { it.id == state.preferences.activeReciterId }
+    }
+    val downloadedSurahsCount = remember(state.surahs) { state.surahs.count { it.isDownloaded } }
+    val featuredSurahs = remember(state.surahs) {
+        state.surahs.filter { it.id in setOf(1, 2, 18, 36, 55, 67, 103, 108, 112, 113, 114) }
+    }
+    val tafsirLangs = remember(state.tafsirSources) {
+        listOf("ALL") + state.tafsirSources.map { it.languageCode.uppercase() }.distinct()
+    }
+    val translationLangs = remember(state.translationSources) {
+        listOf("ALL") + state.translationSources.map { it.languageCode.uppercase() }.distinct()
+    }
     val filteredTranslations = remember(state.translationSources, translationLangFilter) {
         if (translationLangFilter == "ALL") state.translationSources
         else state.translationSources.filter { it.languageCode.equals(translationLangFilter, ignoreCase = true) }
@@ -130,8 +156,7 @@ fun SettingsScreen(
             }
 
             // 1. Offline-First & Local Privacy Summary
-            item {
-                val downloadedSurahsCount = state.surahs.count { it.isDownloaded }
+            item(key = "privacy_summary") {
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.padding(18.dp),
@@ -221,9 +246,9 @@ fun SettingsScreen(
                 }
             }
 
-            // 4. Recitation & Audio Settings (55+ Genuine Qaris, Mode, Speed, Hifz Loop & Cache)
-            item {
-                val cacheMb = state.playbackState.offlineCacheSizeBytes / (1024f * 1024f)
+            // 4. Recitation & Audio Settings (75+ Genuine Qaris, Mode, Speed, Hifz Loop & Cache)
+            item(key = "audio_settings") {
+                val cacheMb = state.offlineCacheSizeBytes / (1024f * 1024f)
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -319,13 +344,13 @@ fun SettingsScreen(
                             }
                         }
 
-                        val sleepRem = state.playbackState.sleepRemainingSec
+                        val sleepRem = state.sleepRemainingSec
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Bedtime, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = sleepRem?.let { sec ->
-                                    "Sleep Timer (%d:%02d left)".format(sec / 60, sec % 60)
+                                    "Sleep Timer (%d:%02d left)".format(Locale.US, sec / 60, sec % 60)
                                 } ?: "Sleep Timer",
                                 style = MaterialTheme.typography.labelLarge
                             )
@@ -393,11 +418,11 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Offline Audio Cache: ${"%.1f".format(cacheMb)} MB",
+                                text = "Offline Audio Cache: ${"%.1f".format(Locale.US, cacheMb)} MB",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            if (state.playbackState.offlineCacheSizeBytes > 0L) {
+                            if (state.offlineCacheSizeBytes > 0L) {
                                 TextButton(onClick = viewModel::clearOfflineAudioCache) {
                                     Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -409,8 +434,8 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. Verified Tafsir Library (18+ Classical & Contemporary Tafsirs + Live API Sync)
-            item {
+            // 5. Verified Tafsir Library (Lazy items for fast 1 GB RAM scrolling)
+            item(key = "tafsir_header") {
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -445,8 +470,7 @@ fun SettingsScreen(
                         }
 
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val langs = listOf("ALL") + state.tafsirSources.map { it.languageCode.uppercase() }.distinct()
-                            items(langs) { code ->
+                            items(tafsirLangs, key = { "tl_$it" }) { code ->
                                 FilterChip(
                                     selected = tafsirLangFilter == code,
                                     onClick = { tafsirLangFilter = code },
@@ -454,42 +478,55 @@ fun SettingsScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
 
-                        HorizontalDivider()
-
-                        filteredTafsirs.forEach { src ->
-                            val isSelected = src.id == state.preferences.activeTafsirSourceId
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.selectDefaultTafsirSource(src) }
-                                    .padding(vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = src.tafsirName,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        text = "${src.languageName} • ${if (src.isDownloaded) "Offline Ready" else "On-Demand API"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (isSelected) {
-                                    Icon(Icons.Default.Check, contentDescription = "Default Tafsir", tint = MaterialTheme.colorScheme.primary)
-                                }
-                            }
+            items(
+                items = filteredTafsirs,
+                key = { "taf_${it.id}" },
+                contentType = { "tafsir_row" }
+            ) { src ->
+                val isSelected = src.id == state.preferences.activeTafsirSourceId
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.selectDefaultTafsirSource(src) }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = src.tafsirName,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            Text(
+                                text = "${src.languageName} • ${if (src.isDownloaded) "Offline Ready" else "On-Demand API"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (isSelected) {
+                            Icon(Icons.Default.Check, contentDescription = "Default Tafsir", tint = MaterialTheme.colorScheme.primary)
                         }
                     }
                 }
             }
 
-            // 6. Word-by-Word & Multi-Translation Languages
-            item {
+            // 6. Word-by-Word & Multi-Translation Languages (Lazy items across 24+ languages)
+            item(key = "translations_header") {
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -510,8 +547,7 @@ fun SettingsScreen(
                             }
                         }
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            val trLangs = listOf("ALL") + state.translationSources.map { it.languageCode.uppercase() }.distinct()
-                            items(trLangs) { code ->
+                            items(translationLangs, key = { "trl_$it" }) { code ->
                                 FilterChip(
                                     selected = translationLangFilter == code,
                                     onClick = { translationLangFilter = code },
@@ -519,45 +555,60 @@ fun SettingsScreen(
                                 )
                             }
                         }
-                        HorizontalDivider()
-                        filteredTranslations.forEach { src ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(src.translatorName, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        text = "${src.languageName} • ${src.fileSizeKb} KB • ${if (src.isDownloaded) "Offline" else "Cloud"}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (state.busySourceId == src.id) {
-                                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                } else {
-                                    Switch(
-                                        checked = src.isEnabled,
-                                        onCheckedChange = { enabled -> viewModel.toggleTranslationSource(src, enabled) },
-                                        modifier = Modifier.testTag("translation_switch_${src.id}")
-                                    )
-                                }
-                            }
+                    }
+                }
+            }
+
+            items(
+                items = filteredTranslations,
+                key = { "tr_${it.id}" },
+                contentType = { "translation_row" }
+            ) { src ->
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (src.isEnabled) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(src.translatorName, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                text = "${src.languageName} • ${src.fileSizeKb} KB • ${if (src.isDownloaded) "Offline" else "Cloud"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (state.busySourceId == src.id) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Switch(
+                                checked = src.isEnabled,
+                                onCheckedChange = { enabled -> viewModel.toggleTranslationSource(src, enabled) },
+                                modifier = Modifier.testTag("translation_switch_${src.id}")
+                            )
                         }
                     }
                 }
             }
 
             // 7. Offline Surah Download Manager (Highlights popular Surahs)
-            item {
+            item(key = "dl_manager_header") {
                 Text(
                     text = stringResource(R.string.download_manager_title),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
-            val featuredSurahs = state.surahs.filter { it.id in setOf(1, 2, 18, 36, 55, 67, 103, 108, 112, 113, 114) }
-            items(featuredSurahs, key = { it.id }) { surah ->
+            items(featuredSurahs, key = { "dl_surah_${it.id}" }, contentType = { "dl_surah_row" }) { surah ->
                 val name = BidiUtils.extractLocalizedSurahName(
                     surah.localizedNamesJson,
                     state.preferences.uiLanguageCode
@@ -590,6 +641,67 @@ fun SettingsScreen(
                     }
                 }
                 HorizontalDivider(thickness = 0.5.dp)
+            }
+
+            // 8. Tajweed Guide & Offline JSON Backup/Restore
+            item(key = "tajweed_backup_section") {
+                var showTajweedGuide by remember { mutableStateOf(false) }
+                val context = LocalContext.current
+                val database = remember { com.example.core.database.NoorDatabase.getInstance(context) }
+                val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+
+                val exportLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.CreateDocument("application/json")
+                ) { uri ->
+                    uri?.let {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            com.example.feature.library.BackupRestoreManager.exportUserDataToJson(context, database, it)
+                        }
+                    }
+                }
+
+                val importLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument()
+                ) { uri ->
+                    uri?.let {
+                        coroutineScope.launch(Dispatchers.IO) {
+                            com.example.feature.library.BackupRestoreManager.importUserDataFromJson(context, database, it)
+                        }
+                    }
+                }
+
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text("Tajweed, Backup & Privacy Tools", style = MaterialTheme.typography.titleMedium)
+                        FilledTonalButton(
+                            onClick = { showTajweedGuide = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Open Tajweed Rules & Makhraj Guide")
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { exportLauncher.launch("alquran_backup_${System.currentTimeMillis()}.json") },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Export JSON Backup")
+                            }
+                            OutlinedButton(
+                                onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Restore JSON")
+                            }
+                        }
+                    }
+                }
+
+                if (showTajweedGuide) {
+                    TajweedGuideSheet(onDismiss = { showTajweedGuide = false })
+                }
             }
 
             item { Spacer(modifier = Modifier.height(72.dp)) }

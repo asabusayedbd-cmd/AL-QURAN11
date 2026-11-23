@@ -102,6 +102,14 @@ object WordMorphologyAnalyzer {
                     "id" -> "Bahasa Indonesia"
                     "tr" -> "Türkçe"
                     "ar" -> "العربية"
+                    "fr" -> "Français"
+                    "es" -> "Español"
+                    "de" -> "Deutsch"
+                    "ru" -> "Русский"
+                    "hi" -> "हिन्दी"
+                    "ms" -> "Bahasa Melayu"
+                    "fa" -> "فارسی"
+                    "ta" -> "தமிழ்"
                     else -> tr.languageCode.uppercase()
                 }
                 langLabel to tr.meaningText
@@ -123,17 +131,21 @@ object WordMorphologyAnalyzer {
         val parts = mutableListOf<WordSegmentPart>()
         var stem = arabic.trim()
 
-        // Common attached Arabic proclitics (deterministic orthographic prefixes)
+        // Common attached Arabic proclitics (diacritic-safe)
         if (lowerGrammar.contains("preposition") && stem.startsWith("بِ")) {
             parts.add(WordSegmentPart("بِـ", "Prefix: Preposition (with/in)", "حرف جر: الباء", "উপসর্গ: بِـ (দ্বারা/নামে)", SegmentRoleType.PREFIX))
             stem = stem.removePrefix("بِ")
         } else if (lowerGrammar.contains("preposition") && stem.startsWith("لِ")) {
             parts.add(WordSegmentPart("لِـ", "Prefix: Preposition (for/to)", "حرف جر: اللام", "উপসর্গ: لِـ (জন্য)", SegmentRoleType.PREFIX))
             stem = stem.removePrefix("لِ")
-        } else if (lowerGrammar.contains("conjunction") && (stem.startsWith("وَ") || stem.startsWith("فَ"))) {
-            val conj = stem.take(2)
+        } else if (lowerGrammar.contains("conjunction") && (stem.startsWith("و") || stem.startsWith("ف"))) {
+            var cut = 1
+            while (cut < stem.length && stem[cut] in '\u064B'..'\u065F') {
+                cut++
+            }
+            val conj = stem.substring(0, cut)
             parts.add(WordSegmentPart("${conj}ـ", "Prefix: Conjunction (and/then)", "حرف عطف", "উপসর্গ: সংযোজক", SegmentRoleType.PREFIX))
-            stem = stem.drop(2)
+            stem = stem.substring(cut)
         }
 
         if (stem.startsWith("ٱلْ") || stem.startsWith("ٱل") || stem.startsWith("الْ") || stem.startsWith("ال")) {

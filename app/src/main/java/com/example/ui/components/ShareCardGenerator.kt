@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -15,10 +16,17 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import androidx.core.content.res.ResourcesCompat
 import com.example.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
 object ShareCardGenerator {
+
+    private val shareScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     fun shareAyahAsImageCard(
         context: Context,
@@ -28,117 +36,158 @@ object ShareCardGenerator {
         translationText: String,
         translatorName: String
     ) {
-        try {
-            val width = 1080
-            val height = 1350
-            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
+        val appContext = context.applicationContext
+        shareScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    renderCardFile(
+                        context = appContext,
+                        surahName = surahName,
+                        verseKey = verseKey,
+                        arabicText = arabicText,
+                        translationText = translationText,
+                        translatorName = translatorName
+                    )
+                }
+                val uri = FileProvider.getUriForFile(
+                    appContext,
+                    "${appContext.packageName}.fileprovider",
+                    file
+                )
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_TEXT, "$arabicText\n\n\"$translationText\" [$surahName $verseKey]")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = Intent.createChooser(shareIntent, appContext.getString(R.string.share_as_card))
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                appContext.startActivity(chooser)
+            } catch (e: Exception) {
+                Toast.makeText(
+                    appContext,
+                    "Could not generate card: ${e.localizedMessage}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
 
-            // Subtle cream base
+    private fun renderCardFile(
+        context: Context,
+        surahName: String,
+        verseKey: String,
+        arabicText: String,
+        translationText: String,
+        translatorName: String
+    ): File {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val isLowRam = am?.isLowRamDevice == true
+        val width = if (isLowRam) 720 else 1080
+        val height = if (isLowRam) 900 else 1350
+        val scale = width / 1080f
+
+        val bitmap = Bitmap.createBitmap(
+            width,
+            height,
+            if (isLowRam) Bitmap.Config.RGB_565 else Bitmap.Config.ARGB_8888
+        )
+        try {
+            val canvas = Canvas(bitmap)
             canvas.drawColor(Color.parseColor("#FAF7F0"))
 
-            // Draw pre-bundled calligraphic ornament frame
-            val bgOptions = BitmapFactory.Options().apply { inSampleSize = 1 }
+            val bgOptions = BitmapFactory.Options().apply {
+                inSampleSize = if (isLowRam) 3 else 2
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
             val ornament = BitmapFactory.decodeResource(context.resources, R.drawable.img_share_card_ornament, bgOptions)
             if (ornament != null) {
                 val srcRect = Rect(0, 0, ornament.width, ornament.height)
                 val dstRect = Rect(0, 0, width, height)
-                val alphaPaint = Paint().apply { alpha = 55 }
+                val alphaPaint = Paint().apply { alpha = 52 }
                 canvas.drawBitmap(ornament, srcRect, dstRect, alphaPaint)
                 ornament.recycle()
             }
 
-            // Emerald border frame
             val borderPaint = Paint().apply {
                 color = Color.parseColor("#0F5C4D")
                 style = Paint.Style.STROKE
-                strokeWidth = 6f
+                strokeWidth = 6f * scale
             }
-            canvas.drawRect(44f, 44f, width - 44f, height - 44f, borderPaint)
+            canvas.drawRect(44f * scale, 44f * scale, width - 44f * scale, height - 44f * scale, borderPaint)
 
             val goldPaint = Paint().apply {
                 color = Color.parseColor("#C89D54")
                 style = Paint.Style.STROKE
-                strokeWidth = 3f
+                strokeWidth = 3f * scale
             }
-            canvas.drawRect(58f, 58f, width - 58f, height - 58f, goldPaint)
+            canvas.drawRect(58f * scale, 58f * scale, width - 58f * scale, height - 58f * scale, goldPaint)
 
             val arabicTypeface = ResourcesCompat.getFont(context, R.font.amiri)
             val latinTypeface = ResourcesCompat.getFont(context, R.font.plus_jakarta_sans)
 
             val headerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#0F5C4D")
-                textSize = 36f
+                textSize = 36f * scale
                 typeface = latinTypeface
                 textAlign = Paint.Align.CENTER
             }
-            canvas.drawText("$surahName • $verseKey", width / 2f, 150f, headerPaint)
+            canvas.drawText("$surahName • $verseKey", width / 2f, 150f * scale, headerPaint)
+
+            val horizontalPad = (100f * scale).toInt()
+            val textWidth = (width - horizontalPad * 2).coerceAtLeast(100)
 
             val arabicPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#1E2421")
-                textSize = 58f
+                textSize = 58f * scale
                 typeface = arabicTypeface
             }
             val arabicLayout = StaticLayout.Builder
-                .obtain(arabicText, 0, arabicText.length, arabicPaint, width - 200)
+                .obtain(arabicText, 0, arabicText.length, arabicPaint, textWidth)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(14f, 1.25f)
+                .setLineSpacing(14f * scale, 1.25f)
                 .build()
 
+            val arabicY = 240f * scale
             canvas.save()
-            canvas.translate(100f, 240f)
+            canvas.translate(horizontalPad.toFloat(), arabicY)
             arabicLayout.draw(canvas)
             canvas.restore()
 
             val translationPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#35403B")
-                textSize = 34f
+                textSize = 34f * scale
                 typeface = latinTypeface
             }
-            val translationY = (240f + arabicLayout.height + 70f).coerceAtMost(height - 320f)
+            val translationY = (arabicY + arabicLayout.height + 70f * scale).coerceAtMost(height - 320f * scale)
             val translationLayout = StaticLayout.Builder
-                .obtain(translationText, 0, translationText.length, translationPaint, width - 200)
+                .obtain(translationText, 0, translationText.length, translationPaint, textWidth)
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(10f, 1.3f)
+                .setLineSpacing(10f * scale, 1.3f)
                 .build()
 
             canvas.save()
-            canvas.translate(100f, translationY)
+            canvas.translate(horizontalPad.toFloat(), translationY)
             translationLayout.draw(canvas)
             canvas.restore()
 
             val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#7A6840")
-                textSize = 26f
+                textSize = 26f * scale
                 typeface = latinTypeface
                 textAlign = Paint.Align.CENTER
             }
-            canvas.drawText("$translatorName • Noor Al-Quran", width / 2f, height - 105f, footerPaint)
+            canvas.drawText("$translatorName • Al-Quran", width / 2f, height - 105f * scale, footerPaint)
 
             val cardsDir = File(context.cacheDir, "shared_cards").apply { mkdirs() }
             val safeKey = verseKey.replace(":", "_")
-            val file = File(cardsDir, "noor_ayah_$safeKey.png")
+            val file = File(cardsDir, "alquran_ayah_$safeKey.png")
             FileOutputStream(file).use { out ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 95, out)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)
             }
+            return file
+        } finally {
             bitmap.recycle()
-
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_TEXT, "$arabicText\n\n\"$translationText\" [$surahName $verseKey]")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            val chooser = Intent.createChooser(shareIntent, context.getString(R.string.share_as_card))
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            context.startActivity(chooser)
-        } catch (e: Exception) {
-            Toast.makeText(context, "Could not generate card: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }
 }

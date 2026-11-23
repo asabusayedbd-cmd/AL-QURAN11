@@ -10,10 +10,14 @@ import com.example.core.localization.BidiUtils
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.UserPreferences
 import com.example.core.network.QuranSyncRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -47,6 +51,7 @@ class ExplorerViewModel(
     private val _searchResults = MutableStateFlow<List<ExplorerSearchResult>>(emptyList())
     private val _downloadingSurahId = MutableStateFlow<Int?>(null)
     private val _downloadMessage = MutableStateFlow<String?>(null)
+    private var searchJob: Job? = null
 
     val uiState: StateFlow<ExplorerUiState> = combine(
         quranDao.observeAllSurahs(),
@@ -77,21 +82,25 @@ class ExplorerViewModel(
             downloadingSurahId = downloadingId,
             downloadMessage = dlMessage
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ExplorerUiState()
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ExplorerUiState()
+        )
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+        searchJob?.cancel()
         val trimmed = query.trim()
         if (trimmed.isBlank()) {
             _matchedSurahs.value = emptyList()
             _searchResults.value = emptyList()
             return
         }
-        viewModelScope.launch {
+        searchJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(90L)
             val allSurahs = uiState.value.surahs
             val numQuery = trimmed.toIntOrNull()
             val normalized = BidiUtils.normalizeArabicForSearch(trimmed)
@@ -137,15 +146,24 @@ class ExplorerViewModel(
     }
 
     private suspend fun mapAndEmitResults(ayahs: List<AyahEntity>) {
+        if (ayahs.isEmpty()) {
+            _searchResults.update { emptyList() }
+            return
+        }
         val prefs = uiState.value.preferences
         val surahsMap = uiState.value.surahs.associateBy { it.id }
+        val trsByAyahId = ayahs.map { it.id }
+            .chunked(500)
+            .flatMap { quranDao.getTranslationsForAyahs(it) }
+            .groupBy { it.ayahId }
+
         val mapped = ayahs.map { ayah ->
             val surah = surahsMap[ayah.surahId]
             val surahName = surah?.let {
                 BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, prefs.uiLanguageCode)
                     .ifBlank { it.nameTransliteration }
             } ?: "Surah ${ayah.surahId}"
-            val trs = quranDao.getTranslationsForAyah(ayah.id)
+            val trs = trsByAyahId[ayah.id].orEmpty()
             val bestTr = trs.firstOrNull { it.languageCode == prefs.uiLanguageCode }
                 ?: trs.firstOrNull { it.languageCode == "bn" }
                 ?: trs.firstOrNull()

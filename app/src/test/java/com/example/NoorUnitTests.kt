@@ -25,6 +25,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import com.example.core.di.AppContainer
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
@@ -167,13 +171,19 @@ class NoorUnitTests {
         assertEquals("বাংলা (Bangla)", analysis.allMeanings.first().first)
         assertEquals(3, analysis.allMeanings.size)
 
-        // Verify starter catalog contains >= 50 Qaris, >= 15 Tafsirs, >= 12 Translations
+        // Diacritic-safe conjunction prefix stripping (وَٱللَّهِ should yield "وَـ")
+        val waWord = word.copy(id = 102L, textUthmani = "وَٱللَّهِ", grammarTagJson = "Conjunction + Proper Noun")
+        val waAnalysis = WordMorphologyAnalyzer.analyze(waWord, translations)
+        assertTrue(waAnalysis.segments.any { it.roleType == SegmentRoleType.PREFIX && it.arabicPrefixOrPart == "وَـ" })
+
+        // Verify starter catalog contains >= 75 Qaris, >= 15 Tafsirs, >= 35 Translations
         val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        assertEquals("Al-Quran", appContext.getString(R.string.app_name))
         val starterText = appContext.assets.open("quran_starter/quran_starter.json").bufferedReader().use { it.readText() }
         val root = JSONObject(starterText)
-        assertTrue("Expected >= 50 reciters", root.getJSONArray("reciters").length() >= 50)
+        assertTrue("Expected >= 75 reciters", root.getJSONArray("reciters").length() >= 75)
         assertTrue("Expected >= 15 tafsir sources", root.getJSONArray("tafsirSources").length() >= 15)
-        assertTrue("Expected >= 12 translation sources", root.getJSONArray("translationSources").length() >= 12)
+        assertTrue("Expected >= 35 translation sources", root.getJSONArray("translationSources").length() >= 35)
     }
 
     // 5. Tajweed HTML parser (quoted & unquoted attributes, end-marker stripping, IndoPak mode) & 114-Surah index
@@ -213,5 +223,28 @@ class NoorUnitTests {
         assertEquals(114, surahs.length())
         assertEquals(1, surahs.getJSONObject(0).getInt("id"))
         assertEquals(114, surahs.getJSONObject(113).getInt("id"))
+    }
+
+    // 6. Surah localization cache & concurrent idempotent seeding verification
+    @Test
+    fun testBidiCacheAndIdempotentSeeder() = runBlocking {
+        val sampleJson = """{"en":"Al-Fatihah","bn":"আল-ফাতিহা","ar":"الفاتحة"}"""
+        val first = BidiUtils.extractLocalizedSurahName(sampleJson, "bn")
+        val second = BidiUtils.extractLocalizedSurahName(sampleJson, "bn")
+        assertEquals("আল-ফাতিহা", first)
+        assertEquals(first, second)
+        assertEquals("Al-Fatihah", BidiUtils.extractLocalizedSurahName(sampleJson, "fr"))
+
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val container = AppContainer.getInstance(appContext)
+        // Concurrent calls must safely coalesce via Mutex without duplicating rows
+        listOf(
+            async { container.seeder.seedIfNeeded() },
+            async { container.seeder.seedIfNeeded() },
+            async { container.seeder.seedIfNeeded() }
+        ).awaitAll()
+        assertEquals(114, container.database.quranDao().countSurahs())
+        assertTrue(container.database.quranDao().countReciters() >= 75)
+        assertTrue(container.database.quranDao().countTranslationSources() >= 35)
     }
 }

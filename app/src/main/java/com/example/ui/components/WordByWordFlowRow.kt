@@ -64,6 +64,17 @@ fun WordByWordFlowRow(
     }
 
     // Strictly isolate Quranic Word-by-Word flow as Right-to-Left regardless of app chrome language.
+    val arabicFont = remember(scriptType) { arabicScriptFont(scriptType) }
+    val wordMeaningStyle = remember(wbwFontSizeSp, wbwLanguageCode) {
+        banglaSafeBodyStyle(wbwFontSizeSp, wbwLanguageCode)
+    }
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val activeContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val activeBorder = remember(primaryColor) { BorderStroke(1.6.dp, primaryColor) }
+    val defaultBorder = remember(outlineColor) { BorderStroke(0.75.dp, outlineColor.copy(alpha = 0.7f)) }
+
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         FlowRow(
             modifier = modifier.fillMaxWidth(),
@@ -73,16 +84,8 @@ fun WordByWordFlowRow(
             visibleWords.forEach { item ->
                 key(item.word.id) {
                     val isActive = activeWordPosition != null && activeWordPosition == item.word.position
-                    val containerColor = if (isActive) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    }
-                    val border = if (isActive) {
-                        BorderStroke(1.6.dp, MaterialTheme.colorScheme.primary)
-                    } else {
-                        BorderStroke(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f))
-                    }
+                    val containerColor = if (isActive) activeContainerColor else surfaceColor
+                    val border = if (isActive) activeBorder else defaultBorder
 
                     Surface(
                         color = containerColor,
@@ -105,7 +108,7 @@ fun WordByWordFlowRow(
 
                             Text(
                                 text = arabicWord,
-                                fontFamily = arabicScriptFont(scriptType),
+                                fontFamily = arabicFont,
                                 fontSize = arabicFontSizeSp.sp,
                                 lineHeight = (arabicFontSizeSp * 1.45f).sp,
                                 color = if (isActive) {
@@ -133,7 +136,7 @@ fun WordByWordFlowRow(
                                 CompositionLocalProvider(LocalLayoutDirection provides meaningDirection) {
                                     Text(
                                         text = item.localizedMeaning,
-                                        style = banglaSafeBodyStyle(wbwFontSizeSp, wbwLanguageCode),
+                                        style = wordMeaningStyle,
                                         color = if (isActive) {
                                             MaterialTheme.colorScheme.onPrimaryContainer
                                         } else {

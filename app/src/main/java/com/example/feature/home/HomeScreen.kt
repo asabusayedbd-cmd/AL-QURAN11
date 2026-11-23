@@ -11,7 +11,6 @@ import android.location.LocationManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -81,7 +80,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -91,6 +89,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.R
 import com.example.core.ibadah.PrayerTimeCalculator
 import com.example.core.localization.BidiUtils
@@ -160,15 +160,19 @@ fun HomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Serene Hero Greeting Banner
-            item {
+            // Serene Hero Greeting Banner with Al-Quran Brand Header
+            item(key = "home_hero_banner", contentType = "hero") {
                 ElevatedCard(
                     shape = MaterialTheme.shapes.large,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().height(168.dp)) {
-                        Image(
-                            painter = painterResource(R.drawable.img_hero_crescent),
+                    Box(modifier = Modifier.fillMaxWidth().height(196.dp)) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(R.drawable.img_hero_crescent)
+                                .size(900, 420)
+                                .crossfade(160)
+                                .build(),
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
@@ -179,8 +183,8 @@ fun HomeScreen(
                                 .background(
                                     Brush.verticalGradient(
                                         colors = listOf(
-                                            Color(0xB8082821),
-                                            Color(0xEC0A3B31)
+                                            Color(0xC2082821),
+                                            Color(0xF00A3B31)
                                         )
                                     )
                                 )
@@ -188,22 +192,62 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(20.dp),
+                                .padding(18.dp),
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column {
-                                Text(
-                                    text = stringResource(greetingRes),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = Color(0xFFFAF7F0)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = "${state.hijriDate}  •  ${state.gregorianDate}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color(0xFFEBD9B3)
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFF0E4839),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(R.drawable.ic_quran_logo_fg_1795445024163)
+                                            .size(96, 96)
+                                            .build(),
+                                        contentDescription = "Al-Quran emblem",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = stringResource(R.string.app_name),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFF3CF82)
+                                    )
+                                    Text(
+                                        text = stringResource(greetingRes),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = Color(0xFFFAF7F0)
+                                    )
+                                }
+                                Surface(
+                                    color = Color(0x28F3CF82),
+                                    shape = MaterialTheme.shapes.small
+                                ) {
+                                    Text(
+                                        text = "114 Surahs",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFF3CF82),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
+
+                            Text(
+                                text = "${state.hijriDate}  •  ${state.gregorianDate}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color(0xFFEBD9B3)
+                            )
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -248,7 +292,7 @@ fun HomeScreen(
             }
 
             // Continue Reading & Daily Habit Progress Row
-            item {
+            item(key = "home_continue_reading", contentType = "card") {
                 ElevatedCard(
                     shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.elevatedCardColors(
@@ -307,7 +351,7 @@ fun HomeScreen(
             }
 
             // Daily Quran Goal & 7-Day Consistency
-            item {
+            item(key = "home_daily_goal", contentType = "card") {
                 OutlinedCard(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
@@ -400,7 +444,7 @@ fun HomeScreen(
 
             // Verse of the Day Card
             state.verseOfTheDay?.let { votd ->
-                item {
+                item(key = "home_votd", contentType = "card") {
                     ElevatedCard(
                         shape = MaterialTheme.shapes.large,
                         modifier = Modifier
@@ -496,7 +540,7 @@ fun HomeScreen(
             }
 
             // Quick Shortcuts
-            item {
+            item(key = "home_shortcuts", contentType = "row") {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -541,7 +585,7 @@ fun HomeScreen(
             }
 
             // Daily Ibadah & Prayer Card (Sadiq-inspired calm widget)
-            item {
+            item(key = "home_prayer_card", contentType = "card") {
                 ElevatedCard(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
                     Column(
                         modifier = Modifier.padding(18.dp),
@@ -611,7 +655,7 @@ fun HomeScreen(
                             }
                         }
 
-                        Row(
+                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
@@ -642,6 +686,35 @@ fun HomeScreen(
                             }
                         }
                     }
+                }
+            }
+
+            // Quran Knowledge Quiz Card
+            item(key = "home_quiz_card") {
+                var showQuizSheet by remember { mutableStateOf(false) }
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showQuizSheet = true }
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Quranic Knowledge Quiz", style = MaterialTheme.typography.titleMedium)
+                            Text("Test your knowledge of Surahs, Juz, and Quranic facts offline.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        FilledTonalButton(onClick = { showQuizSheet = true }) {
+                            Text("Play Quiz")
+                        }
+                    }
+                }
+                if (showQuizSheet) {
+                    QuranQuizSheet(onDismiss = { showQuizSheet = false })
                 }
             }
 

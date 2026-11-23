@@ -44,6 +44,9 @@ interface QuranDao {
     @Query("SELECT * FROM ayahs WHERE verseKey = :verseKey LIMIT 1")
     suspend fun getAyahByKey(verseKey: String): AyahEntity?
 
+    @Query("SELECT * FROM ayahs WHERE verseKey = :verseKey LIMIT 1")
+    fun observeAyahByKey(verseKey: String): Flow<AyahEntity?>
+
     @Query("SELECT * FROM ayahs WHERE verseKey IN (:verseKeys)")
     suspend fun getAyahsByKeys(verseKeys: List<String>): List<AyahEntity>
 
@@ -71,8 +74,24 @@ interface QuranDao {
     @Query("SELECT * FROM words WHERE ayahId IN (:ayahIds) ORDER BY ayahId ASC, position ASC")
     fun observeWordsForAyahs(ayahIds: List<Int>): Flow<List<WordEntity>>
 
+    @Query(
+        """
+        SELECT w.* FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId
+        ORDER BY a.ayahNumber ASC, w.position ASC
+        """
+    )
+    fun observeWordsBySurah(surahId: Int): Flow<List<WordEntity>>
+
+    @Query("SELECT * FROM words WHERE ayahId IN (:ayahIds) ORDER BY ayahId ASC, position ASC")
+    suspend fun getWordsForAyahs(ayahIds: List<Int>): List<WordEntity>
+
     @Query("SELECT * FROM words WHERE ayahId = :ayahId ORDER BY position ASC")
     suspend fun getWordsForAyah(ayahId: Int): List<WordEntity>
+
+    @Query("SELECT COUNT(*) FROM words WHERE rootArabic = :rootArabic AND rootArabic != ''")
+    suspend fun countWordsByRoot(rootArabic: String): Int
 
     @Query("SELECT * FROM words WHERE rootArabic = :rootArabic AND rootArabic != '' ORDER BY ayahId ASC, position ASC LIMIT 30")
     suspend fun getWordsByRoot(rootArabic: String): List<WordEntity>
@@ -98,6 +117,19 @@ interface QuranDao {
 
     @Query("SELECT * FROM word_translations WHERE wordId IN (:wordIds)")
     fun observeWordTranslations(wordIds: List<Long>): Flow<List<WordTranslationEntity>>
+
+    @Query(
+        """
+        SELECT wt.* FROM word_translations wt
+        INNER JOIN words w ON w.id = wt.wordId
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId
+        """
+    )
+    fun observeWordTranslationsBySurah(surahId: Int): Flow<List<WordTranslationEntity>>
+
+    @Query("SELECT * FROM word_translations WHERE wordId IN (:wordIds)")
+    suspend fun getWordTranslationsForWords(wordIds: List<Long>): List<WordTranslationEntity>
 
     @Query("SELECT * FROM word_translations WHERE wordId = :wordId")
     suspend fun getWordTranslations(wordId: Long): List<WordTranslationEntity>
@@ -138,6 +170,18 @@ interface QuranDao {
 
     @Query("SELECT * FROM ayah_translations WHERE ayahId IN (:ayahIds)")
     fun observeAyahTranslations(ayahIds: List<Int>): Flow<List<AyahTranslationEntity>>
+
+    @Query(
+        """
+        SELECT t.* FROM ayah_translations t
+        INNER JOIN ayahs a ON a.id = t.ayahId
+        WHERE a.surahId = :surahId
+        """
+    )
+    fun observeAyahTranslationsBySurah(surahId: Int): Flow<List<AyahTranslationEntity>>
+
+    @Query("SELECT * FROM ayah_translations WHERE ayahId IN (:ayahIds)")
+    suspend fun getTranslationsForAyahs(ayahIds: List<Int>): List<AyahTranslationEntity>
 
     @Query("SELECT * FROM ayah_translations WHERE ayahId = :ayahId")
     suspend fun getTranslationsForAyah(ayahId: Int): List<AyahTranslationEntity>

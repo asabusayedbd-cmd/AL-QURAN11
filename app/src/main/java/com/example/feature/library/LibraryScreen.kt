@@ -319,6 +319,27 @@ fun LibraryScreen(
                                 }
                             }
                         }
+                        item {
+                            var showFlashcards by remember { mutableStateOf(false) }
+                            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                                Column(
+                                    modifier = Modifier.padding(18.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Quranic Vocabulary Flashcards", style = MaterialTheme.typography.titleMedium)
+                                    Text("Practice high-frequency Quranic roots and vocabulary offline.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    FilledTonalButton(
+                                        onClick = { showFlashcards = true },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("Open Vocabulary Flashcards")
+                                    }
+                                }
+                            }
+                            if (showFlashcards) {
+                                VocabularyFlashcardsSheet(onDismiss = { showFlashcards = false })
+                            }
+                        }
                     }
                 }
             }

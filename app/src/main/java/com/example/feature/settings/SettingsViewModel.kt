@@ -14,16 +14,21 @@ import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.UserPreferences
 import com.example.core.network.QuranSyncRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class SettingsUiState(
     val preferences: UserPreferences = UserPreferences(),
-    val playbackState: AudioPlaybackState = AudioPlaybackState(),
+    val offlineCacheSizeBytes: Long = 0L,
+    val sleepRemainingSec: Int? = null,
     val translationSources: List<TranslationSourceEntity> = emptyList(),
     val tafsirSources: List<TafsirSourceEntity> = emptyList(),
     val reciters: List<AudioReciterEntity> = emptyList(),
@@ -46,7 +51,13 @@ class SettingsViewModel(
     private val _busySourceId = MutableStateFlow<Int?>(null)
     private val _busySurahId = MutableStateFlow<Int?>(null)
     private val _isRefreshingTafsirs = MutableStateFlow(false)
-    private val fallbackPlaybackFlow = MutableStateFlow(AudioPlaybackState())
+    private val fallbackAudioSummaryFlow = MutableStateFlow(0L to (null as Int?))
+    private val audioSummaryFlow = (
+        audioController?.state
+            ?.map { it.offlineCacheSizeBytes to it.sleepRemainingSec }
+            ?.distinctUntilChanged()
+            ?: fallbackAudioSummaryFlow
+        )
 
     private val catalogsFlow = combine(
         quranDao.observeTranslationSources(),
@@ -68,18 +79,20 @@ class SettingsViewModel(
 
     val uiState: StateFlow<SettingsUiState> = combine(
         preferencesRepository.preferencesFlow,
-        audioController?.state ?: fallbackPlaybackFlow,
+        audioSummaryFlow,
         catalogsFlow,
         statusFlow
-    ) { prefs, playback, catalogs, statuses ->
+    ) { prefs, audioSummary, catalogs, statuses ->
         val (trSources, tafSources) = catalogs.first
         val (reciters, surahs) = catalogs.second
         val (msg, busySrc) = statuses.first
         val (busySurah, refreshingTaf) = statuses.second
+        val (cacheBytes, sleepRem) = audioSummary
 
         SettingsUiState(
             preferences = prefs,
-            playbackState = playback,
+            offlineCacheSizeBytes = cacheBytes,
+            sleepRemainingSec = sleepRem,
             translationSources = trSources,
             tafsirSources = tafSources,
             reciters = reciters,
@@ -89,11 +102,13 @@ class SettingsViewModel(
             busySurahId = busySurah,
             isRefreshingTafsirs = refreshingTaf
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SettingsUiState()
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = SettingsUiState()
+        )
 
     fun setUiLanguage(languageCode: String) {
         viewModelScope.launch {

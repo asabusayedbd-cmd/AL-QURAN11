@@ -1,9 +1,14 @@
 package com.example.feature.reader
 
+import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -87,6 +92,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.core.database.AyahEntity
@@ -103,6 +109,8 @@ import com.example.ui.components.WordByWordFlowRow
 import com.example.ui.theme.LocalTajweedPalette
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -119,6 +127,7 @@ fun ReaderScreen(
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val playbackCursor by viewModel.playbackCursor.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val tajweedPalette = LocalTajweedPalette.current
@@ -132,7 +141,24 @@ fun ReaderScreen(
     var pendingTargetPage by rememberSaveable { mutableIntStateOf(targetPage) }
     var lastScrolledSurahId by rememberSaveable { mutableIntStateOf(surahId) }
     var selectedMushafAyah by remember { mutableStateOf<AyahEntity?>(null) }
-    var lastObservedPlaybackSurahId by remember { mutableIntStateOf(state.playbackState.surahId) }
+    var lastObservedPlaybackSurahId by remember { mutableIntStateOf(playbackCursor.surahId) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* Playback starts regardless; granted enables foreground notification card */ }
+
+    val playAyahWithBackgroundPermission: (AyahEntity) -> Unit = { ayah ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val granted = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!granted) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+        viewModel.playAyah(ayah)
+    }
 
     LaunchedEffect(targetAyah, targetPage) {
         pendingTargetAyah = targetAyah
@@ -192,9 +218,9 @@ fun ReaderScreen(
     }
 
     // Auto-scroll when currently playing Ayah advances
-    LaunchedEffect(state.playbackState.ayahNumber, state.playbackState.surahId, state.playbackState.isPlaying, state.preferences.readerViewMode, headerOffset) {
-        if (state.playbackState.isPlaying && state.playbackState.surahId == activeSurahId) {
-            val targetNum = state.playbackState.ayahNumber
+    LaunchedEffect(playbackCursor.ayahNumber, playbackCursor.surahId, playbackCursor.isPlaying, state.preferences.readerViewMode, headerOffset) {
+        if (playbackCursor.isPlaying && playbackCursor.surahId == activeSurahId) {
+            val targetNum = playbackCursor.ayahNumber
             val listIndex = if (state.preferences.readerViewMode == ReaderViewMode.MUSHAF) {
                 val pIdx = mushafPages.indexOfFirst { (_, pageAyahs) ->
                     pageAyahs.any { it.ayah.ayahNumber == targetNum }
@@ -211,9 +237,9 @@ fun ReaderScreen(
     }
 
     // Sync ReaderScreen if auto-advance transitions to the following Surah during active playback
-    LaunchedEffect(state.playbackState.isVisible, state.playbackState.isPlaying, state.playbackState.surahId) {
-        val pbSurah = state.playbackState.surahId
-        if (state.playbackState.isVisible && state.playbackState.isPlaying && pbSurah != lastObservedPlaybackSurahId) {
+    LaunchedEffect(playbackCursor.isVisible, playbackCursor.isPlaying, playbackCursor.surahId) {
+        val pbSurah = playbackCursor.surahId
+        if (playbackCursor.isVisible && playbackCursor.isPlaying && pbSurah != lastObservedPlaybackSurahId) {
             lastObservedPlaybackSurahId = pbSurah
             if (pbSurah != activeSurahId) {
                 pendingTargetAyah = 1
@@ -262,9 +288,11 @@ fun ReaderScreen(
                             }
                             state.surah?.let { surah ->
                                 Text(
-                                    text = "${surah.nameArabic} • ${BidiUtils.formatNumber(surah.ayahCount, state.preferences.uiLanguageCode)} Ayahs • Juz ${surah.startJuz}",
+                                    text = "Al-Quran • ${surah.nameArabic} • ${BidiUtils.formatNumber(surah.ayahCount, state.preferences.uiLanguageCode)} Ayahs • Juz ${surah.startJuz}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -272,7 +300,7 @@ fun ReaderScreen(
                     actions = {
                         if (state.ayahs.isNotEmpty()) {
                             IconButton(
-                                onClick = { viewModel.playAyah(state.ayahs.first().ayah) },
+                                onClick = { playAyahWithBackgroundPermission(state.ayahs.first().ayah) },
                                 modifier = Modifier.testTag("reader_play_surah_button")
                             ) {
                                 Icon(
@@ -315,8 +343,9 @@ fun ReaderScreen(
             }
         },
         bottomBar = {
+            val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
             AudioHifzBar(
-                playbackState = state.playbackState,
+                playbackState = playbackState,
                 reciters = state.reciters,
                 autoPlayWordOnInspect = state.preferences.autoPlayWordOnInspect,
                 onTogglePlayPause = viewModel::togglePlayPause,
@@ -481,7 +510,7 @@ fun ReaderScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         if (state.surah?.bismillahPre == true) {
-                            item(key = "bismillah_${activeSurahId}") {
+                            item(key = "bismillah_${activeSurahId}", contentType = "bismillah") {
                                 Surface(
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
                                     shape = MaterialTheme.shapes.medium,
@@ -508,14 +537,18 @@ fun ReaderScreen(
                         }
 
                         if (state.preferences.readerViewMode == ReaderViewMode.MUSHAF) {
-                            items(mushafPages, key = { "page_${it.first}" }) { (pageNumber, pageAyahs) ->
+                            items(
+                                items = mushafPages,
+                                key = { "page_${it.first}" },
+                                contentType = { "mushaf_page" }
+                            ) { (pageNumber, pageAyahs) ->
                                 val juzNumber = pageAyahs.firstOrNull()?.ayah?.juzNumber ?: state.surah?.startJuz ?: 1
                                 val isIndoPak = state.preferences.scriptType == QuranScriptType.INDOPAK
                                 val highlightBg = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
                                 val selectedBg = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
                                 val selectedMushafId = selectedMushafAyah?.id
-                                val playingAyahNum = if (state.playbackState.isVisible && state.playbackState.surahId == activeSurahId) {
-                                    state.playbackState.ayahNumber
+                                val playingAyahNum = if (playbackCursor.isVisible && playbackCursor.surahId == activeSurahId) {
+                                    playbackCursor.ayahNumber
                                 } else null
 
                                 val pageAnnotatedText = remember(
@@ -658,11 +691,27 @@ fun ReaderScreen(
                                 }
                             }
                         } else {
-                            items(state.ayahs, key = { it.ayah.id }) { bundle ->
-                                val isPlayingThis = state.playbackState.surahId == bundle.ayah.surahId &&
-                                    state.playbackState.ayahNumber == bundle.ayah.ayahNumber &&
-                                    state.playbackState.isVisible
-                                val activeWordPos = if (isPlayingThis) state.playbackState.activeWordPosition else null
+                            items(
+                                items = state.ayahs,
+                                key = { it.ayah.id },
+                                contentType = { "ayah_card" }
+                            ) { bundle ->
+                                val isPlayingThis = playbackCursor.surahId == bundle.ayah.surahId &&
+                                    playbackCursor.ayahNumber == bundle.ayah.ayahNumber &&
+                                    playbackCursor.isVisible
+                                val activeWordPos by if (isPlayingThis) {
+                                    remember(bundle.ayah.surahId, bundle.ayah.ayahNumber) {
+                                        viewModel.playbackState
+                                            .map { pb ->
+                                                if (pb.isVisible && pb.surahId == bundle.ayah.surahId && pb.ayahNumber == bundle.ayah.ayahNumber) {
+                                                    pb.activeWordPosition
+                                                } else null
+                                            }
+                                            .distinctUntilChanged()
+                                    }.collectAsStateWithLifecycle(initialValue = null)
+                                } else {
+                                    remember { mutableStateOf<Int?>(null) }
+                                }
 
                                 ElevatedCard(
                                     shape = MaterialTheme.shapes.large,
@@ -696,7 +745,7 @@ fun ReaderScreen(
 
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 IconButton(
-                                                    onClick = { viewModel.playAyah(bundle.ayah) },
+                                                    onClick = { playAyahWithBackgroundPermission(bundle.ayah) },
                                                     modifier = Modifier.testTag("play_ayah_${bundle.ayah.verseKey}")
                                                 ) {
                                                     Icon(
@@ -952,7 +1001,7 @@ fun ReaderScreen(
                 ) {
                     FilledTonalButton(
                         onClick = {
-                            viewModel.playAyah(mushafAyah)
+                            playAyahWithBackgroundPermission(mushafAyah)
                             selectedMushafAyah = null
                         },
                         modifier = Modifier.testTag("mushaf_action_play")
@@ -1113,15 +1162,16 @@ fun ReaderScreen(
     }
 
     if (showRecitationSettings) {
-        val effectivePlaybackState = if (state.playbackState.isVisible) {
-            state.playbackState
+        val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
+        val effectivePlaybackState = if (playbackState.isVisible) {
+            playbackState
         } else {
-            state.playbackState.copy(
+            playbackState.copy(
                 surahId = activeSurahId,
                 surahName = state.localizedSurahName,
                 reciterId = state.preferences.activeReciterId,
                 reciterName = state.reciters.firstOrNull { it.id == state.preferences.activeReciterId }?.name
-                    ?: state.playbackState.reciterName
+                    ?: playbackState.reciterName
             )
         }
         RecitationSettingsModalSheet(

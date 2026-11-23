@@ -37,7 +37,9 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
+import kotlin.math.abs
 
 data class AudioDownloadProgress(
     val surahId: Int,
@@ -292,6 +294,7 @@ class QuranAudioController(
             val metadata = MediaMetadata.Builder()
                 .setTitle(title)
                 .setArtist(artist)
+                .setAlbumTitle("Al-Quran")
                 .build()
             val mediaItem = MediaItem.Builder()
                 .setUri(uri)
@@ -378,7 +381,10 @@ class QuranAudioController(
         pendingPauseJob?.cancel()
         wordPollingJob?.cancel()
         sleepTimerJob?.cancel()
-        mediaController?.stop()
+        mediaController?.let {
+            it.stop()
+            it.clearMediaItems()
+        }
         isPlayingSingleWord = false
         _state.update {
             it.copy(
@@ -479,7 +485,8 @@ class QuranAudioController(
 
                 withContext(Dispatchers.IO) {
                     val dir = File(context.filesDir, "audio/$reciterId").apply { mkdirs() }
-                    (1..total).chunked(4).forEach { batch ->
+                    val buffer = ByteArray(8 * 1024)
+                    (1..total).chunked(2).forEach { batch ->
                         coroutineScope {
                             batch.map { ayahNum ->
                                 async {
@@ -488,12 +495,22 @@ class QuranAudioController(
                                         val url = buildReciterAudioUrl(reciter.baseUrl, reciterId, surahId, ayahNum)
                                         val req = Request.Builder().url(url).build()
                                         okHttpClient.newCall(req).execute().use { resp ->
-                                            if (resp.isSuccessful) {
-                                                val bytes = resp.body?.bytes()
-                                                if (bytes != null && bytes.size > 512) {
-                                                    val tmp = File(dir, "${dest.name}.tmp")
-                                                    tmp.writeBytes(bytes)
+                                            val bodyStream = resp.body?.byteStream()
+                                            if (resp.isSuccessful && bodyStream != null) {
+                                                val tmp = File(dir, "${dest.name}.tmp")
+                                                bodyStream.use { input ->
+                                                    FileOutputStream(tmp).use { output ->
+                                                        while (true) {
+                                                            val read = input.read(buffer)
+                                                            if (read == -1) break
+                                                            output.write(buffer, 0, read)
+                                                        }
+                                                    }
+                                                }
+                                                if (tmp.length() > 512L) {
                                                     tmp.renameTo(dest)
+                                                } else {
+                                                    tmp.delete()
                                                 }
                                             }
                                         }
@@ -637,6 +654,8 @@ class QuranAudioController(
     private fun startWordPositionPolling() {
         wordPollingJob?.cancel()
         wordPollingJob = scope.launch {
+            var lastEmittedPosMs = -1L
+            var lastEmittedWordPos: Int? = -1
             while (isActive) {
                 val controller = mediaController
                 if (controller != null && controller.isPlaying) {
@@ -650,15 +669,19 @@ class QuranAudioController(
                     } else {
                         HifzLoopEngine.estimateWordPositionByProgress(currentAyahWords.size, pos, duration)
                     }
-                    _state.update {
-                        it.copy(
-                            positionMs = pos,
-                            durationMs = duration,
-                            activeWordPosition = activeWord
-                        )
+                    if (activeWord != lastEmittedWordPos || abs(pos - lastEmittedPosMs) >= 140L || duration != s.durationMs) {
+                        lastEmittedPosMs = pos
+                        lastEmittedWordPos = activeWord
+                        _state.update {
+                            it.copy(
+                                positionMs = pos,
+                                durationMs = duration,
+                                activeWordPosition = activeWord
+                            )
+                        }
                     }
                 }
-                delay(65L)
+                delay(110L)
             }
         }
     }

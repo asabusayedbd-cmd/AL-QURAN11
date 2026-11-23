@@ -28,14 +28,18 @@ import com.example.core.localization.UserPreferences
 import com.example.core.localization.WordMorphologyAnalyzer
 import com.example.core.network.QuranSyncRepository
 import com.example.ui.components.WordDisplayItem
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -55,6 +59,13 @@ data class WordInspectorState(
     val rootOccurrencesCount: Int,
     val rootOccurrences: List<WordOccurrenceProjection>,
     val analysis: DetailedWordAnalysis
+)
+
+data class ActivePlaybackCursor(
+    val surahId: Int = 0,
+    val ayahNumber: Int = 0,
+    val isVisible: Boolean = false,
+    val isPlaying: Boolean = false
 )
 
 data class ReaderUiState(
@@ -99,62 +110,69 @@ class ReaderViewModel(
     private val autoSyncedSurahLangKeys = mutableSetOf<String>()
     private var downloadJob: kotlinx.coroutines.Job? = null
 
-    private val ayahsFlow = _surahId.flatMapLatest { sid -> quranDao.observeAyahsBySurah(sid) }
+    val playbackState: StateFlow<AudioPlaybackState> = audioController.state
+    val playbackCursor: StateFlow<ActivePlaybackCursor> = audioController.state
+        .map {
+            ActivePlaybackCursor(
+                surahId = it.surahId,
+                ayahNumber = it.ayahNumber,
+                isVisible = it.isVisible,
+                isPlaying = it.isPlaying
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ActivePlaybackCursor())
 
-    private val bundlesFlow = combine(
-        ayahsFlow,
-        preferencesRepository.preferencesFlow,
-        quranDao.observeEnabledTranslationSources(),
-        userLibraryDao.observeBookmarks(),
-        userLibraryDao.observeNotes()
-    ) { ayahs, prefs, enabledSources, bookmarks, notes ->
-        Triple(ayahs, prefs, Triple(enabledSources, bookmarks, notes))
-    }.flatMapLatest { (ayahs, prefs, meta) ->
-        val (enabledSources, bookmarks, notes) = meta
-        if (ayahs.isEmpty()) {
-            flowOf(emptyList())
-        } else {
-            val ayahIds = ayahs.map { it.id }
+    private val bundlesFlow = _surahId.flatMapLatest { sid ->
+        combine(
+            quranDao.observeAyahsBySurah(sid),
+            quranDao.observeWordsBySurah(sid),
+            quranDao.observeWordTranslationsBySurah(sid),
+            quranDao.observeAyahTranslationsBySurah(sid),
             combine(
-                quranDao.observeWordsForAyahs(ayahIds),
-                quranDao.observeAyahTranslations(ayahIds)
-            ) { allWords, allTranslations ->
-                Pair(allWords, allTranslations)
-            }.flatMapLatest { (allWords, allTranslations) ->
-                val wordIds = allWords.map { it.id }
-                val wtFlow = if (wordIds.isEmpty()) flowOf(emptyList()) else quranDao.observeWordTranslations(wordIds)
-                combine(wtFlow, flowOf(Unit)) { wordTrs, _ ->
-                    val enabledIds = enabledSources.map { it.id }.toSet()
-                    val wordsByAyah = allWords.groupBy { it.ayahId }
-                    val trsByAyah = allTranslations.groupBy { it.ayahId }
-                    val wordTrById = wordTrs.groupBy { it.wordId }
-                    val bookmarkedKeys = bookmarks.map { it.verseKey }.toSet()
-                    val noteKeys = notes.map { it.verseKey }.toSet()
+                preferencesRepository.preferencesFlow,
+                quranDao.observeEnabledTranslationSources(),
+                userLibraryDao.observeBookmarks(),
+                userLibraryDao.observeNotes()
+            ) { prefs, enabledSources, bookmarks, notes ->
+                Pair(prefs to enabledSources, bookmarks to notes)
+            }
+        ) { ayahs, allWords, wordTrs, allTranslations, meta ->
+            if (ayahs.isEmpty()) {
+                emptyList()
+            } else {
+                val (prefs, enabledSources) = meta.first
+                val (bookmarks, notes) = meta.second
+                val enabledIds = enabledSources.map { it.id }.toSet()
+                val wordsByAyah = allWords.groupBy { it.ayahId }
+                val trsByAyah = allTranslations.groupBy { it.ayahId }
+                val wordTrById = wordTrs.groupBy { it.wordId }
+                val bookmarkedKeys = bookmarks.map { it.verseKey }.toSet()
+                val noteKeys = notes.map { it.verseKey }.toSet()
 
-                    ayahs.map { ayah ->
-                        val wList = wordsByAyah[ayah.id].orEmpty().map { w ->
-                            val wTrs = wordTrById[w.id].orEmpty()
-                            val meaning = wTrs.firstOrNull { it.languageCode == prefs.wbwLanguageCode }?.meaningText
-                                ?: wTrs.firstOrNull { it.languageCode == "en" }?.meaningText
-                                ?: wTrs.firstOrNull()?.meaningText
-                                ?: ""
-                            WordDisplayItem(w, meaning)
-                        }
-                        val ayahTrs = trsByAyah[ayah.id].orEmpty()
-                            .filter { enabledIds.isEmpty() || it.sourceId in enabledIds }
-                            .ifEmpty { trsByAyah[ayah.id].orEmpty() }
-                        AyahDisplayBundle(
-                            ayah = ayah,
-                            words = wList,
-                            translations = ayahTrs,
-                            isBookmarked = ayah.verseKey in bookmarkedKeys,
-                            hasNote = ayah.verseKey in noteKeys
-                        )
+                ayahs.map { ayah ->
+                    val wList = wordsByAyah[ayah.id].orEmpty().map { w ->
+                        val wTrs = wordTrById[w.id].orEmpty()
+                        val meaning = wTrs.firstOrNull { it.languageCode == prefs.wbwLanguageCode }?.meaningText
+                            ?: wTrs.firstOrNull { it.languageCode == "en" }?.meaningText
+                            ?: wTrs.firstOrNull()?.meaningText
+                            ?: ""
+                        WordDisplayItem(w, meaning)
                     }
+                    val ayahTrs = trsByAyah[ayah.id].orEmpty()
+                        .filter { enabledIds.isEmpty() || it.sourceId in enabledIds }
+                        .ifEmpty { trsByAyah[ayah.id].orEmpty() }
+                    AyahDisplayBundle(
+                        ayah = ayah,
+                        words = wList,
+                        translations = ayahTrs,
+                        isBookmarked = ayah.verseKey in bookmarkedKeys,
+                        hasNote = ayah.verseKey in noteKeys
+                    )
                 }
             }
         }
-    }
+    }.flowOn(Dispatchers.Default)
 
     private val selectedTafsirsFlow = _selectedTafsirAyah.flatMapLatest { ayah ->
         if (ayah == null) flowOf(emptyList()) else quranDao.observeTafsirsForAyah(ayah.id)
@@ -197,10 +215,9 @@ class ReaderViewModel(
     private val readerCoreFlow = combine(
         _surahId.flatMapLatest { quranDao.observeSurah(it) },
         bundlesFlow,
-        preferencesRepository.preferencesFlow,
-        audioController.state
-    ) { surah, bundles, prefs, playback ->
-        Pair(surah to bundles, prefs to playback)
+        preferencesRepository.preferencesFlow
+    ) { surah, bundles, prefs ->
+        Triple(surah, bundles, prefs)
     }
 
     val uiState: StateFlow<ReaderUiState> = combine(
@@ -208,8 +225,7 @@ class ReaderViewModel(
         catalogFlow,
         overlayFlow
     ) { core, catalog, overlay ->
-        val (surah, bundles) = core.first
-        val (prefs, playback) = core.second
+        val (surah, bundles, prefs) = core
         val (allSurahs, reciters, tafsirSources) = catalog
         val (selectedTriple, flags) = overlay
         val (selectedAyah, selectedTafsirs, selectedNote) = selectedTriple
@@ -231,7 +247,7 @@ class ReaderViewModel(
             ayahs = bundles,
             isSurahIncomplete = isIncomplete,
             preferences = prefs,
-            playbackState = playback,
+            playbackState = AudioPlaybackState(),
             reciters = reciters,
             tafsirSources = tafsirSources,
             selectedTafsirAyah = selectedAyah,
@@ -243,11 +259,13 @@ class ReaderViewModel(
             downloadError = dlErr,
             inspectedWord = inspected
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = ReaderUiState()
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = ReaderUiState()
+        )
 
     fun loadSurah(surahId: Int) {
         val targetId = surahId.coerceIn(1, 114)
@@ -366,7 +384,7 @@ class ReaderViewModel(
                 emptyList()
             }
             val totalOccurrencesCount = if (item.word.rootArabic.isNotBlank()) {
-                quranDao.getWordsByRoot(item.word.rootArabic).size.coerceAtLeast(occurrences.size)
+                quranDao.countWordsByRoot(item.word.rootArabic).coerceAtLeast(occurrences.size)
             } else {
                 1
             }

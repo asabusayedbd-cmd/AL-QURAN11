@@ -135,13 +135,36 @@ fun ExplorerScreen(
                 .fillMaxSize()
                 .widthIn(max = 760.dp)
         ) {
-            // Search & AI Smart Search Bar
+            // Al-Quran Surah Explorer Header & Search Bar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "114 Surahs • 30 Juz • 604 Pages",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
                 OutlinedTextField(
                     value = state.searchQuery,
                     onValueChange = { viewModel.updateSearchQuery(it) },
@@ -266,11 +289,17 @@ fun ExplorerScreen(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(vertical = 8.dp)
                         ) {
-                            items(state.surahs, key = { it.id }) { surah ->
-                                val localizedName = BidiUtils.extractLocalizedSurahName(
-                                    surah.localizedNamesJson,
-                                    state.preferences.uiLanguageCode
-                                ).ifBlank { surah.nameTransliteration }
+                            items(
+                                items = state.surahs,
+                                key = { it.id },
+                                contentType = { "surah_row" }
+                            ) { surah ->
+                                val localizedName = remember(surah.localizedNamesJson, state.preferences.uiLanguageCode) {
+                                    BidiUtils.extractLocalizedSurahName(
+                                        surah.localizedNamesJson,
+                                        state.preferences.uiLanguageCode
+                                    ).ifBlank { surah.nameTransliteration }
+                                }
                                 val isDownloading = state.downloadingSurahId == surah.id
 
                                 Row(
@@ -388,7 +417,11 @@ fun ExplorerScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(604) { idx ->
+                            items(
+                                count = 604,
+                                key = { idx -> idx + 1 },
+                                contentType = { "mushaf_page_chip" }
+                            ) { idx ->
                                 val page = idx + 1
                                 AssistChip(
                                     onClick = {

@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Noor Al-Quran</string>
+    <string name="app_name">Al-Quran</string>
     <string name="nav_home">Home</string>
     <string name="nav_quran">Quran</string>
     <string name="nav_search">Search</string>

@@ -5,6 +5,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontLoadingStrategy
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
@@ -12,38 +13,38 @@ import com.example.R
 import com.example.core.localization.QuranScriptType
 
 val AmiriQuranFont = FontFamily(
-    Font(R.font.amiri, FontWeight.Normal),
-    Font(R.font.amiri, FontWeight.SemiBold),
-    Font(R.font.amiri, FontWeight.Bold)
+    Font(R.font.amiri, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.amiri, FontWeight.SemiBold, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.amiri, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val IndoPakArabicFont = FontFamily(
-    Font(R.font.scheherazade_new, FontWeight.Normal),
-    Font(R.font.scheherazade_new, FontWeight.Bold)
+    Font(R.font.scheherazade_new, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.scheherazade_new, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val NotoArabicFont = FontFamily(
-    Font(R.font.noto_naskh_arabic, FontWeight.Normal),
-    Font(R.font.noto_naskh_arabic, FontWeight.Medium)
+    Font(R.font.noto_naskh_arabic, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.noto_naskh_arabic, FontWeight.Medium, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val BanglaBodyFont = FontFamily(
-    Font(R.font.noto_sans_bengali, FontWeight.Normal),
-    Font(R.font.noto_sans_bengali, FontWeight.Medium),
-    Font(R.font.noto_sans_bengali, FontWeight.SemiBold)
+    Font(R.font.noto_sans_bengali, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.noto_sans_bengali, FontWeight.Medium, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.noto_sans_bengali, FontWeight.SemiBold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val BanglaDisplayFont = FontFamily(
-    Font(R.font.hind_siliguri, FontWeight.Normal),
-    Font(R.font.hind_siliguri, FontWeight.SemiBold),
-    Font(R.font.hind_siliguri, FontWeight.Bold)
+    Font(R.font.hind_siliguri, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.hind_siliguri, FontWeight.SemiBold, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.hind_siliguri, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val LatinUiFont = FontFamily(
-    Font(R.font.plus_jakarta_sans, FontWeight.Normal),
-    Font(R.font.plus_jakarta_sans, FontWeight.Medium),
-    Font(R.font.plus_jakarta_sans, FontWeight.SemiBold),
-    Font(R.font.plus_jakarta_sans, FontWeight.Bold)
+    Font(R.font.plus_jakarta_sans, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.plus_jakarta_sans, FontWeight.Medium, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.plus_jakarta_sans, FontWeight.SemiBold, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.plus_jakarta_sans, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 fun arabicScriptFont(scriptType: QuranScriptType): FontFamily = when (scriptType) {

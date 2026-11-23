@@ -12,9 +12,11 @@ import com.example.core.ibadah.KhatamPlanEstimate
 import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.UserPreferences
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -71,11 +73,13 @@ class LibraryViewModel(
             todayAyahsRead = todayAyahs,
             preferences = prefs
         )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = LibraryUiState()
-    )
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = LibraryUiState()
+        )
 
     fun createCollection(name: String) {
         val trimmed = name.trim()

@@ -35,8 +35,10 @@ class QuranSyncRepository(
             val surah = quranDao.getSurah(surahId) ?: return@withContext Result.failure(
                 IllegalArgumentException("Unknown Surah $surahId")
             )
+            val allTranslationSources = quranDao.getAllTranslationSources()
+            val translationLangById = allTranslationSources.associate { it.id to it.languageCode }
             val resolvedTranslationIds = translationIds?.takeIf { it.isNotEmpty() }
-                ?: quranDao.getAllTranslationSources()
+                ?: allTranslationSources
                     .filter { it.isEnabled }
                     .map { it.id }
                     .ifEmpty { listOf(161, 131) }
@@ -134,7 +136,7 @@ class QuranSyncRepository(
                     }
 
                     for (tr in v.translations) {
-                        val langCode = inferTranslationLang(tr.resourceId)
+                        val langCode = translationLangById[tr.resourceId] ?: inferTranslationLang(tr.resourceId)
                         ayahTranslationsToSave.add(
                             AyahTranslationEntity(
                                 sourceId = tr.resourceId,
@@ -194,18 +196,30 @@ class QuranSyncRepository(
             database.withTransaction {
                 quranDao.insertAyahs(ayahsToSave)
 
-                // Match existing words by (ayahId, position) so starter metadata and multilingual
-                // word translations survive cleanly without creating duplicate word entries.
-                val existingWords = ayahsToSave.flatMap { quranDao.getWordsForAyah(it.id) }
+                // Match existing words by (ayahId, position) in batched queries so starter metadata
+                // and multilingual word translations survive cleanly without N+1 database calls.
+                val ayahIds = ayahsToSave.map { it.id }
+                val existingWords = ayahIds.chunked(500).flatMap { quranDao.getWordsForAyahs(it) }
                 val existingByPos = existingWords.associateBy { it.ayahId to it.position }
+
+                val changedOldIds = wordsToSave.mapNotNull { w ->
+                    val old = existingByPos[w.ayahId to w.position]
+                    if (old != null && old.id != w.id) old.id else null
+                }
+                val oldTranslationsByWordId = if (changedOldIds.isNotEmpty()) {
+                    changedOldIds.chunked(500)
+                        .flatMap { quranDao.getWordTranslationsForWords(it) }
+                        .groupBy { it.wordId }
+                } else {
+                    emptyMap()
+                }
                 val migratedOldTranslations = mutableListOf<WordTranslationEntity>()
 
                 val mergedWords = wordsToSave.map { w ->
                     val old = existingByPos[w.ayahId to w.position]
                     if (old != null) {
                         if (old.id != w.id) {
-                            val oldTrs = quranDao.getWordTranslations(old.id)
-                            for (tr in oldTrs) {
+                            oldTranslationsByWordId[old.id]?.forEach { tr ->
                                 migratedOldTranslations.add(tr.copy(wordId = w.id))
                             }
                         }
@@ -334,12 +348,27 @@ class QuranSyncRepository(
         161, 162, 163 -> "bn"
         97, 54, 158, 234 -> "ur"
         33, 134 -> "id"
-        77, 52 -> "tr"
-        31 -> "fr"
+        77, 52, 210 -> "tr"
+        31, 136 -> "fr"
         83 -> "es"
         122 -> "hi"
-        27 -> "de"
+        27, 208 -> "de"
         39 -> "ms"
+        45, 79 -> "ru"
+        29, 135 -> "fa"
+        133 -> "ta"
+        80 -> "ml"
+        56 -> "zh"
+        35 -> "ja"
+        219 -> "ko"
+        231 -> "sw"
+        126 -> "bs"
+        89 -> "sq"
+        46 -> "so"
+        153 -> "it"
+        43 -> "pt"
+        144 -> "nl"
+        101 -> "uz"
         else -> "en"
     }
 
@@ -358,6 +387,20 @@ class QuranSyncRepository(
             "hindi" -> "hi"
             "malay" -> "ms"
             "german" -> "de"
+            "persian", "farsi" -> "fa"
+            "tamil" -> "ta"
+            "malayalam" -> "ml"
+            "chinese" -> "zh"
+            "japanese" -> "ja"
+            "korean" -> "ko"
+            "swahili" -> "sw"
+            "bosnian" -> "bs"
+            "albanian" -> "sq"
+            "somali" -> "so"
+            "italian" -> "it"
+            "portuguese" -> "pt"
+            "dutch" -> "nl"
+            "uzbek" -> "uz"
             else -> languageName?.take(2)?.lowercase() ?: "en"
         }
     }
@@ -379,12 +422,16 @@ class QuranSyncRepository(
     }
 
     private fun cleanHtml(raw: String): String {
-        return raw.replace(Regex("<sup[^>]*>.*?</sup>"), "")
-            .replace(Regex("<[^>]+>"), "")
+        return CLEAN_HTML_SUP_REGEX.replace(raw, "")
+            .let { CLEAN_HTML_TAG_REGEX.replace(it, "") }
             .replace("&quot;", "\"")
             .replace("&#39;", "'")
             .replace("&rsquo;", "’")
             .replace("&lsquo;", "‘")
+            .replace("&mdash;", "—")
+            .replace("&ndash;", "–")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
             .replace("&nbsp;", " ")
             .replace("&amp;", "&")
             .trim()
@@ -393,5 +440,7 @@ class QuranSyncRepository(
     companion object {
         private val END_SPAN_REGEX = Regex("<span\\s+class=[\"']?end[\"']?[^>]*>.*?</span>", RegexOption.IGNORE_CASE)
         private val VERSE_END_MARKER_REGEX = Regex("^[\\u0660-\\u06690-9\\uFD3E\\uFD3F]+$")
+        private val CLEAN_HTML_SUP_REGEX = Regex("<sup[^>]*>.*?</sup>", RegexOption.DOT_MATCHES_ALL)
+        private val CLEAN_HTML_TAG_REGEX = Regex("<[^>]+>")
     }
 }

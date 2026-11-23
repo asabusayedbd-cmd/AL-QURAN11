@@ -7,6 +7,7 @@ import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
@@ -30,9 +31,9 @@ fun NoorAlQuranTheme(
     content: @Composable () -> Unit
 ) {
     val isDark = themeMode == NoorThemeMode.SLATE_DARK || themeMode == NoorThemeMode.AMOLED_BLACK
-    val colorScheme = colorSchemeForTheme(themeMode)
-    val tajweedPalette = if (isDark) DarkTajweedPalette else LightTajweedPalette
-    val typography = noorTypography(uiLanguageCode)
+    val colorScheme = remember(themeMode) { colorSchemeForTheme(themeMode) }
+    val tajweedPalette = remember(isDark) { if (isDark) DarkTajweedPalette else LightTajweedPalette }
+    val typography = remember(uiLanguageCode) { noorTypography(uiLanguageCode) }
 
     val view = LocalView.current
     if (!view.isInEditMode) {

@@ -1,13 +1,13 @@
 package com.example.core.localization
 
 import android.os.Build
+import android.util.LruCache
 import androidx.core.text.BidiFormatter
 import androidx.core.text.TextDirectionHeuristicsCompat
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.chrono.HijrahChronology
-import java.time.chrono.HijrahDate
 import java.time.temporal.ChronoField
 import java.util.Calendar
 import java.util.Date
@@ -17,6 +17,14 @@ object BidiUtils {
 
     private val ARABIC_DIACRITICS_REGEX = Regex("[\\u0610-\\u061A\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]")
     private val ARABIC_ALEF_VARIANTS_REGEX = Regex("[\\u0622\\u0623\\u0625\\u0671]")
+    private val surahNameCache = LruCache<String, String>(512)
+    @Volatile
+    private var cachedDateResult: Pair<String, Pair<String, String>>? = null
+
+    fun trimCaches() {
+        surahNameCache.evictAll()
+        cachedDateResult = null
+    }
 
     /**
      * Wraps inline Arabic text with Unicode Bidi isolation marks so punctuation,
@@ -82,7 +90,9 @@ object BidiUtils {
     }
 
     fun extractLocalizedSurahName(localizedNamesJson: String, languageCode: String): String {
-        return try {
+        val cacheKey = "$languageCode|$localizedNamesJson"
+        surahNameCache.get(cacheKey)?.let { return it }
+        val resolved = try {
             val obj = JSONObject(localizedNamesJson)
             obj.optString(languageCode).takeIf { it.isNotBlank() }
                 ?: obj.optString("en").takeIf { it.isNotBlank() }
@@ -90,13 +100,22 @@ object BidiUtils {
         } catch (_: Exception) {
             ""
         }
+        surahNameCache.put(cacheKey, resolved)
+        return resolved
     }
 
     fun formatGregorianAndHijriDate(languageCode: String): Pair<String, String> {
+        val dayStamp = System.currentTimeMillis() / 3_600_000L
+        val cacheKey = "$dayStamp|$languageCode"
+        cachedDateResult?.let { (key, value) ->
+            if (key == cacheKey) return value
+        }
         val locale = Locale.forLanguageTag(languageCode)
         val gregorian = SimpleDateFormat("EEE, d MMM yyyy", locale).format(Date())
         val hijri = computeHijriDateString(languageCode)
-        return gregorian to hijri
+        val result = gregorian to hijri
+        cachedDateResult = cacheKey to result
+        return result
     }
 
     fun computeHijriDateString(languageCode: String): String {

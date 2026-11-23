@@ -40,7 +40,10 @@ abstract class NoorDatabase : RoomDatabase() {
                     context.applicationContext,
                     NoorDatabase::class.java,
                     "noor_al_quran.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }

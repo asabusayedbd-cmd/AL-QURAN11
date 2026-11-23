@@ -41,10 +41,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -77,6 +79,7 @@ import com.example.core.audio.AudioPlaybackState
 import com.example.core.audio.HifzLoopConfig
 import com.example.core.audio.HifzLoopEngine
 import com.example.core.database.AudioReciterEntity
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -181,10 +184,12 @@ fun AudioHifzBar(
                 playbackState.sleepRemainingSec?.let { sec ->
                     val mins = sec / 60
                     val rem = sec % 60
-                    add("Sleep %d:%02d".format(mins, rem))
+                    add("Sleep %d:%02d".format(Locale.US, mins, rem))
                 }
                 if (playbackState.isPlayingFromOfflineCache) {
                     add("Offline")
+                } else if (playbackState.isPlaying) {
+                    add("Background Ready")
                 }
             }
 
@@ -225,12 +230,16 @@ fun AudioHifzBar(
                     Icon(Icons.Default.SkipPrevious, contentDescription = "Previous Ayah")
                 }
 
-                IconButton(
+                FilledTonalIconButton(
                     onClick = onTogglePlayPause,
+                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
                     modifier = Modifier.testTag("audio_play_pause_button")
                 ) {
                     if (playbackState.isBuffering) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     } else if (playbackState.isPlaying) {
                         Icon(Icons.Default.Pause, contentDescription = "Pause")
                     } else {
@@ -741,7 +750,7 @@ fun RecitationSettingsModalSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Offline Audio Cache: ${"%.1f".format(cacheMb)} MB",
+                    text = "Offline Audio Cache: ${"%.1f".format(Locale.US, cacheMb)} MB",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
