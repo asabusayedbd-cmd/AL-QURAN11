@@ -93,6 +93,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.R
 import com.example.core.ibadah.PrayerTimeCalculator
+import com.example.core.ibadah.PrayerTimesSummary
 import com.example.core.localization.BidiUtils
 import com.example.ui.components.ShareCardGenerator
 import com.example.ui.theme.arabicScriptFont
@@ -133,6 +134,7 @@ fun HomeScreen(
     var showQiblaSheet by remember { mutableStateOf(false) }
     var showTasbeehSheet by remember { mutableStateOf(false) }
     var showCityPicker by remember { mutableStateOf(false) }
+    var showPrayerScheduleSheet by remember { mutableStateOf(false) }
 
     val locationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -586,7 +588,12 @@ fun HomeScreen(
 
             // Daily Ibadah & Prayer Card (Sadiq-inspired calm widget)
             item(key = "home_prayer_card", contentType = "card") {
-                ElevatedCard(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
+                ElevatedCard(
+                    shape = MaterialTheme.shapes.large,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showPrayerScheduleSheet = true }
+                ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -763,6 +770,15 @@ fun HomeScreen(
             qiblaBearingDeg = state.qiblaBearingDegrees,
             locationName = state.preferences.locationName,
             onDismiss = { showQiblaSheet = false }
+        )
+    }
+
+    if (showPrayerScheduleSheet) {
+        PrayerScheduleSheet(
+            prayerTimes = state.prayerTimes,
+            locationName = state.preferences.locationName,
+            onDismiss = { showPrayerScheduleSheet = false },
+            onOpenCityPicker = { showCityPicker = true }
         )
     }
 
@@ -954,5 +970,120 @@ private fun fetchLastCoarseLocation(context: Context, onResult: (Double, Double)
     }
     if (loc != null) {
         onResult(loc.latitude, loc.longitude)
+    }
+}
+
+private data class PrayerRow(val name: String, val time: String, val isFard: Boolean)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PrayerScheduleSheet(
+    prayerTimes: PrayerTimesSummary,
+    locationName: String,
+    onDismiss: () -> Unit,
+    onOpenCityPicker: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Prayer Schedule & Timings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(locationName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                FilledTonalButton(onClick = {
+                    onDismiss()
+                    onOpenCityPicker()
+                }) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Change City")
+                }
+            }
+
+            // Next Prayer Banner
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Next Prayer", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(prayerTimes.nextPrayerName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(prayerTimes.nextPrayerTime, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(prayerTimes.countdownText, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            val prayers = listOf(
+                PrayerRow("Imsak (Sahri End)", prayerTimes.imsak, false),
+                PrayerRow("Fajr", prayerTimes.fajr, true),
+                PrayerRow("Sunrise", prayerTimes.sunrise, false),
+                PrayerRow("Dhuhr", prayerTimes.dhuhr, true),
+                PrayerRow("Asr", prayerTimes.asr, true),
+                PrayerRow("Sunset", prayerTimes.sunset, false),
+                PrayerRow("Maghrib", prayerTimes.maghrib, true),
+                PrayerRow("Isha", prayerTimes.isha, true),
+                PrayerRow("Tahajjud (Last Third)", prayerTimes.tahajjud, false),
+                PrayerRow("Midnight", prayerTimes.midnight, false)
+            )
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(prayers) { row ->
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = if (row.isFard) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.surface,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = row.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = if (row.isFard) FontWeight.SemiBold else FontWeight.Normal
+                            )
+                            Text(
+                                text = row.time,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (row.isFard) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
     }
 }

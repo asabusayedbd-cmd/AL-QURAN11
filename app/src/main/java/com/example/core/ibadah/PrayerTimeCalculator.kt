@@ -9,16 +9,22 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.math.tan
+import kotlin.math.roundToInt
 
 data class PrayerTimesSummary(
     val fajr: String,
+    val imsak: String,
     val sunrise: String,
     val dhuhr: String,
     val asr: String,
+    val sunset: String,
     val maghrib: String,
     val isha: String,
+    val tahajjud: String,
+    val midnight: String,
     val nextPrayerName: String,
-    val nextPrayerTime: String
+    val nextPrayerTime: String,
+    val countdownText: String
 )
 
 data class CityLocationPreset(
@@ -46,9 +52,6 @@ object PrayerTimeCalculator {
         CityLocationPreset("New York, USA", 40.7128, -74.0060)
     )
 
-    /**
-     * Computes great-circle initial bearing from given coordinates to the Kaaba in Makkah (0..360 deg).
-     */
     fun calculateQiblaBearing(latitude: Double, longitude: Double): Float {
         val phiK = Math.toRadians(KAABA_LAT)
         val lambdaK = Math.toRadians(KAABA_LON)
@@ -62,14 +65,12 @@ object PrayerTimeCalculator {
         return ((bearingDeg + 360.0) % 360.0).toFloat()
     }
 
-    /**
-     * Astronomical solar calculation using MWL/Karachi standard angles (18 deg Fajr, 17.5 deg Isha, Shafi'i/Hanafi Asr).
-     */
     fun calculateDailyTimes(
         latitude: Double,
         longitude: Double,
         calendar: Calendar = Calendar.getInstance(),
-        hanafiAsr: Boolean = false
+        hanafiAsr: Boolean = false,
+        angleMethod: Int = 0 // 0: MWL / Karachi (18 deg), 1: ISNA (15 deg), 2: Egyptian (19.5 deg)
     ): PrayerTimesSummary {
         val tzHours = TimeZone.getDefault().getOffset(calendar.timeInMillis) / 3600000.0
         val julian = julianDay(
@@ -89,34 +90,66 @@ object PrayerTimeCalculator {
         val decl = asinDeg(sinDeg(e) * sinDeg(l))
 
         val transit = 12.0 + tzHours - longitude / 15.0 - eqTime
-        val fajr = transit - hourAngle(18.0, latitude, decl)
+
+        val fajrAngle = when (angleMethod) {
+            1 -> 15.0
+            2 -> 19.5
+            else -> 18.0
+        }
+        val ishaAngle = when (angleMethod) {
+            1 -> 15.0
+            2 -> 17.5
+            else -> 18.0
+        }
+
+        val fajr = transit - hourAngle(fajrAngle, latitude, decl)
+        val imsak = fajr - (10.0 / 60.0) // 10 mins before Fajr
         val sunrise = transit - hourAngle(0.833, latitude, decl)
-        val dhuhr = transit + (2.0 / 60.0)
+        val dhuhr = transit + (2.0 / 60.0) // +2 min safety offset
         val asrFactor = if (hanafiAsr) 2.0 else 1.0
         val asrAltDeg = Math.toDegrees(atan2(1.0, asrFactor + tan(Math.toRadians(kotlin.math.abs(latitude - decl)))))
         val asr = transit + hourAngle(-asrAltDeg, latitude, decl)
-        val maghrib = transit + hourAngle(0.833, latitude, decl)
-        val isha = transit + hourAngle(18.0, latitude, decl)
+        val sunset = transit + hourAngle(0.833, latitude, decl)
+        val maghrib = sunset + (3.0 / 60.0) // +3 min safety after sunset
+        val isha = transit + hourAngle(ishaAngle, latitude, decl)
 
-        val nowDecimal = calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) / 60.0
+        // Tahajjud (last third of night) & Midnight
+        val nightDurationHours = (24.0 - sunset + fajr) % 24.0
+        val midnightDecimal = fixHour(sunset + nightDurationHours / 2.0)
+        val tahajjudDecimal = fixHour(fajr - (nightDurationHours / 3.0))
+
+        val nowDecimal = calendar.get(Calendar.HOUR_OF_DAY) + calendar.get(Calendar.MINUTE) / 60.0 + calendar.get(Calendar.SECOND) / 3600.0
+        
         val ordered = listOf(
             "Fajr" to fajr,
+            "Sunrise" to sunrise,
             "Dhuhr" to dhuhr,
             "Asr" to asr,
             "Maghrib" to maghrib,
             "Isha" to isha
         )
-        val next = ordered.firstOrNull { it.second > nowDecimal } ?: ("Fajr" to fajr)
+
+        val nextEntry = ordered.firstOrNull { it.second > nowDecimal } ?: ("Fajr" to (fajr + 24.0))
+        val diffHours = nextEntry.second - nowDecimal
+        val diffMinTotal = (diffHours * 60.0).roundToInt()
+        val dh = diffMinTotal / 60
+        val dm = diffMinTotal % 60
+        val countdownStr = if (dh > 0) "in ${dh}h ${dm}m" else "in ${dm}m"
 
         return PrayerTimesSummary(
             fajr = formatTime(fajr),
+            imsak = formatTime(imsak),
             sunrise = formatTime(sunrise),
             dhuhr = formatTime(dhuhr),
             asr = formatTime(asr),
+            sunset = formatTime(sunset),
             maghrib = formatTime(maghrib),
             isha = formatTime(isha),
-            nextPrayerName = next.first,
-            nextPrayerTime = formatTime(next.second)
+            tahajjud = formatTime(tahajjudDecimal),
+            midnight = formatTime(midnightDecimal),
+            nextPrayerName = nextEntry.first,
+            nextPrayerTime = formatTime(nextEntry.second % 24.0),
+            countdownText = countdownStr
         )
     }
 
