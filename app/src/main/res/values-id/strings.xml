@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Noor Al-Quran</string>
+    <string name="nav_home">Beranda</string>
+    <string name="nav_quran">Al-Quran</string>
+    <string name="nav_search">Cari</string>
+    <string name="nav_bookmarks">Pustaka</string>
+    <string name="nav_settings">Pengaturan</string>
+    <string name="continue_reading">Lanjutkan Membaca</string>
+    <string name="daily_goal_title">Target Harian Al-Quran</string>
+    <string name="verse_of_the_day">Ayat Hari Ini</string>
+    <string name="prayer_times_title">Jadwal Sholat</string>
+    <string name="qibla_compass_title">Arah Kiblat</string>
+    <string name="tasbeeh_counter_title">Tasbih Digital</string>
+    <string name="tab_surah">Surah</string>
+    <string name="tab_juz">Juz</string>
+    <string name="tab_page">Halaman</string>
+    <string name="tab_duas">Doa Rabbana</string>
+    <string name="mode_word_by_word">Kata per Kata</string>
+    <string name="mode_mushaf">Mushaf</string>
+    <string name="tafsir_title">Tafsir &amp; Catatan</string>
+    <string name="sign_in_google">Masuk dengan Google</string>
+    <string name="sign_out">Keluar</string>
+</resources>

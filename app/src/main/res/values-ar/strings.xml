@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">نور القرآن</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_quran">القرآن</string>
+    <string name="nav_search">بحث</string>
+    <string name="nav_bookmarks">المكتبة</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <string name="greeting_morning">السلام عليكم، صباح الخير</string>
+    <string name="greeting_afternoon">السلام عليكم، طاب يومكم</string>
+    <string name="greeting_evening">السلام عليكم، مساء الخير</string>
+    <string name="greeting_night">السلام عليكم، ليلة مباركة</string>
+
+    <string name="continue_reading">متابعة القراءة</string>
+    <string name="ayah_progress_fmt">الآية %1$s • الجزء %2$s</string>
+    <string name="daily_goal_title">الورد القرآني اليومي</string>
+    <string name="daily_goal_progress_fmt">%1$s / %2$s آية اليوم</string>
+    <string name="streak_days_fmt">سلسلة %1$s أيام</string>
+    <string name="verse_of_the_day">آية اليوم</string>
+    <string name="quick_shortcuts">وصول سريع</string>
+    <string name="ibadah_tools">العبادات اليومية والصلاة</string>
+    <string name="prayer_times_title">مواقيت الصلاة</string>
+    <string name="qibla_compass_title">اتجاه القبلة</string>
+    <string name="tasbeeh_counter_title">المسبحة الرقمية</string>
+    <string name="detect_location">تحديد الموقع عبر GPS</string>
+
+    <string name="tab_surah">السورة</string>
+    <string name="tab_juz">الجزء</string>
+    <string name="tab_page">الصفحة</string>
+    <string name="tab_duas">أدعية ربنا</string>
+    <string name="search_hint">ابحث بالعربية أو البنغالية أو الإنجليزية أو 2:255…</string>
+    <string name="ai_semantic_search">البحث الذكي</string>
+
+    <string name="mode_word_by_word">كلمة بكلمة</string>
+    <string name="mode_mushaf">المصحف</string>
+    <string name="display_settings">العرض والخطوط</string>
+    <string name="script_uthmani">الرسم العثماني (المدينة)</string>
+    <string name="script_indopak">الخط النستعليق (إندوباك)</string>
+    <string name="tajweed_colors">ألوان التجويد</string>
+    <string name="show_transliteration">إظهار النطق اللاتيني</string>
+    <string name="arabic_font_size">حجم الخط العربي</string>
+    <string name="wbw_font_size">حجم معاني الكلمات</string>
+    <string name="translation_font_size">حجم الترجمة والتفسير</string>
+
+    <string name="word_inspector_title">تحليل الكلمة ومعناها</string>
+    <string name="word_root_label">الجذر</string>
+    <string name="word_lemma_label">المادة</string>
+    <string name="word_grammar_label">الإعراب والصرف</string>
+    <string name="word_occurrences_label">المواضع في القرآن المحمّل</string>
+    <string name="play_word_audio">استماع للكلمة</string>
+
+    <string name="tafsir_title">التفسير والتدبر</string>
+    <string name="personal_note_hint">اكتب خاطرة أو ملاحظة شخصية حول هذه الآية…</string>
+    <string name="save_note">حفظ الملاحظة</string>
+    <string name="ask_ai_study_helper">اسأل مساعد التدبر</string>
+    <string name="share_as_card">مشاركة كبطاقة</string>
+    <string name="ai_grounding_notice">الإجابات مستندة حصراً إلى النص القرآني الموثق والتفسير المحمّل.</string>
+    <string name="ai_ask_hint">اسأل عن معنى الآية أو تفسيرها…</string>
+
+    <string name="hifz_controls">الحفظ والصوتيات</string>
+    <string name="repeat_ayah">تكرار الآية</string>
+    <string name="pause_between_ayahs">التوقف بين الآيات</string>
+    <string name="loop_range">تكرار النطاق</string>
+    <string name="playback_speed">السرعة</string>
+
+    <string name="ui_language_title">لغة الواجهة</string>
+    <string name="content_languages_title">لغات الترجمة ومعاني الكلمات</string>
+    <string name="theme_title">مظهر القراءة</string>
+    <string name="theme_serene_emerald">كريمي وزمردي هادئ</string>
+    <string name="theme_sepia">بني دافئ للقراءة</string>
+    <string name="theme_slate_dark">داكن زمردي</string>
+    <string name="theme_amoled">أسود ليلي AMOLED</string>
+
+    <string name="cloud_sync_title">المزامنة السحابية</string>
+    <string name="guest_mode_desc">أنت تقرأ في الوضع المحلي. سجّل الدخول عبر Google لمزامنة الإشارات والملاحظات.</string>
+    <string name="sign_in_google">تسجيل الدخول عبر Google</string>
+    <string name="sign_out">تسجيل الخروج</string>
+    <string name="download_manager_title">إدارة المحتوى والتنزيلات</string>
+    <string name="download_surah">تنزيل السورة</string>
+    <string name="downloaded_badge">متاح دون اتصال</string>
+
+    <string name="khatam_plan_title">خطة الختمة</string>
+    <string name="collections_title">مجموعات الإشارات المرجعية</string>
+
+    <string name="cd_bookmark_ayah">حفظ الآية</string>
+    <string name="cd_play_ayah">تشغيل تلاوة الآية</string>
+    <string name="cd_open_tafsir">فتح التفسير والملاحظات</string>
+    <string name="cd_share_ayah">مشاركة بطاقة الآية</string>
+    <string name="cd_copy_ayah">نسخ نص الآية</string>
+    <string name="cd_qibla_needle">إبرة بوصلة القبلة</string>
+    <string name="cd_back">رجوع</string>
+    <string name="cd_settings">إعدادات العرض</string>
+</resources>

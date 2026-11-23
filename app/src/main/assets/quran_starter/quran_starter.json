@@ -1,0 +1,847 @@
+{
+  "translationSources": [
+    {"id": 161, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "ড. আবু বকর মুহাম্মাদ যাকারিয়া", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 1850},
+    {"id": 162, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "মাওলানা মুহিউদ্দীন খান (তাইসীরুল কুরআন)", "isDownloaded": true, "isEnabled": false, "fileSizeKb": 1720},
+    {"id": 163, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "আল-বায়ান ফাউন্ডেশন", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1790},
+    {"id": 131, "languageCode": "en", "languageName": "English", "translatorName": "Dr. Mustafa Khattab (The Clear Quran)", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 1450},
+    {"id": 20, "languageCode": "en", "languageName": "English", "translatorName": "Saheeh International", "isDownloaded": true, "isEnabled": false, "fileSizeKb": 1390},
+    {"id": 85, "languageCode": "en", "languageName": "English", "translatorName": "M.A.S. Abdel Haleem", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1410},
+    {"id": 97, "languageCode": "ur", "languageName": "اردو (Urdu)", "translatorName": "مولانا فتح محمد جالندھری", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1610},
+    {"id": 234, "languageCode": "ur", "languageName": "اردو (Urdu)", "translatorName": "مولانا محمد جوناگڑھی", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1640},
+    {"id": 33, "languageCode": "id", "languageName": "Bahasa Indonesia", "translatorName": "Kementerian Agama RI", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1480},
+    {"id": 77, "languageCode": "tr", "languageName": "Türkçe", "translatorName": "Diyanet İşleri Başkanlığı", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1420},
+    {"id": 31, "languageCode": "fr", "languageName": "Français", "translatorName": "Muhammad Hamidullah", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1460},
+    {"id": 83, "languageCode": "es", "languageName": "Español", "translatorName": "Sheikh Isa García", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1490},
+    {"id": 122, "languageCode": "hi", "languageName": "हिन्दी (Hindi)", "translatorName": "Azizul Haq al-Umari", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1710},
+    {"id": 27, "languageCode": "de", "languageName": "Deutsch", "translatorName": "Abu Rida Muhammad ibn Ahmad", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1440}
+  ],
+  "tafsirSources": [
+    {"id": 164, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "tafsirName": "তাফসীর আবু বকর যাকারিয়া", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 8400},
+    {"id": 165, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "tafsirName": "তাফসীর আহসানুল বায়ান", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 7900},
+    {"id": 166, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "tafsirName": "তাফসীর ফাতহুল মাজীদ", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 8200},
+    {"id": 381, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "tafsirName": "তাফসীর ইবনে কাসীর (বাংলা)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 11500},
+    {"id": 169, "languageCode": "en", "languageName": "English", "tafsirName": "Tafsir Ibn Kathir (Abridged)", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 9200},
+    {"id": 168, "languageCode": "en", "languageName": "English", "tafsirName": "Maarif-ul-Quran (Mufti Shafi)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 10800},
+    {"id": 817, "languageCode": "en", "languageName": "English", "tafsirName": "Tazkirul Quran (Wahiduddin Khan)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 6400},
+    {"id": 16, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "التفسير الميسر (Al-Muyassar)", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 6800},
+    {"id": 14, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "تفسير ابن كثير (Ibn Kathir Arabic)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 14200},
+    {"id": 15, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "تفسير الطبري (Jami al-Bayan)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 18500},
+    {"id": 90, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "تفسير القرطبي (Al-Qurtubi)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 16400},
+    {"id": 91, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "تفسير السعدي (As-Sa'di)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 8900},
+    {"id": 93, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "التفسير الوسيط لطنطاوي (Al-Wasit)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 11200},
+    {"id": 94, "languageCode": "ar", "languageName": "العربية (Arabic)", "tafsirName": "تفسير البغوي (Al-Baghawi)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 12600},
+    {"id": 160, "languageCode": "ur", "languageName": "اردو (Urdu)", "tafsirName": "تفسیر ابن کثیر (اردو)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 11800},
+    {"id": 157, "languageCode": "ur", "languageName": "اردو (Urdu)", "tafsirName": "فی ظلال القرآن (Fi Zilal Urdu)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 9600},
+    {"id": 159, "languageCode": "ur", "languageName": "اردو (Urdu)", "tafsirName": "بیان القرآن (Dr. Israr Ahmed)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 8800},
+    {"id": 170, "languageCode": "ru", "languageName": "Русский (Russian)", "tafsirName": "Тафсир ас-Саади (As-Sa'di Russian)", "isDownloaded": false, "isEnabled": true, "fileSizeKb": 8500}
+  ],
+  "reciters": [
+    {"id": 7, "name": "Mishary Rashid Alafasy", "localizedName": "مشاري راشد العفاسي • মিশারি রাশিদ আল-আফাসি", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Alafasy_128kbps/", "isDownloaded": false},
+    {"id": 1, "name": "Mahmoud Khalil Al-Husary", "localizedName": "محمود خليل الحصري • মাহমুদ খলিল আল-হুসারী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Husary_128kbps/", "isDownloaded": false},
+    {"id": 9, "name": "Muhammad Siddiq Al-Minshawi", "localizedName": "محمد صديق المنشاوي • মুহাম্মাদ সিদ্দিক আল-মিনশাভী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Minshawy_Murattal_128kbps/", "isDownloaded": false},
+    {"id": 2, "name": "Abdul Basit 'Abdus-Samad (Murattal)", "localizedName": "عبد الباسط عبد الصمد • আব্দুল বাসিত (মুরাত্তাল)", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdul_Basit_Murattal_192kbps/", "isDownloaded": false},
+    {"id": 3, "name": "Abdur-Rahman As-Sudais", "localizedName": "عبد الرحمن السديس • আব্দুর রহমান আস-সুদাইস", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdurrahmaan_As-Sudais_192kbps/", "isDownloaded": false},
+    {"id": 4, "name": "Abu Bakr Ash-Shatri", "localizedName": "أبو بكر الشاطري • আবু বকর আশ-শাতরী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abu_Bakr_Ash-Shaatree_128kbps/", "isDownloaded": false},
+    {"id": 5, "name": "Hani Ar-Rifai", "localizedName": "هاني الرفاعي • হানি আর-রিফায়ী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Hani_Rifai_192kbps/", "isDownloaded": false},
+    {"id": 6, "name": "Abdullah Ibn Ali Basfar", "localizedName": "عبد الله بصفر • আব্দুল্লাহ বাসফার", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdullah_Basfar_192kbps/", "isDownloaded": false},
+    {"id": 8, "name": "Muhammad Siddiq Al-Minshawi (Mujawwad)", "localizedName": "المنشاوي (مجود) • আল-মিনশাভী (মুজাওয়াদ)", "style": "Mujawwad", "baseUrl": "https://everyayah.com/data/Minshawy_Mujawwad_192kbps/", "isDownloaded": false},
+    {"id": 10, "name": "Sa'ud Ash-Shuraym", "localizedName": "سعود الشريم • সাউদ আশ-শুরাইম", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Saood_ash-Shuraym_128kbps/", "isDownloaded": false},
+    {"id": 11, "name": "Abdul Basit 'Abdus-Samad (Mujawwad)", "localizedName": "عبد الباسط (مجود) • আব্দুল বাসিত (মুজাওয়াদ)", "style": "Mujawwad", "baseUrl": "https://everyayah.com/data/Abdul_Basit_Mujawwad_128kbps/", "isDownloaded": false},
+    {"id": 12, "name": "Mahmoud Khalil Al-Husary (Mujawwad)", "localizedName": "الحصري (مجود) • আল-হুসারী (মুজাওয়াদ)", "style": "Mujawwad", "baseUrl": "https://everyayah.com/data/Husary_Mujawwad_64kbps/", "isDownloaded": false},
+    {"id": 13, "name": "Mahmoud Khalil Al-Husary (Muallim)", "localizedName": "الحصري (معلم) • আল-হুসারী (মুয়াল্লিম)", "style": "Muallim", "baseUrl": "https://everyayah.com/data/Husary_Muallim_128kbps/", "isDownloaded": false},
+    {"id": 14, "name": "Maher Al-Muaiqly", "localizedName": "ماهر المعيقلي • মাহের আল-মুয়াইকলি", "style": "Murattal", "baseUrl": "https://everyayah.com/data/MaherAlMuaiqly128kbps/", "isDownloaded": false},
+    {"id": 15, "name": "Saad Al-Ghamdi", "localizedName": "سعد الغامدي • সাদ আল-গামদী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ghamadi_40kbps/", "isDownloaded": false},
+    {"id": 16, "name": "Muhammad Jibreel", "localizedName": "محمد جبريل • মুহাম্মাদ জিবরীল", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Muhammad_Jibreel_128kbps/", "isDownloaded": false},
+    {"id": 17, "name": "Muhammad Ayyub", "localizedName": "محمد أيوب • মুহাম্মাদ আইয়ুব", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Muhammad_Ayyoub_128kbps/", "isDownloaded": false},
+    {"id": 18, "name": "Ali Abdur-Rahman Al-Hudhaify", "localizedName": "علي الحذيفي • আলী আল-হুযাইফী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Hudhaify_128kbps/", "isDownloaded": false},
+    {"id": 19, "name": "Ahmed Ibn Ali Al-Ajamy", "localizedName": "أحمد العجمي • আহমাদ আল-আজমী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah.net/", "isDownloaded": false},
+    {"id": 20, "name": "Fares Abbad", "localizedName": "فارس عباد • ফারেস আব্বাদ", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Fares_Abbad_64kbps/", "isDownloaded": false},
+    {"id": 21, "name": "Yasser Ad-Dosari", "localizedName": "ياسر الدوسري • ইয়াসির আদ-দোসারী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/", "isDownloaded": false},
+    {"id": 22, "name": "Nasser Al-Qatami", "localizedName": "ناصر القطامي • নাসের আল-কাতামী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Nasser_Alqatami_128kbps/", "isDownloaded": false},
+    {"id": 23, "name": "Salah Bukhatir", "localizedName": "صلاح بو خاطر • সালাহ বুখাতির", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Salaah_AbdulRahman_Bukhatir_128kbps/", "isDownloaded": false},
+    {"id": 24, "name": "Salah Al-Budair", "localizedName": "صلاح البدير • সালাহ আল-বুদাইর", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Salah_Al_Budair_128kbps/", "isDownloaded": false},
+    {"id": 25, "name": "Abdul Muhsin Al-Qasim", "localizedName": "عبد المحسن القاسم • আব্দুল মুহসিন আল-কাসিম", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Muhsin_Al_Qasim_192kbps/", "isDownloaded": false},
+    {"id": 26, "name": "Abdullah Awad Al-Juhany", "localizedName": "عبد الله الجهني • আব্দুল্লাহ আল-জুহানী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdullaah_3awwaad_Al-Juhaynee_128kbps/", "isDownloaded": false},
+    {"id": 27, "name": "Abdullah Al-Matroud", "localizedName": "عبد الله المطرود • আব্দুল্লাহ আল-মাতরুদ", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdullah_Matroud_128kbps/", "isDownloaded": false},
+    {"id": 28, "name": "Ahmed Naina", "localizedName": "أحمد نعينع • আহমাদ নাইনা", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ahmed_Neana_128kbps/", "isDownloaded": false},
+    {"id": 29, "name": "Akram Al-Alaqmi", "localizedName": "أكرم العلاقمي • আকরাম আল-আলাকমী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Akram_AlAlaqimy_128kbps/", "isDownloaded": false},
+    {"id": 30, "name": "Ali Hajjaj Al-Souesi", "localizedName": "علي حجاج السويسي • আলী হাজ্জাজ আস-সুয়াইসী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ali_Hajjaj_AlSuesy_128kbps/", "isDownloaded": false},
+    {"id": 31, "name": "Ali Jaber", "localizedName": "علي جابر • আলী জাবের", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ali_Jaber_64kbps/", "isDownloaded": false},
+    {"id": 32, "name": "Ayman Rushdi Suwayd", "localizedName": "أيمن رشدي سويد • আয়মান সুয়াইদ (তাজবীদ)", "style": "Muallim", "baseUrl": "https://everyayah.com/data/Ayman_Sowaid_64kbps/", "isDownloaded": false},
+    {"id": 33, "name": "Bandar Baleelah", "localizedName": "بندر بليلة • বান্দার বালিলাহ", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Bander_Baleela_64kbps/", "isDownloaded": false},
+    {"id": 34, "name": "Ibrahim Al-Akhdar", "localizedName": "إبراهيم الأخضر • ইবরাহীম আল-আখদার", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Ibrahim_Akhdar_64kbps/", "isDownloaded": false},
+    {"id": 35, "name": "Khalid Al-Qahtani", "localizedName": "خالد القحطاني • খালিদ আল-কাহতানী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Khaalid_Al-Qahtaanee_192kbps/", "isDownloaded": false},
+    {"id": 36, "name": "Karim Mansoori", "localizedName": "كريم منصوري • করিম মানসূরী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Karim_Mansoori_40kbps/", "isDownloaded": false},
+    {"id": 37, "name": "Mahmoud Ali Al-Banna", "localizedName": "محمود علي البنا • মাহমুদ আলী আল-বান্না", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Mahmoud_Ali_Al_Banna_32kbps/", "isDownloaded": false},
+    {"id": 38, "name": "Muhammad Al-Tablawi", "localizedName": "محمد محمود الطبلاوي • মুহাম্মাদ আল-তাবলাভী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Mohammad_al_Tablaway_128kbps/", "isDownloaded": false},
+    {"id": 39, "name": "Muhammad Abdul-Kareem", "localizedName": "محمد عبد الكريم • মুহাম্মাদ আব্দুল করীম", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Muhammad_AbdulKareem_128kbps/", "isDownloaded": false},
+    {"id": 40, "name": "Mustafa Ismail", "localizedName": "مصطفى إسماعيل • মুস্তাফা ইসমাইল", "style": "Mujawwad", "baseUrl": "https://everyayah.com/data/Mustafa_Ismail_48kbps/", "isDownloaded": false},
+    {"id": 41, "name": "Nabil Ar-Rifai", "localizedName": "نبيل الرفاعي • নাবিল আর-রিফায়ী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Nabil_Rifa3i_48kbps/", "isDownloaded": false},
+    {"id": 42, "name": "Shahriar Parhizgar", "localizedName": "شهريار برهيزكار • শাহরিয়ার পারহিজগার", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Parhizgar_48kbps/", "isDownloaded": false},
+    {"id": 43, "name": "Sahl Yassin", "localizedName": "سهل ياسين • সাহল ইয়াসিন", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Sahl_Yassin_128kbps/", "isDownloaded": false},
+    {"id": 44, "name": "Aziz Alili", "localizedName": "عزيز عليلي • আজিজ আলিলী", "style": "Murattal", "baseUrl": "https://everyayah.com/data/aziz_alili_128kbps/", "isDownloaded": false},
+    {"id": 45, "name": "Khalifa Al-Tunaiji", "localizedName": "خليفة الطنيجي • খলিফা আত-তুনাইজী", "style": "Muallim", "baseUrl": "https://everyayah.com/data/khalefa_al_tunaiji_64kbps/", "isDownloaded": false},
+    {"id": 46, "name": "Yasser Salama", "localizedName": "ياسر سلامة • ইয়াসির সালামা (হাদর)", "style": "Hadr", "baseUrl": "https://everyayah.com/data/Yaser_Salamah_128kbps/", "isDownloaded": false},
+    {"id": 47, "name": "Abdul Basit (Warsh 'an Nafi')", "localizedName": "عبد الباسط (ورش) • আব্দুল বাসিত (ওয়ারশ)", "style": "Warsh", "baseUrl": "https://everyayah.com/data/warsh/warsh_Abdul_Basit_128kbps/", "isDownloaded": false},
+    {"id": 48, "name": "Ibrahim Al-Dosary (Warsh 'an Nafi')", "localizedName": "إبراهيم الدوسري (ورش) • ইবরাহীম আদ-দোসারী (ওয়ারশ)", "style": "Warsh", "baseUrl": "https://everyayah.com/data/warsh/warsh_ibrahim_aldosary_128kbps/", "isDownloaded": false},
+    {"id": 49, "name": "Yassin Al-Jazaery (Warsh 'an Nafi')", "localizedName": "ياسين الجزائري (ورش) • ইয়াসিন আল-জাযায়েরী (ওয়ারশ)", "style": "Warsh", "baseUrl": "https://everyayah.com/data/warsh/warsh_yassin_al_jazaery_64kbps/", "isDownloaded": false},
+    {"id": 50, "name": "Muhammad Siddiq Al-Minshawi (Teaching)", "localizedName": "المنشاوي (معلم) • আল-মিনশাভী (শিক্ষণ)", "style": "Muallim", "baseUrl": "https://everyayah.com/data/Minshawy_Teacher_128kbps/", "isDownloaded": false},
+    {"id": 51, "name": "Abdullah Basfar (32kbps Compact)", "localizedName": "بصفر (خفيف) • আব্দুল্লাহ বাসফার (লাইট)", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Abdullah_Basfar_32kbps/", "isDownloaded": false},
+    {"id": 52, "name": "Al-Hussayni Al-Azazy (With Children)", "localizedName": "الحسيني العزازي • আল-হুসাইনী আল-আজাযী (শিশুসহ)", "style": "Muallim", "baseUrl": "https://everyayah.com/data/Al-Hussayni_Al-Azazy_with_Children_64kbps/", "isDownloaded": false},
+    {"id": 53, "name": "Maher Al-Muaiqly (64kbps Compact)", "localizedName": "المعيقلي (64k) • মাহের আল-মুয়াইকলি (৬৪k)", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Maher_AlMuaiqly_64kbps/", "isDownloaded": false},
+    {"id": 54, "name": "Ali Abdur-Rahman Al-Hudhaify (64kbps)", "localizedName": "الحذيفي (64k) • আলী আল-হুযাইফী (৬৪k)", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Hudhaify_64kbps/", "isDownloaded": false},
+    {"id": 55, "name": "Mishary Rashid Alafasy (64kbps Compact)", "localizedName": "العفاسي (64k) • আল-আফাসি (৬৪k)", "style": "Murattal", "baseUrl": "https://everyayah.com/data/Alafasy_64kbps/", "isDownloaded": false}
+  ],
+  "ayahs": [
+    {
+      "id": 1, "surahId": 1, "ayahNumber": 1, "verseKey": "1:1",
+      "textUthmani": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "textIndopak": "بِسْمِ اللّٰهِ الرَّحْمٰنِ الرَّحِيْمِ",
+      "textTajweedHtml": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِ<tajweed class=madd>ي</tajweed>مِ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 5200,
+      "words": [
+        {"id": 1001, "position": 1, "textUthmani": "بِسْمِ", "textIndopak": "بِسْمِ", "transliteration": "bismi", "rootArabic": "س م و", "lemmaArabic": "اِسْم", "grammarTag": "Preposition + Noun (Genitive)", "meanings": {"bn": "নামে", "en": "In the name of", "ur": "نام سے"}, "startMs": 0, "endMs": 1050},
+        {"id": 1002, "position": 2, "textUthmani": "ٱللَّهِ", "textIndopak": "اللّٰهِ", "transliteration": "Allāhi", "rootArabic": "أ ل ه", "lemmaArabic": "اللّٰه", "grammarTag": "Proper Noun (Majesty, Genitive)", "meanings": {"bn": "আল্লাহর", "en": "Allah", "ur": "اللہ کے"}, "startMs": 1050, "endMs": 2250},
+        {"id": 1003, "position": 3, "textUthmani": "ٱلرَّحْمَـٰنِ", "textIndopak": "الرَّحْمٰنِ", "transliteration": "ar-Raḥmāni", "rootArabic": "ر ح م", "lemmaArabic": "رَحْمٰن", "grammarTag": "Intensive Adjective (Genitive)", "meanings": {"bn": "পরম করুণাময়", "en": "the Most Gracious", "ur": "نہایت مہربان"}, "startMs": 2250, "endMs": 3650},
+        {"id": 1004, "position": 4, "textUthmani": "ٱلرَّحِيمِ", "textIndopak": "الرَّحِيْمِ", "transliteration": "ar-Raḥīm", "rootArabic": "ر ح م", "lemmaArabic": "رَحِيم", "grammarTag": "Active Adjective (Genitive)", "meanings": {"bn": "অতি দয়ালু", "en": "the Most Merciful", "ur": "رحم کرنے والے"}, "startMs": 3650, "endMs": 5200}
+      ],
+      "translations": {
+        "161": "পরম করুণাময় অতি দয়ালু আল্লাহর নামে (শুরু করছি)।",
+        "162": "শুরু করছি আল্লাহর নামে যিনি পরম করুণাময়, অতি দয়ালু।",
+        "131": "In the Name of Allah—the Most Compassionate, Most Merciful.",
+        "20": "In the name of Allah, the Entirely Merciful, the Especially Merciful."
+      },
+      "tafsirs": {
+        "164": "<p><strong>বিসমিল্লাহির রাহমানির রাহীম:</strong> প্রত্যেক কল্যাণকর কাজ আল্লাহর নামে শুরু করা ইসলামের মৌলিক শিক্ষা। 'আর-রাহমান' অর্থ যিনি সমগ্র সৃষ্টির প্রতি ব্যাপক দয়াশীল এবং 'আর-রাহীম' অর্থ যিনি মুমিনদের প্রতি বিশেষ অনুগ্রহকারী।</p>",
+        "169": "<p><strong>In the Name of Allah, the Most Compassionate, Most Merciful:</strong> The Companions began the Book of Allah with the Basmalah. Both <em>Ar-Rahman</em> and <em>Ar-Rahim</em> derive from <em>Rahmah</em> (mercy): Ar-Rahman denotes universal mercy toward all creation, while Ar-Rahim signifies enduring mercy especially for the believers.</p>",
+        "16": "<p>أبتدئ قراءة القرآن باسم الله مستعيناً به، اللهِ عَلَم على الرب تبارك وتعالى، الرحمن ذي الرحمة العامة التي وسعت جميع الخلق، الرحيم بالمؤمنين.</p>"
+      }
+    },
+    {
+      "id": 2, "surahId": 1, "ayahNumber": 2, "verseKey": "1:2",
+      "textUthmani": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِينَ",
+      "textIndopak": "اَلْحَمْدُ لِلّٰهِ رَبِّ الْعٰلَمِيْنَ",
+      "textTajweedHtml": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَـٰلَمِ<tajweed class=madd>ي</tajweed>نَ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 5100,
+      "words": [
+        {"id": 1005, "position": 1, "textUthmani": "ٱلْحَمْدُ", "textIndopak": "اَلْحَمْدُ", "transliteration": "al-ḥamdu", "rootArabic": "ح م د", "lemmaArabic": "حَمْد", "grammarTag": "Noun (Nominative)", "meanings": {"bn": "সকল প্রশংসা", "en": "All praise", "ur": "سب تعریف"}, "startMs": 0, "endMs": 1200},
+        {"id": 1006, "position": 2, "textUthmani": "لِلَّهِ", "textIndopak": "لِلّٰهِ", "transliteration": "lillāhi", "rootArabic": "أ ل ه", "lemmaArabic": "اللّٰه", "grammarTag": "Preposition + Proper Noun", "meanings": {"bn": "আল্লাহর জন্য", "en": "is for Allah", "ur": "اللہ کے لیے"}, "startMs": 1200, "endMs": 2300},
+        {"id": 1007, "position": 3, "textUthmani": "رَبِّ", "textIndopak": "رَبِّ", "transliteration": "Rabbi", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Noun (Genitive)", "meanings": {"bn": "প্রতিপালক", "en": "Lord", "ur": "رب"}, "startMs": 2300, "endMs": 3300},
+        {"id": 1008, "position": 4, "textUthmani": "ٱلْعَـٰلَمِينَ", "textIndopak": "الْعٰلَمِيْنَ", "transliteration": "al-ʿālamīn", "rootArabic": "ع ل م", "lemmaArabic": "عَالَم", "grammarTag": "Plural Noun (Genitive)", "meanings": {"bn": "সকল সৃষ্টির", "en": "of all the worlds", "ur": "تمام جہانوں کا"}, "startMs": 3300, "endMs": 5100}
+      ],
+      "translations": {
+        "161": "সকল প্রশংসা একমাত্র আল্লাহ্‌র জন্য যিনি সৃষ্টিকুলের রব।",
+        "162": "যাবতীয় প্রশংসা আল্লাহ্ তাআলার যিনি সকল সৃষ্টি জগতের পালনকর্তা।",
+        "131": "All praise is for Allah—Lord of all worlds,",
+        "20": "[All] praise is [due] to Allah, Lord of the worlds -"
+      },
+      "tafsirs": {
+        "164": "<p>'আল-হামদু লিল্লাহ' অর্থ ভালোবাসা ও সম্মানের সাথে আল্লাহর পরিপূর্ণ গুণাবলি ও অনুগ্রহের প্রশংসা করা। 'রব' অর্থ স্রষ্টা, মালিক, পরিচালক ও প্রতিপালক।</p>",
+        "169": "<p>All praise and gratitude belong exclusively to Allah, Who sustains, nurtures, and governs every realm of existence—humanity, jinn, angels, and all creation.</p>",
+        "16": "<p>الثناء على الله بصفاته التي كلُّها أوصاف كمال، وبنعمه الظاهرة والباطنة، وهو سبحانه المربي لجميع خلقه بالنعم، ورب كل شيء ومالكه.</p>"
+      }
+    },
+    {
+      "id": 3, "surahId": 1, "ayahNumber": 3, "verseKey": "1:3",
+      "textUthmani": "ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
+      "textIndopak": "الرَّحْمٰنِ الرَّحِيْمِ",
+      "textTajweedHtml": "ٱلرَّحْمَـٰنِ ٱلرَّحِ<tajweed class=madd>ي</tajweed>مِ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 3800,
+      "words": [
+        {"id": 1009, "position": 1, "textUthmani": "ٱلرَّحْمَـٰنِ", "textIndopak": "الرَّحْمٰنِ", "transliteration": "ar-Raḥmāni", "rootArabic": "ر ح م", "lemmaArabic": "رَحْمٰن", "grammarTag": "Adjective (Genitive)", "meanings": {"bn": "পরম করুণাময়", "en": "the Most Compassionate", "ur": "نہایت مہربان"}, "startMs": 0, "endMs": 1900},
+        {"id": 1010, "position": 2, "textUthmani": "ٱلرَّحِيمِ", "textIndopak": "الرَّحِيْمِ", "transliteration": "ar-Raḥīm", "rootArabic": "ر ح م", "lemmaArabic": "رَحِيم", "grammarTag": "Adjective (Genitive)", "meanings": {"bn": "অতি দয়ালু", "en": "the Most Merciful", "ur": "رحم کرنے والا"}, "startMs": 1900, "endMs": 3800}
+      ],
+      "translations": {
+        "161": "যিনি পরম করুণাময়, অতি দয়ালু।",
+        "162": "যিনি পরম করুণাময়, অতি দয়ালু।",
+        "131": "the Most Compassionate, Most Merciful,",
+        "20": "The Entirely Merciful, the Especially Merciful,"
+      },
+      "tafsirs": {
+        "164": "<p>রব্বুল আলামীন বলার পরপরই আল্লাহর করুণা ও দয়ার কথা স্মরণ করিয়ে দেওয়া হয়েছে, যাতে বান্দা আল্লাহর প্রতি আশা ও ভালোবাসা নিয়ে ইবাদত করে।</p>",
+        "169": "<p>Mentioning Allah's mercy immediately after His Lordship balances reverence with hope, reminding the believer that His sustenance flows from compassion.</p>",
+        "16": "<p>الرحمن الذي وسعت رحمته جميع الخلق، الرحيم بالمؤمنين، وهما اسمان من أسماء الله تعالى.</p>"
+      }
+    },
+    {
+      "id": 4, "surahId": 1, "ayahNumber": 4, "verseKey": "1:4",
+      "textUthmani": "مَـٰلِكِ يَوْمِ ٱلدِّينِ",
+      "textIndopak": "مٰلِكِ يَوْمِ الدِّيْنِ",
+      "textTajweedHtml": "مَـٰلِكِ يَوْمِ ٱلدِّ<tajweed class=madd>ي</tajweed>نِ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 3900,
+      "words": [
+        {"id": 1011, "position": 1, "textUthmani": "مَـٰلِكِ", "textIndopak": "مٰلِكِ", "transliteration": "Māliki", "rootArabic": "م ل ك", "lemmaArabic": "مَالِك", "grammarTag": "Active Participle (Genitive)", "meanings": {"bn": "মালিক / অধিপতি", "en": "Master / Sovereign", "ur": "مالک"}, "startMs": 0, "endMs": 1300},
+        {"id": 1012, "position": 2, "textUthmani": "يَوْمِ", "textIndopak": "يَوْمِ", "transliteration": "yawmi", "rootArabic": "ي و م", "lemmaArabic": "يَوْم", "grammarTag": "Noun (Genitive)", "meanings": {"bn": "দিনের", "en": "of the Day", "ur": "دن کا"}, "startMs": 1300, "endMs": 2400},
+        {"id": 1013, "position": 3, "textUthmani": "ٱلدِّينِ", "textIndopak": "الدِّيْنِ", "transliteration": "ad-dīn", "rootArabic": "د ي ن", "lemmaArabic": "دِين", "grammarTag": "Noun (Genitive)", "meanings": {"bn": "বিচার / প্রতিফল", "en": "of Judgment", "ur": "جزا"}, "startMs": 2400, "endMs": 3900}
+      ],
+      "translations": {
+        "161": "বিচার দিনের মালিক।",
+        "162": "বিচার দিনের মালিক।",
+        "131": "Master of the Day of Judgment.",
+        "20": "Sovereign of the Day of Recompense."
+      },
+      "tafsirs": {
+        "164": "<p>'ইয়াওমিদ্দীন' হলো কিয়ামত ও হিসাব-নিকাশের দিন, যেদিন প্রত্যেককে তার আমলের পূর্ণ প্রতিদান দেওয়া হবে এবং একমাত্র আল্লাহরই নিরঙ্কুশ রাজত্ব থাকবে।</p>",
+        "169": "<p>Yawm ad-Din is the Day of Recompense when every soul will be judged with complete justice and only Allah holds absolute sovereignty.</p>",
+        "16": "<p>وهو سبحانه وحده مالك يوم القيامة، وهو يوم الجزاء على الأعمال.</p>"
+      }
+    },
+    {
+      "id": 5, "surahId": 1, "ayahNumber": 5, "verseKey": "1:5",
+      "textUthmani": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+      "textIndopak": "اِيَّاكَ نَعْبُدُ وَاِيَّاكَ نَسْتَعِيْنُ",
+      "textTajweedHtml": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِ<tajweed class=madd>ي</tajweed>نُ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 5300,
+      "words": [
+        {"id": 1014, "position": 1, "textUthmani": "إِيَّاكَ", "textIndopak": "اِيَّاكَ", "transliteration": "iyyāka", "rootArabic": "أ ي ي", "lemmaArabic": "إِيَّا", "grammarTag": "Detached Object Pronoun", "meanings": {"bn": "একমাত্র আপনারই", "en": "You alone", "ur": "تیری ہی"}, "startMs": 0, "endMs": 1200},
+        {"id": 1015, "position": 2, "textUthmani": "نَعْبُدُ", "textIndopak": "نَعْبُدُ", "transliteration": "naʿbudu", "rootArabic": "ع ب د", "lemmaArabic": "عَبَدَ", "grammarTag": "Imperfect Verb (1st Pl.)", "meanings": {"bn": "আমরা ইবাদত করি", "en": "we worship", "ur": "ہم عبادت کرتے ہیں"}, "startMs": 1200, "endMs": 2500},
+        {"id": 1016, "position": 3, "textUthmani": "وَإِيَّاكَ", "textIndopak": "وَاِيَّاكَ", "transliteration": "wa-iyyāka", "rootArabic": "أ ي ي", "lemmaArabic": "إِيَّا", "grammarTag": "Conjunction + Pronoun", "meanings": {"bn": "এবং একমাত্র আপনারই কাছে", "en": "and You alone", "ur": "اور تجھ ہی سے"}, "startMs": 2500, "endMs": 3800},
+        {"id": 1017, "position": 4, "textUthmani": "نَسْتَعِينُ", "textIndopak": "نَسْتَعِيْنُ", "transliteration": "nastaʿīn", "rootArabic": "ع و ن", "lemmaArabic": "اِسْتَعَانَ", "grammarTag": "Form X Imperfect Verb", "meanings": {"bn": "আমরা সাহায্য চাই", "en": "we ask for help", "ur": "ہم مدد مانگتے ہیں"}, "startMs": 3800, "endMs": 5300}
+      ],
+      "translations": {
+        "161": "আপনারই আমরা ইবাদত করি এবং আপনারই নিকট সাহায্য চাই।",
+        "162": "আমরা একমাত্র তোমারই ইবাদত করি এবং শুধুমাত্র তোমারই সাহায্য প্রার্থনা করি।",
+        "131": "You ˹alone˺ we worship and You ˹alone˺ we ask for help.",
+        "20": "It is You we worship and You we ask for help."
+      },
+      "tafsirs": {
+        "164": "<p>এই আয়াত তাওহীদে উলূহিয়্যাতের মূল ঘোষণা। কর্মপদ 'ইয়্যাকা' আগে এনে ইবাদত ও সাহায্য প্রার্থনা একমাত্র আল্লাহর জন্য নির্দিষ্ট করা হয়েছে।</p>",
+        "169": "<p>Placing the object pronoun <em>Iyyaka</em> first establishes exclusivity: worship and ultimate reliance belong strictly to Allah alone.</p>",
+        "16": "<p>إنا نخصك وحدك بالعبادة، ونستعين بك وحدك في جميع أمورنا، فالأمر كله بيدك لا يملك منه أحد مثقال ذرة.</p>"
+      }
+    },
+    {
+      "id": 6, "surahId": 1, "ayahNumber": 6, "verseKey": "1:6",
+      "textUthmani": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+      "textIndopak": "اِهْدِنَا الصِّرَاطَ الْمُسْتَقِيْمَ",
+      "textTajweedHtml": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِ<tajweed class=madd>ي</tajweed>مَ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 4500,
+      "words": [
+        {"id": 1018, "position": 1, "textUthmani": "ٱهْدِنَا", "textIndopak": "اِهْدِنَا", "transliteration": "ihdinā", "rootArabic": "ه د ي", "lemmaArabic": "هَدَى", "grammarTag": "Imperative Verb + Pronoun", "meanings": {"bn": "আমাদের পথ দেখান", "en": "Guide us", "ur": "ہمیں چلا"}, "startMs": 0, "endMs": 1400},
+        {"id": 1019, "position": 2, "textUthmani": "ٱلصِّرَٰطَ", "textIndopak": "الصِّرَاطَ", "transliteration": "aṣ-ṣirāṭa", "rootArabic": "ص ر ط", "lemmaArabic": "صِرَاط", "grammarTag": "Noun (Accusative)", "meanings": {"bn": "পথ", "en": "to the path", "ur": "راستہ"}, "startMs": 1400, "endMs": 2800},
+        {"id": 1020, "position": 3, "textUthmani": "ٱلْمُسْتَقِيمَ", "textIndopak": "الْمُسْتَقِيْمَ", "transliteration": "al-mustaqīm", "rootArabic": "ق و م", "lemmaArabic": "مُسْتَقِيم", "grammarTag": "Form X Participle", "meanings": {"bn": "সরল-সঠিক", "en": "the straight", "ur": "سیدھا"}, "startMs": 2800, "endMs": 4500}
+      ],
+      "translations": {
+        "161": "আমাদেরকে সরল পথ দেখান।",
+        "162": "আমাদেরকে সরল পথ দেখাও।",
+        "131": "Guide us along the Straight Path,",
+        "20": "Guide us to the straight path -"
+      },
+      "tafsirs": {
+        "164": "<p>ইসলামই হলো সরল-সঠিক পথ (সিরাতে মুস্তাকীম)। প্রতি রাকাত সালাতে বান্দা এ পথে অবিচল থাকার জন্য আল্লাহর নিকট দোয়া করে।</p>",
+        "169": "<p>Believers ask Allah in every prayer for continuous guidance, clarity, and steadfastness upon the straight path of truth.</p>",
+        "16": "<p>دُلَّنا وأرشدنا ووفِّقنا إلى الطريق المستقيم، وثبِّتنا عليه حتى نلقاك، وهو الإسلام، الذي هو الطريق الواضح الموصل إلى رضوان الله وإلى جنته.</p>"
+      }
+    },
+    {
+      "id": 7, "surahId": 1, "ayahNumber": 7, "verseKey": "1:7",
+      "textUthmani": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+      "textIndopak": "صِرَاطَ الَّذِيْنَ اَنْعَمْتَ عَلَيْهِمْ ۙ غَيْرِ الْمَغْضُوْبِ عَلَيْهِمْ وَلَا الضَّآلِّيْنَ",
+      "textTajweedHtml": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱل<tajweed class=madd>ضَّآ</tajweed>لِّينَ",
+      "juzNumber": 1, "hizbNumber": 1, "pageNumber": 1, "sajdahType": null,
+      "audioDurationMs": 9500,
+      "words": [
+        {"id": 1021, "position": 1, "textUthmani": "صِرَٰطَ", "textIndopak": "صِرَاطَ", "transliteration": "ṣirāṭa", "rootArabic": "ص ر ط", "lemmaArabic": "صِرَاط", "grammarTag": "Noun (Apposition)", "meanings": {"bn": "তাদের পথ", "en": "the path of", "ur": "راستہ"}, "startMs": 0, "endMs": 900},
+        {"id": 1022, "position": 2, "textUthmani": "ٱلَّذِينَ", "textIndopak": "الَّذِيْنَ", "transliteration": "alladhīna", "rootArabic": "ل ذ ي", "lemmaArabic": "الَّذِي", "grammarTag": "Relative Pronoun", "meanings": {"bn": "যাদের প্রতি", "en": "those whom", "ur": "ان لوگوں کا"}, "startMs": 900, "endMs": 1900},
+        {"id": 1023, "position": 3, "textUthmani": "أَنْعَمْتَ", "textIndopak": "اَنْعَمْتَ", "transliteration": "anʿamta", "rootArabic": "ن ع م", "lemmaArabic": "أَنْعَمَ", "grammarTag": "Form IV Perfect Verb", "meanings": {"bn": "আপনি অনুগ্রহ করেছেন", "en": "You have blessed", "ur": "تو نے انعام کیا"}, "startMs": 1900, "endMs": 3000},
+        {"id": 1024, "position": 4, "textUthmani": "عَلَيْهِمْ", "textIndopak": "عَلَيْهِمْ", "transliteration": "ʿalayhim", "rootArabic": "ع ل و", "lemmaArabic": "عَلَى", "grammarTag": "Preposition + Pronoun", "meanings": {"bn": "তাদের ওপর", "en": "upon them", "ur": "ان پر"}, "startMs": 3000, "endMs": 4100},
+        {"id": 1025, "position": 5, "textUthmani": "غَيْرِ", "textIndopak": "غَيْرِ", "transliteration": "ghayri", "rootArabic": "غ ي ر", "lemmaArabic": "غَيْر", "grammarTag": "Noun (Genitive)", "meanings": {"bn": "নয়", "en": "not of", "ur": "نہ کہ"}, "startMs": 4100, "endMs": 4900},
+        {"id": 1026, "position": 6, "textUthmani": "ٱلْمَغْضُوبِ", "textIndopak": "الْمَغْضُوْبِ", "transliteration": "al-maghḍūbi", "rootArabic": "غ ض ب", "lemmaArabic": "مَغْضُوب", "grammarTag": "Passive Participle", "meanings": {"bn": "যারা ক্রোধের পাত্র", "en": "those who earned wrath", "ur": "جن پر غضب ہوا"}, "startMs": 4900, "endMs": 6300},
+        {"id": 1027, "position": 7, "textUthmani": "عَلَيْهِمْ", "textIndopak": "عَلَيْهِمْ", "transliteration": "ʿalayhim", "rootArabic": "ع ل و", "lemmaArabic": "عَلَى", "grammarTag": "Preposition + Pronoun", "meanings": {"bn": "তাদের ওপর", "en": "upon them", "ur": "ان پر"}, "startMs": 6300, "endMs": 7300},
+        {"id": 1028, "position": 8, "textUthmani": "وَلَا", "textIndopak": "وَلَا", "transliteration": "wa-lā", "rootArabic": "ل ا", "lemmaArabic": "لَا", "grammarTag": "Conjunction + Negation", "meanings": {"bn": "এবং না", "en": "and not", "ur": "اور نہ"}, "startMs": 7300, "endMs": 8000},
+        {"id": 1029, "position": 9, "textUthmani": "ٱلضَّآلِّينَ", "textIndopak": "الضَّآلِّيْنَ", "transliteration": "aḍ-ḍāllīn", "rootArabic": "ض ل ل", "lemmaArabic": "ضَالّ", "grammarTag": "Active Participle (Pl.)", "meanings": {"bn": "পথভ্রষ্টদের", "en": "those who go astray", "ur": "گمراہوں کا"}, "startMs": 8000, "endMs": 9500}
+      ],
+      "translations": {
+        "161": "তাদের পথ, যাদের ওপর আপনি অনুগ্রহ করেছেন; তাদের পথ নয়, যাদের ওপর আপনার গযব বর্ষিত হয়েছে এবং তাদেরও নয়, যারা পথভ্রষ্ট হয়েছে।",
+        "162": "সে সমস্ত লোকের পথ, যাদেরকে তুমি নেয়ামত দান করেছ। তাদের পথ নয়, যাদের প্রতি তোমার গজব নাযিল হয়েছে এবং যারা পথভ্রষ্ট হয়েছে।",
+        "131": "the Path of those You have blessed—not those You are displeased with, or those who are astray.",
+        "20": "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray."
+      },
+      "tafsirs": {
+        "164": "<p>অনুগ্রহপ্রাপ্তদের পথ হলো নবী, সিদ্দীক, শহীদ ও সৎকর্মশীলদের পথ। আর গযবপ্রাপ্তরা হলো যারা সত্য জেনেও তা অমান্য করে, এবং পথভ্রষ্টরা হলো যারা অজ্ঞতাবশত সঠিক পথ হারিয়ে ফেলে।</p>",
+        "169": "<p>Those blessed by Allah are the prophets, the truthful, the martyrs, and the righteous (4:69). Those who earn displeasure abandon truth despite knowing it, while those astray act without sound knowledge.</p>",
+        "16": "<p>طريق الذين أنعمت عليهم من النبيين والصِّدِّيقين والشهداء والصالحين، غير طريق المغضوب عليهم الذين عرفوا الحق ولم يعملوا به، ولا طريق الضالين الذين لم يهتدوا عن جهل.</p>"
+      }
+    },
+    {
+      "id": 2255, "surahId": 2, "ayahNumber": 255, "verseKey": "2:255",
+      "textUthmani": "ٱللَّهُ لَآ إِلَـٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَةٌ وَلَا نَوْمٌ ۚ لَّهُۥ مَا فِى ٱلسَّمَـٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَن ذَا ٱلَّذِى يَشْفَعُ عِندَهُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَىْءٍ مِّنْ عِلْمِهِۦٓ إِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ",
+      "textIndopak": "اَللّٰهُ لَآ اِلٰهَ اِلَّا هُوَ اَلْحَيُّ الْقَيُّوْمُ ۚ لَا تَاْخُذُهٗ سِنَةٌ وَّلَا نَوْمٌ ۚ لَهٗ مَا فِي السَّمٰوٰتِ وَمَا فِي الْاَرْضِ ۗ مَنْ ذَا الَّذِيْ يَشْفَعُ عِنْدَهٗٓ اِلَّا بِاِذْنِهٖ ۚ يَعْلَمُ مَا بَيْنَ اَيْدِيْهِمْ وَمَا خَلْفَهُمْ ۚ وَلَا يُحِيْطُوْنَ بِشَيْءٍ مِّنْ عِلْمِهٖٓ اِلَّا بِمَا شَآءَ ۚ وَسِعَ كُرْسِيُّهُ السَّمٰوٰتِ وَالْاَرْضَ ۚ وَلَا يَئُوْدُهٗ حِفْظُهُمَا ۚ وَهُوَ الْعَلِيُّ الْعَظِيْمُ",
+      "textTajweedHtml": "ٱللَّهُ لَ<tajweed class=madd>آ</tajweed> إِلَـٰهَ إِلَّا هُوَ ٱلْحَىُّ ٱلْقَيُّومُ ۚ لَا تَأْخُذُهُۥ سِنَ<tajweed class=idgham>ةٌ و</tajweed>َلَا نَوْمٌ ۚ لَّهُۥ مَا فِى ٱلسَّمَـٰوَٰتِ وَمَا فِى ٱلْأَرْضِ ۗ مَ<tajweed class=ikhfa>ن ذ</tajweed>َا ٱلَّذِى يَشْفَعُ عِ<tajweed class=ikhfa>ندَ</tajweed>هُۥٓ إِلَّا بِإِذْنِهِۦ ۚ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ ۖ وَلَا يُحِيطُونَ بِشَ<tajweed class=idgham>ىْءٍ مِّ</tajweed>نْ عِلْمِهِۦٓ إِلَّا بِمَا شَ<tajweed class=madd>آ</tajweed>ءَ ۚ وَسِعَ كُرْسِيُّهُ ٱلسَّمَـٰوَٰتِ وَٱلْأَرْضَ ۖ وَلَا يَـُٔودُهُۥ حِفْظُهُمَا ۚ وَهُوَ ٱلْعَلِىُّ ٱلْعَظِيمُ",
+      "juzNumber": 3, "hizbNumber": 5, "pageNumber": 42, "sajdahType": null,
+      "audioDurationMs": 28000,
+      "words": [
+        {"id": 2001, "position": 1, "textUthmani": "ٱللَّهُ", "textIndopak": "اَللّٰهُ", "transliteration": "Allāhu", "rootArabic": "أ ل ه", "lemmaArabic": "اللّٰه", "grammarTag": "Proper Noun", "meanings": {"bn": "আল্লাহ", "en": "Allah", "ur": "اللہ"}, "startMs": 0, "endMs": 1100},
+        {"id": 2002, "position": 2, "textUthmani": "لَآ", "textIndopak": "لَآ", "transliteration": "lā", "rootArabic": "ل ا", "lemmaArabic": "لَا", "grammarTag": "Negation Particle", "meanings": {"bn": "নেই", "en": "there is no", "ur": "نہیں"}, "startMs": 1100, "endMs": 1900},
+        {"id": 2003, "position": 3, "textUthmani": "إِلَـٰهَ", "textIndopak": "اِلٰهَ", "transliteration": "ilāha", "rootArabic": "أ ل ه", "lemmaArabic": "إِلٰه", "grammarTag": "Noun", "meanings": {"bn": "সত্য ইলাহ", "en": "deity worthy of worship", "ur": "معبود"}, "startMs": 1900, "endMs": 2800},
+        {"id": 2004, "position": 4, "textUthmani": "إِلَّا", "textIndopak": "اِلَّا", "transliteration": "illā", "rootArabic": "إ ل ا", "lemmaArabic": "إِلَّا", "grammarTag": "Exceptive Particle", "meanings": {"bn": "ছাড়া", "en": "except", "ur": "سوائے"}, "startMs": 2800, "endMs": 3500},
+        {"id": 2005, "position": 5, "textUthmani": "هُوَ", "textIndopak": "هُوَ", "transliteration": "Huwa", "rootArabic": "ه و", "lemmaArabic": "هُوَ", "grammarTag": "Pronoun", "meanings": {"bn": "তিনি", "en": "Him", "ur": "اس کے"}, "startMs": 3500, "endMs": 4200},
+        {"id": 2006, "position": 6, "textUthmani": "ٱلْحَىُّ", "textIndopak": "اَلْحَيُّ", "transliteration": "al-Ḥayyu", "rootArabic": "ح ي ي", "lemmaArabic": "حَيّ", "grammarTag": "Adjective", "meanings": {"bn": "চিরঞ্জীব", "en": "the Ever-Living", "ur": "ہمیشہ زندہ"}, "startMs": 4200, "endMs": 5300},
+        {"id": 2007, "position": 7, "textUthmani": "ٱلْقَيُّومُ", "textIndopak": "الْقَيُّوْمُ", "transliteration": "al-Qayyūm", "rootArabic": "ق و م", "lemmaArabic": "قَيُّوم", "grammarTag": "Intensive Adjective", "meanings": {"bn": "সর্বসত্তার ধারক", "en": "Sustainer of all existence", "ur": "سب کو قائم رکھنے والا"}, "startMs": 5300, "endMs": 6800}
+      ],
+      "translations": {
+        "161": "আল্লাহ্‌, তিনি ছাড়া কোনো সত্য ইলাহ নেই। তিনি চিরঞ্জীব, সর্বসত্তার ধারক। তাঁকে তন্দ্রাও স্পর্শ করতে পারে না, নিদ্রাও নয়। আসমানসমূহে যা কিছু আছে ও যমীনে যা কিছু আছে সবই তাঁর। কে আছে এমন, যে তাঁর অনুমতি ছাড়া তাঁর কাছে সুপারিশ করবে? তাদের সামনে ও পেছনে যা কিছু আছে সবই তিনি জানেন। আর যা তিনি ইচ্ছা করেন তা ছাড়া তাঁর জ্ঞানের কোনো কিছুই তারা আয়ত্ত করতে পারে না। তাঁর কুরসী আসমানসমূহ ও যমীনকে পরিব্যাপ্ত করে আছে। আর সেগুলো রক্ষণাবেক্ষণ করা তাঁর জন্য মোটেই কঠিন নয়। তিনি সুউচ্চ, মহান।",
+        "131": "Allah! There is no god ˹worthy of worship˺ except Him, the Ever-Living, All-Sustaining. Neither drowsiness nor sleep overtakes Him. To Him belongs whatever is in the heavens and whatever is on the earth. Who could possibly intercede with Him without His permission? He ˹fully˺ knows what is ahead of them and what is behind them, but no one can grasp any of His knowledge—except what He wills ˹to reveal˺. His Seat encompasses the heavens and the earth, and the preservation of both does not tire Him. For He is the Most High, the Greatest.",
+        "20": "Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great."
+      },
+      "tafsirs": {
+        "164": "<p><strong>আয়াতুল কুরসী:</strong> সহীহ হাদীস অনুযায়ী এটি কুরআনের সর্বশ্রেষ্ঠ আয়াত। এতে আল্লাহর তাওহীদ, চিরস্থায়ী জীবন, সর্বব্যাপী জ্ঞান, নিরঙ্কুশ সার্বভৌমত্ব ও মহত্ত্ব পূর্ণাঙ্গরূপে বিবৃত হয়েছে।</p>",
+        "169": "<p><strong>Ayat al-Kursi (The Verse of the Throne):</strong> Described by the Prophet (peace be upon him) as the greatest verse in the Book of Allah. It encapsulates ten profound affirmations of Allah's Oneness, eternal life, self-subsistence, absolute knowledge, and effortless preservation of the universe.</p>",
+        "16": "<p>الله الذي لا يستحق الألوهية والعبودية إلا هو، الحي الذي له جميع معاني الحياة الكاملة، القيوم القائم على كل شيء، لا يلحقه نعاس ولا نوم، مالك السماوات والأرض، العالم بكل شيء، المحيط علمه وقدرته بالكون كله.</p>"
+      }
+    },
+    {
+      "id": 2201, "surahId": 2, "ayahNumber": 201, "verseKey": "2:201",
+      "textUthmani": "وَمِنْهُم مَّن يَقُولُ رَبَّنَآ ءَاتِنَا فِى ٱلدُّنْيَا حَسَنَةً وَفِى ٱلْـَٔاخِرَةِ حَسَنَةً وَقِنَا عَذَابَ ٱلنَّارِ",
+      "textIndopak": "وَمِنْهُمْ مَّنْ يَّقُوْلُ رَبَّنَآ اٰتِنَا فِي الدُّنْيَا حَسَنَةً وَّفِي الْاٰخِرَةِ حَسَنَةً وَّقِنَا عَذَابَ النَّارِ",
+      "textTajweedHtml": "وَمِ<tajweed class=ikhfa>نْهُ</tajweed><tajweed class=idgham>م مَّ</tajweed><tajweed class=idgham>ن يَّ</tajweed>قُولُ رَبَّنَ<tajweed class=madd>آ</tajweed> ءَاتِنَا فِى ٱلدُّنْيَا حَسَنَ<tajweed class=idgham>ةً و</tajweed>َفِى ٱلْـَٔاخِرَةِ حَسَنَ<tajweed class=idgham>ةً و</tajweed>َقِنَا عَذَابَ ٱلنَّ<tajweed class=madd>ا</tajweed>رِ",
+      "juzNumber": 2, "hizbNumber": 3, "pageNumber": 31, "sajdahType": null,
+      "audioDurationMs": 9200,
+      "words": [
+        {"id": 2101, "position": 1, "textUthmani": "رَبَّنَآ", "textIndopak": "رَبَّنَآ", "transliteration": "Rabbanā", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Vocative Noun + Pronoun", "meanings": {"bn": "হে আমাদের রব", "en": "Our Lord", "ur": "اے ہمارے رب"}, "startMs": 0, "endMs": 1400},
+        {"id": 2102, "position": 2, "textUthmani": "ءَاتِنَا", "textIndopak": "اٰتِنَا", "transliteration": "ātinā", "rootArabic": "أ ت ي", "lemmaArabic": "آتَى", "grammarTag": "Imperative Verb", "meanings": {"bn": "আমাদের দান করুন", "en": "grant us", "ur": "ہمیں عطا فرما"}, "startMs": 1400, "endMs": 2800},
+        {"id": 2103, "position": 3, "textUthmani": "حَسَنَةً", "textIndopak": "حَسَنَةً", "transliteration": "ḥasanatan", "rootArabic": "ح س ن", "lemmaArabic": "حَسَنَة", "grammarTag": "Noun", "meanings": {"bn": "কল্যাণ", "en": "good", "ur": "بھلائی"}, "startMs": 2800, "endMs": 4500}
+      ],
+      "translations": {
+        "161": "আর তাদের মধ্যে এমনও আছে যারা বলে, হে আমাদের রব! আমাদেরকে দুনিয়াতে কল্যাণ দিন এবং আখিরাতেও কল্যাণ দিন এবং আমাদেরকে আগুনের শাস্তি থেকে রক্ষা করুন।",
+        "131": "Yet there are others who say, 'Our Lord! Grant us the good of this world and the Hereafter, and protect us from the torment of the Fire.'",
+        "20": "But among them is he who says, 'Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.'"
+      },
+      "tafsirs": {
+        "164": "<p>এটি রাসূলুল্লাহ (সা.)-এর সর্বাধিক পঠিত جامع বা সর্বব্যাপী দোয়া। দুনিয়ার কল্যাণ বলতে সুস্থতা, হালাল রিযিক, নেক আমল ও প্রশান্ত হৃদয় বোঝায়।</p>",
+        "169": "<p>This comprehensive Rabbana supplication was the most frequent du'a of the Prophet Muhammad (peace be upon him), uniting well-being in both worlds.</p>",
+        "16": "<p>دعاء جامع يطلب فيه المؤمن خير الدنيا من صحة وعافية وعلم نافع ورزق حلال، وخير الآخرة من الجنة والنجاة من النار.</p>"
+      }
+    },
+    {
+      "id": 3008, "surahId": 3, "ayahNumber": 8, "verseKey": "3:8",
+      "textUthmani": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً ۚ إِنَّكَ أَنتَ ٱلْوَهَّابُ",
+      "textIndopak": "رَبَّنَا لَا تُزِغْ قُلُوْبَنَا بَعْدَ اِذْ هَدَيْتَنَا وَهَبْ لَنَا مِنْ لَّدُنْكَ رَحْمَةً ۚ اِنَّكَ اَنْتَ الْوَهَّابُ",
+      "textTajweedHtml": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَ<tajweed class=qalqalah>بْ</tajweed> لَنَا مِ<tajweed class=idgham>ن لَّ</tajweed>دُ<tajweed class=ikhfa>نكَ</tajweed> رَحْمَةً ۚ إِ<tajweed class=ghunnah>نَّ</tajweed>كَ أَ<tajweed class=ikhfa>نتَ</tajweed> ٱلْوَهَّ<tajweed class=madd>ا</tajweed>بُ",
+      "juzNumber": 3, "hizbNumber": 6, "pageNumber": 50, "sajdahType": null,
+      "audioDurationMs": 8600,
+      "words": [
+        {"id": 3001, "position": 1, "textUthmani": "رَبَّنَا", "textIndopak": "رَبَّنَا", "transliteration": "Rabbanā", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Vocative Noun", "meanings": {"bn": "হে আমাদের রব", "en": "Our Lord", "ur": "اے ہمارے رب"}, "startMs": 0, "endMs": 1400},
+        {"id": 3002, "position": 2, "textUthmani": "قُلُوبَنَا", "textIndopak": "قُلُوْبَنَا", "transliteration": "qulūbanā", "rootArabic": "ق ل ب", "lemmaArabic": "قَلْب", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "আমাদের অন্তরসমূহ", "en": "our hearts", "ur": "ہمارے دل"}, "startMs": 1400, "endMs": 3200},
+        {"id": 3003, "position": 3, "textUthmani": "رَحْمَةً", "textIndopak": "رَحْمَةً", "transliteration": "raḥmatan", "rootArabic": "ر ح م", "lemmaArabic": "رَحْمَة", "grammarTag": "Noun", "meanings": {"bn": "দয়া / রহমত", "en": "mercy", "ur": "رحمت"}, "startMs": 3200, "endMs": 5000}
+      ],
+      "translations": {
+        "161": "হে আমাদের রব! আপনি আমাদেরকে হিদায়াত দান করার পর আমাদের অন্তরসমূহকে বক্র করবেন না এবং আপনার পক্ষ থেকে আমাদেরকে রহমত দান করুন। নিশ্চয় আপনি মহাদাতা।",
+        "131": "˹They say,˺ 'Our Lord! Do not let our hearts deviate after you have guided us. Grant us Your mercy. You are indeed the Giver ˹of all bounties˺.'",
+        "20": "[Who say], 'Our Lord, let not our hearts deviate after You have guided us and grant us from Yourself mercy. Indeed, You are the Bestower.'"
+      },
+      "tafsirs": {
+        "164": "<p>গভীর জ্ঞানের অধিকারী মুমিনগণ আল্লাহর কাছে ঈমান ও হিদায়াতের ওপর অবিচল থাকার জন্য বিনীত প্রার্থনা করেন।</p>",
+        "169": "<p>Those firmly grounded in knowledge supplicate for steadfastness of heart after receiving guidance, trusting in Allah as Al-Wahhab (The Bestower).</p>",
+        "16": "<p>يا ربنا لا تُمل قلوبنا عن الحق بعد أن مننت علينا بالهداية لدينك، وامنحنا من فضلك رحمة واسعة، إنك أنت كثير العطاء والفضل.</p>"
+      }
+    },
+    {
+      "id": 10301, "surahId": 103, "ayahNumber": 1, "verseKey": "103:1",
+      "textUthmani": "وَٱلْعَصْرِ",
+      "textIndopak": "وَالْعَصْرِ",
+      "textTajweedHtml": "وَٱلْعَصْرِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 601, "sajdahType": null,
+      "audioDurationMs": 2200,
+      "words": [
+        {"id": 103001, "position": 1, "textUthmani": "وَٱلْعَصْرِ", "textIndopak": "وَالْعَصْرِ", "transliteration": "wal-ʿaṣr", "rootArabic": "ع ص ر", "lemmaArabic": "عَصْر", "grammarTag": "Oath Particle + Noun", "meanings": {"bn": "মহাকালের শপথ", "en": "By time", "ur": "زمانے کی قسم"}, "startMs": 0, "endMs": 2200}
+      ],
+      "translations": {
+        "161": "কালের শপথ,",
+        "131": "By the ˹passage of˺ time!",
+        "20": "By time,"
+      },
+      "tafsirs": {
+        "164": "<p>আল্লাহ সময়ের শপথ করেছেন মানবজাতির জীবনের মূল্য ও অপচয় সম্পর্কে সতর্ক করার জন্য।</p>",
+        "169": "<p>Allah swears by time—the capital of every human life—to underscore the urgency of faith, righteousness, truth, and patience.</p>",
+        "16": "<p>أقسم الله تعالى بالدهر على أن بني آدم في هلكة ونقصان.</p>"
+      }
+    },
+    {
+      "id": 10302, "surahId": 103, "ayahNumber": 2, "verseKey": "103:2",
+      "textUthmani": "إِنَّ ٱلْإِنسَـٰنَ لَفِى خُسْرٍ",
+      "textIndopak": "اِنَّ الْاِنْسَانَ لَفِيْ خُسْرٍ",
+      "textTajweedHtml": "إِ<tajweed class=ghunnah>نَّ</tajweed> ٱلْإِ<tajweed class=ikhfa>نسَـٰ</tajweed>نَ لَفِى خُسْرٍ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 601, "sajdahType": null,
+      "audioDurationMs": 3600,
+      "words": [
+        {"id": 103002, "position": 1, "textUthmani": "إِنَّ", "textIndopak": "اِنَّ", "transliteration": "inna", "rootArabic": "أ ن ن", "lemmaArabic": "إِنَّ", "grammarTag": "Emphatic Particle", "meanings": {"bn": "নিশ্চয়", "en": "Indeed", "ur": "بے شک"}, "startMs": 0, "endMs": 800},
+        {"id": 103003, "position": 2, "textUthmani": "ٱلْإِنسَـٰنَ", "textIndopak": "الْاِنْسَانَ", "transliteration": "al-insāna", "rootArabic": "أ ن س", "lemmaArabic": "إِنسَان", "grammarTag": "Noun (Accusative)", "meanings": {"bn": "মানুষ", "en": "mankind", "ur": "انسان"}, "startMs": 800, "endMs": 1900},
+        {"id": 103004, "position": 3, "textUthmani": "لَفِى", "textIndopak": "لَفِيْ", "transliteration": "lafī", "rootArabic": "ف ي", "lemmaArabic": "فِي", "grammarTag": "Preposition", "meanings": {"bn": "অবশ্যই মধ্যে", "en": "is surely in", "ur": "البتہ میں ہے"}, "startMs": 1900, "endMs": 2600},
+        {"id": 103005, "position": 4, "textUthmani": "خُسْرٍ", "textIndopak": "خُسْرٍ", "transliteration": "khusr", "rootArabic": "خ س ر", "lemmaArabic": "خُسْر", "grammarTag": "Noun (Genitive)", "meanings": {"bn": "ক্ষতির", "en": "loss", "ur": "گھاٹے"}, "startMs": 2600, "endMs": 3600}
+      ],
+      "translations": {
+        "161": "নিশ্চয় মানুষ ক্ষতিগ্রস্ত;",
+        "131": "Surely humanity is in ˹grave˺ loss,",
+        "20": "Indeed, mankind is in loss,"
+      },
+      "tafsirs": {
+        "164": "<p>ইসলামী জীবনের চারটি শর্ত পূরণ না করলে মানুষ সময়ের অপচয়ে ক্ষতিগ্রস্ত হতে বাধ্য।</p>",
+        "169": "<p>Without the four pillars mentioned in the next verse, humanity suffers real existential loss.</p>",
+        "16": "<p>إن جنس الإنسان لفي هلاك وخسران، إلا من اتصف بصفات الفلاح.</p>"
+      }
+    },
+    {
+      "id": 10303, "surahId": 103, "ayahNumber": 3, "verseKey": "103:3",
+      "textUthmani": "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّـٰلِحَـٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّبْرِ",
+      "textIndopak": "اِلَّا الَّذِيْنَ اٰمَنُوْا وَعَمِلُوا الصّٰلِحٰتِ وَتَوَاصَوْا بِالْحَقِّ ۙ وَتَوَاصَوْا بِالصَّبْرِ",
+      "textTajweedHtml": "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّـٰلِحَـٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّ<tajweed class=qalqalah>بْ</tajweed>رِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 601, "sajdahType": null,
+      "audioDurationMs": 7400,
+      "words": [
+        {"id": 103006, "position": 1, "textUthmani": "إِلَّا", "textIndopak": "اِلَّا", "transliteration": "illā", "rootArabic": "إ ل ا", "lemmaArabic": "إِلَّا", "grammarTag": "Exceptive Particle", "meanings": {"bn": "তারা ছাড়া", "en": "except", "ur": "سوائے"}, "startMs": 0, "endMs": 700},
+        {"id": 103007, "position": 2, "textUthmani": "ٱلَّذِينَ", "textIndopak": "الَّذِيْنَ", "transliteration": "alladhīna", "rootArabic": "ل ذ ي", "lemmaArabic": "الَّذِي", "grammarTag": "Relative Pronoun", "meanings": {"bn": "যারা", "en": "those who", "ur": "ان لوگوں کے جو"}, "startMs": 700, "endMs": 1500},
+        {"id": 103008, "position": 3, "textUthmani": "ءَامَنُوا۟", "textIndopak": "اٰمَنُوْا", "transliteration": "āmanū", "rootArabic": "أ م ن", "lemmaArabic": "آمَنَ", "grammarTag": "Perfect Verb", "meanings": {"bn": "ঈমান এনেছে", "en": "have believed", "ur": "ایمان لائے"}, "startMs": 1500, "endMs": 2400},
+        {"id": 103009, "position": 4, "textUthmani": "وَعَمِلُوا۟", "textIndopak": "وَعَمِلُوا", "transliteration": "wa-ʿamilū", "rootArabic": "ع م ل", "lemmaArabic": "عَمِلَ", "grammarTag": "Perfect Verb", "meanings": {"bn": "ও সৎকাজ করেছে", "en": "and done", "ur": "اور عمل کیے"}, "startMs": 2400, "endMs": 3300},
+        {"id": 103010, "position": 5, "textUthmani": "ٱلصَّـٰلِحَـٰتِ", "textIndopak": "الصّٰلِحٰتِ", "transliteration": "aṣ-ṣāliḥāti", "rootArabic": "ص ل ح", "lemmaArabic": "صَالِحَة", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "নেক আমল", "en": "righteous deeds", "ur": "نیک"}, "startMs": 3300, "endMs": 4500},
+        {"id": 103011, "position": 6, "textUthmani": "وَتَوَاصَوْا۟", "textIndopak": "وَتَوَاصَوْا", "transliteration": "wa-tawāṣaw", "rootArabic": "و ص ي", "lemmaArabic": "تَوَاصَى", "grammarTag": "Form VI Verb", "meanings": {"bn": "ও উপদেশ দিয়েছে", "en": "and advised each other", "ur": "اور نصیحت کی"}, "startMs": 4500, "endMs": 5500},
+        {"id": 103012, "position": 7, "textUthmani": "بِٱلْحَقِّ", "textIndopak": "بِالْحَقِّ", "transliteration": "bil-ḥaqqi", "rootArabic": "ح ق ق", "lemmaArabic": "حَقّ", "grammarTag": "Preposition + Noun", "meanings": {"bn": "সত্যের", "en": "to truth", "ur": "حق کی"}, "startMs": 5500, "endMs": 6200},
+        {"id": 103013, "position": 8, "textUthmani": "وَتَوَاصَوْا۟", "textIndopak": "وَتَوَاصَوْا", "transliteration": "wa-tawāṣaw", "rootArabic": "و ص ي", "lemmaArabic": "تَوَاصَى", "grammarTag": "Form VI Verb", "meanings": {"bn": "ও পরস্পর উপদেশ দিয়েছে", "en": "and advised each other", "ur": "اور نصیحت کی"}, "startMs": 6200, "endMs": 6800},
+        {"id": 103014, "position": 9, "textUthmani": "بِٱلصَّبْرِ", "textIndopak": "بِالصَّبْرِ", "transliteration": "biṣ-ṣabr", "rootArabic": "ص ب ر", "lemmaArabic": "صَبْر", "grammarTag": "Preposition + Noun", "meanings": {"bn": "ধৈর্যের", "en": "to patience", "ur": "صبر کی"}, "startMs": 6800, "endMs": 7400}
+      ],
+      "translations": {
+        "161": "কিন্তু তারা নয়, যারা ঈমান এনেছে এবং সৎকাজ করেছে, আর পরস্পরকে সত্যের উপদেশ দিয়েছে এবং পরস্পরকে ধৈর্যের উপদেশ দিয়েছে।",
+        "131": "except those who have faith, do good, and urge each other to the truth, and urge each other to perseverance.",
+        "20": "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience."
+      },
+      "tafsirs": {
+        "164": "<p>ইমাম শাফেয়ী (রহ.) বলেন: মানুষ যদি কেবল এই সূরাটি নিয়েই গভীরভাবে চিন্তা করত, তবে তাদের হিদায়াতের জন্য এটিই যথেষ্ট হতো।</p>",
+        "169": "<p>Imam Ash-Shafi'i remarked: 'If people were to reflect deeply upon this single Surah alone, it would suffice them for guidance.'</p>",
+        "16": "<p>إلا الذين آمنوا بالله وعملوا الصالحات، وأوصى بعضهم بعضاً بالحق والصبر على طاعة الله وعن معصيته وعلى أقداره.</p>"
+      }
+    },
+    {
+      "id": 10801, "surahId": 108, "ayahNumber": 1, "verseKey": "108:1",
+      "textUthmani": "إِنَّآ أَعْطَيْنَـٰكَ ٱلْكَوْثَرَ",
+      "textIndopak": "اِنَّآ اَعْطَيْنٰكَ الْكَوْثَرَ",
+      "textTajweedHtml": "إِ<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>آ</tajweed> أَعْطَيْنَـٰكَ ٱلْكَوْثَرَ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 602, "sajdahType": null,
+      "audioDurationMs": 3200,
+      "words": [
+        {"id": 108001, "position": 1, "textUthmani": "إِنَّآ", "textIndopak": "اِنَّآ", "transliteration": "innā", "rootArabic": "أ ن ن", "lemmaArabic": "إِنَّ", "grammarTag": "Emphatic Particle + Pronoun", "meanings": {"bn": "নিশ্চয় আমরা", "en": "Indeed We", "ur": "بے شک ہم نے"}, "startMs": 0, "endMs": 1000},
+        {"id": 108002, "position": 2, "textUthmani": "أَعْطَيْنَـٰكَ", "textIndopak": "اَعْطَيْنٰكَ", "transliteration": "aʿṭaynāka", "rootArabic": "ع ط و", "lemmaArabic": "أَعْطَى", "grammarTag": "Form IV Perfect Verb", "meanings": {"bn": "আপনাকে দান করেছি", "en": "have granted you", "ur": "آپ کو عطا کیا"}, "startMs": 1000, "endMs": 2200},
+        {"id": 108003, "position": 3, "textUthmani": "ٱلْكَوْثَرَ", "textIndopak": "الْكَوْثَرَ", "transliteration": "al-Kawthar", "rootArabic": "ك ث ر", "lemmaArabic": "كَوْثَر", "grammarTag": "Noun (Accusative)", "meanings": {"bn": "কাওসার (প্রভূত কল্যাণ)", "en": "Al-Kawthar (abundance)", "ur": "کوثر"}, "startMs": 2200, "endMs": 3200}
+      ],
+      "translations": {
+        "161": "নিশ্চয় আমরা আপনাকে কাওসার দান করেছি।",
+        "131": "Indeed, We have granted you ˹O Prophet˺ abundant goodness.",
+        "20": "Indeed, We have granted you, [O Muhammad], al-Kawthar."
+      },
+      "tafsirs": {
+        "164": "<p>কাওসার হলো জান্নাতের এক মহাপবিত্র নহর এবং নবী (সা.)-কে প্রদত্ত অশেষ কল্যাণ।</p>",
+        "169": "<p>Al-Kawthar refers both to abundant goodness in this life and the Hereafter, and to the sacred river of Paradise gifted to the Prophet.</p>",
+        "16": "<p>إنا أعطيناك أيها النبي الخير الكثير في الدنيا والآخرة، ومن ذلك نهر الكوثر في الجنة.</p>"
+      }
+    },
+    {
+      "id": 10802, "surahId": 108, "ayahNumber": 2, "verseKey": "108:2",
+      "textUthmani": "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ",
+      "textIndopak": "فَصَلِّ لِرَبِّكَ وَانْحَرْ",
+      "textTajweedHtml": "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 602, "sajdahType": null,
+      "audioDurationMs": 2800,
+      "words": [
+        {"id": 108004, "position": 1, "textUthmani": "فَصَلِّ", "textIndopak": "فَصَلِّ", "transliteration": "fa-ṣalli", "rootArabic": "ص ل و", "lemmaArabic": "صَلَّى", "grammarTag": "Imperative Verb", "meanings": {"bn": "অতএব সালাত আদায় করুন", "en": "So pray", "ur": "پس نماز پڑھیں"}, "startMs": 0, "endMs": 900},
+        {"id": 108005, "position": 2, "textUthmani": "لِرَبِّكَ", "textIndopak": "لِرَبِّكَ", "transliteration": "li-Rabbika", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Preposition + Noun", "meanings": {"bn": "আপনার রবের উদ্দেশ্যে", "en": "to your Lord", "ur": "اپنے رب کے لیے"}, "startMs": 900, "endMs": 1900},
+        {"id": 108006, "position": 3, "textUthmani": "وَٱنْحَرْ", "textIndopak": "وَانْحَرْ", "transliteration": "wanḥar", "rootArabic": "ن ح ر", "lemmaArabic": "نَحَرَ", "grammarTag": "Imperative Verb", "meanings": {"bn": "এবং কুরবানি করুন", "en": "and sacrifice", "ur": "اور قربانی کریں"}, "startMs": 1900, "endMs": 2800}
+      ],
+      "translations": {
+        "161": "অতএব আপনার রবের উদ্দেশ্যেই সালাত আদায় করুন এবং কুরবানি করুন।",
+        "131": "So pray and sacrifice to your Lord ˹alone˺.",
+        "20": "So pray to your Lord and sacrifice [to Him alone]."
+      },
+      "tafsirs": {
+        "164": "<p>আল্লাহর কৃতজ্ঞতাস্বরূপ সালাত ও কুরবানি কেবল তাঁরই সন্তুষ্টির জন্য নিবেদিত হতে হবে।</p>",
+        "169": "<p>Gratitude for divine blessings is expressed through sincere worship: prayer and sacrifice dedicated solely to Allah.</p>",
+        "16": "<p>فأخلص لربك صلاتك كلها، واذبح ذبيحتك له وحده لا لغيره.</p>"
+      }
+    },
+    {
+      "id": 10803, "surahId": 108, "ayahNumber": 3, "verseKey": "108:3",
+      "textUthmani": "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ",
+      "textIndopak": "اِنَّ شَانِئَكَ هُوَ الْاَبْتَرُ",
+      "textTajweedHtml": "إِ<tajweed class=ghunnah>نَّ</tajweed> شَانِئَكَ هُوَ ٱلْأَ<tajweed class=qalqalah>بْ</tajweed>تَرُ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 602, "sajdahType": null,
+      "audioDurationMs": 3200,
+      "words": [
+        {"id": 108007, "position": 1, "textUthmani": "إِنَّ", "textIndopak": "اِنَّ", "transliteration": "inna", "rootArabic": "أ ن ن", "lemmaArabic": "إِنَّ", "grammarTag": "Emphatic Particle", "meanings": {"bn": "নিশ্চয়", "en": "Indeed", "ur": "بے شک"}, "startMs": 0, "endMs": 700},
+        {"id": 108008, "position": 2, "textUthmani": "شَانِئَكَ", "textIndopak": "شَانِئَكَ", "transliteration": "shāniʾaka", "rootArabic": "ش ن أ", "lemmaArabic": "شَانِئ", "grammarTag": "Active Participle", "meanings": {"bn": "আপনার বিদ্বেষকারী", "en": "your enemy", "ur": "آپ کا دشمن"}, "startMs": 700, "endMs": 1700},
+        {"id": 108009, "position": 3, "textUthmani": "هُوَ", "textIndopak": "هُوَ", "transliteration": "huwa", "rootArabic": "ه و", "lemmaArabic": "هُوَ", "grammarTag": "Pronoun", "meanings": {"bn": "সেই তো", "en": "is the one", "ur": "وہی"}, "startMs": 1700, "endMs": 2200},
+        {"id": 108010, "position": 4, "textUthmani": "ٱلْأَبْتَرُ", "textIndopak": "الْاَبْتَرُ", "transliteration": "al-abtar", "rootArabic": "ب ت ر", "lemmaArabic": "أَبْتَر", "grammarTag": "Noun", "meanings": {"bn": "নির্বংশ / লেজকাটা", "en": "cut off", "ur": "بے نام و نشان"}, "startMs": 2200, "endMs": 3200}
+      ],
+      "translations": {
+        "161": "নিশ্চয় আপনার প্রতি বিদ্বেষ পোষণকারীই তো নির্বংশ (সকল কল্যাণ থেকে বিচ্ছিন্ন)।",
+        "131": "Only the one who hates you is truly cut off ˹from any goodness˺.",
+        "20": "Indeed, your enemy is the one cut off."
+      },
+      "tafsirs": {
+        "164": "<p>নবী (সা.)-এর স্মরণ কেয়ামত পর্যন্ত সমুন্নত থাকবে, আর তাঁর বিদ্বেষকারীরাই ইতিহাসে কল্যাণ থেকে বিচ্ছিন্ন হয়ে যাবে।</p>",
+        "169": "<p>Those who mocked the Prophet's legacy vanished into obscurity, while the Prophet's remembrance endures across all generations.</p>",
+        "16": "<p>إن مبغضك ومنتقصك هو المنقطع أثره، المقطوع من كل خير.</p>"
+      }
+    },
+    {
+      "id": 11201, "surahId": 112, "ayahNumber": 1, "verseKey": "112:1",
+      "textUthmani": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
+      "textIndopak": "قُلْ هُوَ اللّٰهُ اَحَدٌ",
+      "textTajweedHtml": "قُلْ هُوَ ٱللَّهُ أَحَ<tajweed class=qalqalah>دٌ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2600,
+      "words": [
+        {"id": 112001, "position": 1, "textUthmani": "قُلْ", "textIndopak": "قُلْ", "transliteration": "Qul", "rootArabic": "ق و ل", "lemmaArabic": "قَالَ", "grammarTag": "Imperative Verb", "meanings": {"bn": "বলুন", "en": "Say", "ur": "کہہ دیجیے"}, "startMs": 0, "endMs": 650},
+        {"id": 112002, "position": 2, "textUthmani": "هُوَ", "textIndopak": "هُوَ", "transliteration": "Huwa", "rootArabic": "ه و", "lemmaArabic": "هُوَ", "grammarTag": "Pronoun", "meanings": {"bn": "তিনি", "en": "He is", "ur": "وہ"}, "startMs": 650, "endMs": 1200},
+        {"id": 112003, "position": 3, "textUthmani": "ٱللَّهُ", "textIndopak": "اللّٰهُ", "transliteration": "Allāhu", "rootArabic": "أ ل ه", "lemmaArabic": "اللّٰه", "grammarTag": "Proper Noun", "meanings": {"bn": "আল্লাহ", "en": "Allah", "ur": "اللہ"}, "startMs": 1200, "endMs": 1900},
+        {"id": 112004, "position": 4, "textUthmani": "أَحَدٌ", "textIndopak": "اَحَدٌ", "transliteration": "Aḥad", "rootArabic": "أ ح د", "lemmaArabic": "أَحَد", "grammarTag": "Noun (Predicate)", "meanings": {"bn": "এক ও অদ্বিতীয়", "en": "the One", "ur": "یکتا"}, "startMs": 1900, "endMs": 2600}
+      ],
+      "translations": {
+        "161": "বলুন, তিনি আল্লাহ্‌, এক-অদ্বিতীয়।",
+        "162": "বলুন, তিনি আল্লাহ, এক।",
+        "131": "Say, ˹O Prophet,˺ 'He is Allah—One ˹and Indivisible˺;",
+        "20": "Say, 'He is Allah, [who is] One,"
+      },
+      "tafsirs": {
+        "164": "<p>সূরা ইখলাস মর্যাদার দিক থেকে কুরআনের এক-তৃতীয়াংশের সমতুল্য। এতে আল্লাহর একত্ববাদ ও পূর্ণাঙ্গতা চমৎকারভাবে ঘোষিত হয়েছে।</p>",
+        "169": "<p>Surah Al-Ikhlas equals one-third of the Quran in meaning because it establishes pure Tawhid—Allah's absolute Oneness.</p>",
+        "16": "<p>قل أيها الرسول: هو الله المتفرد بالألوهية والربوبية والأسماء والصفات، لا شريك له.</p>"
+      }
+    },
+    {
+      "id": 11202, "surahId": 112, "ayahNumber": 2, "verseKey": "112:2",
+      "textUthmani": "ٱللَّهُ ٱلصَّمَدُ",
+      "textIndopak": "اَللّٰهُ الصَّمَدُ",
+      "textTajweedHtml": "ٱللَّهُ ٱلصَّمَ<tajweed class=qalqalah>دُ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2200,
+      "words": [
+        {"id": 112005, "position": 1, "textUthmani": "ٱللَّهُ", "textIndopak": "اَللّٰهُ", "transliteration": "Allāhu", "rootArabic": "أ ل ه", "lemmaArabic": "اللّٰه", "grammarTag": "Proper Noun", "meanings": {"bn": "আল্লাহ", "en": "Allah", "ur": "اللہ"}, "startMs": 0, "endMs": 1000},
+        {"id": 112006, "position": 2, "textUthmani": "ٱلصَّمَدُ", "textIndopak": "الصَّمَدُ", "transliteration": "aṣ-Ṣamad", "rootArabic": "ص م د", "lemmaArabic": "صَمَد", "grammarTag": "Adjective", "meanings": {"bn": "অমুখাপেক্ষী (সকলের আশ্রয়)", "en": "the Eternal Refuge", "ur": "بے نیاز"}, "startMs": 1000, "endMs": 2200}
+      ],
+      "translations": {
+        "161": "আল্লাহ্‌ অমুখাপেক্ষী (সকল কিছু তাঁর ওপর নির্ভরশীল)।",
+        "162": "আল্লাহ অমুখাপেক্ষী।",
+        "131": "Allah—the Sustainer ˹needed by all˺.",
+        "20": "Allah, the Eternal Refuge."
+      },
+      "tafsirs": {
+        "164": "<p>'আস-সামাদ' অর্থ যিনি কারো মুখাপেক্ষী নন, কিন্তু সমগ্র সৃষ্টি প্রয়োজনে তাঁরই মুখাপেক্ষী।</p>",
+        "169": "<p>As-Samad is the Self-Sufficient Master upon Whom all creation depends for every need.</p>",
+        "16": "<p>الله وحده المقصود في قضاء الحوائج والرغائب على الدوام.</p>"
+      }
+    },
+    {
+      "id": 11203, "surahId": 112, "ayahNumber": 3, "verseKey": "112:3",
+      "textUthmani": "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+      "textIndopak": "لَمْ يَلِدْ ۙ وَلَمْ يُوْلَدْ",
+      "textTajweedHtml": "لَمْ يَلِ<tajweed class=qalqalah>دْ</tajweed> وَلَمْ يُولَ<tajweed class=qalqalah>دْ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2600,
+      "words": [
+        {"id": 112007, "position": 1, "textUthmani": "لَمْ", "textIndopak": "لَمْ", "transliteration": "Lam", "rootArabic": "ل م", "lemmaArabic": "لَمْ", "grammarTag": "Negation Particle", "meanings": {"bn": "না", "en": "Neither", "ur": "نہیں"}, "startMs": 0, "endMs": 500},
+        {"id": 112008, "position": 2, "textUthmani": "يَلِدْ", "textIndopak": "يَلِدْ", "transliteration": "yalid", "rootArabic": "و ل د", "lemmaArabic": "وَلَدَ", "grammarTag": "Jussive Verb", "meanings": {"bn": "তিনি জন্ম দিয়েছেন", "en": "He begets", "ur": "اس نے جنا"}, "startMs": 500, "endMs": 1300},
+        {"id": 112009, "position": 3, "textUthmani": "وَلَمْ", "textIndopak": "وَلَمْ", "transliteration": "wa-lam", "rootArabic": "ل م", "lemmaArabic": "لَمْ", "grammarTag": "Conjunction + Negation", "meanings": {"bn": "এবং না", "en": "nor", "ur": "اور نہ"}, "startMs": 1300, "endMs": 1900},
+        {"id": 112010, "position": 4, "textUthmani": "يُولَدْ", "textIndopak": "يُوْلَدْ", "transliteration": "yūlad", "rootArabic": "و ل د", "lemmaArabic": "وَلَدَ", "grammarTag": "Passive Jussive Verb", "meanings": {"bn": "তাঁকে জন্ম দেওয়া হয়েছে", "en": "was He begotten", "ur": "وہ جنا گیا"}, "startMs": 1900, "endMs": 2600}
+      ],
+      "translations": {
+        "161": "তিনি কাউকে জন্ম দেননি এবং তাঁকেও জন্ম দেওয়া হয়নি।",
+        "131": "He has never had offspring, nor was He born.",
+        "20": "He neither begets nor is born,"
+      },
+      "tafsirs": {
+        "164": "<p>আল্লাহ সন্তান ও পিতা-মাতা থেকে সম্পূর্ণ পবিত্র; তাঁর অস্তিত্ব অনাদি ও অনন্ত।</p>",
+        "169": "<p>Allah transcends all human lineage and physical origin; He has no beginning and no offspring.</p>",
+        "16": "<p>ليس له ولد ولا والد ولا صاحبة.</p>"
+      }
+    },
+    {
+      "id": 11204, "surahId": 112, "ayahNumber": 4, "verseKey": "112:4",
+      "textUthmani": "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ",
+      "textIndopak": "وَلَمْ يَكُنْ لَّهٗ كُفُوًا اَحَدٌ",
+      "textTajweedHtml": "وَلَمْ يَكُ<tajweed class=idgham>ن لَّ</tajweed>هُۥ كُفُوًا أَحَ<tajweed class=qalqalah>دٌۢ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 3300,
+      "words": [
+        {"id": 112011, "position": 1, "textUthmani": "وَلَمْ", "textIndopak": "وَلَمْ", "transliteration": "Wa-lam", "rootArabic": "ل م", "lemmaArabic": "لَمْ", "grammarTag": "Conjunction + Negation", "meanings": {"bn": "এবং নেই", "en": "And there is not", "ur": "اور نہیں"}, "startMs": 0, "endMs": 700},
+        {"id": 112012, "position": 2, "textUthmani": "يَكُن", "textIndopak": "يَكُنْ", "transliteration": "yakun", "rootArabic": "ك و ن", "lemmaArabic": "كَانَ", "grammarTag": "Jussive Verb", "meanings": {"bn": "হন", "en": "to", "ur": "ہے"}, "startMs": 700, "endMs": 1300},
+        {"id": 112013, "position": 3, "textUthmani": "لَّهُۥ", "textIndopak": "لَّهٗ", "transliteration": "lahu", "rootArabic": "ل", "lemmaArabic": "لِ", "grammarTag": "Preposition + Pronoun", "meanings": {"bn": "তাঁর", "en": "Him", "ur": "اس کا"}, "startMs": 1300, "endMs": 1900},
+        {"id": 112014, "position": 4, "textUthmani": "كُفُوًا", "textIndopak": "كُفُوًا", "transliteration": "kufuwan", "rootArabic": "ك ف أ", "lemmaArabic": "كُفُو", "grammarTag": "Noun", "meanings": {"bn": "সমতুল্য", "en": "equivalent", "ur": "ہمسر"}, "startMs": 1900, "endMs": 2600},
+        {"id": 112015, "position": 5, "textUthmani": "أَحَدٌۢ", "textIndopak": "اَحَدٌ", "transliteration": "aḥad", "rootArabic": "أ ح د", "lemmaArabic": "أَحَد", "grammarTag": "Noun", "meanings": {"bn": "কেউই", "en": "anyone", "ur": "کوئی"}, "startMs": 2600, "endMs": 3300}
+      ],
+      "translations": {
+        "161": "এবং তাঁর সমতুল্য কেউই নেই।",
+        "131": "And there is none comparable to Him.'",
+        "20": "Nor is there to Him any equivalent.'"
+      },
+      "tafsirs": {
+        "164": "<p>সত্তা, গুণাবলি ও কর্মে আল্লাহর কোনো সমকক্ষ বা সদৃশ নেই।</p>",
+        "169": "<p>Nothing in creation resembles or equals Allah in essence, attributes, or majesty.</p>",
+        "16": "<p>ولم يكن له مماثل ولا مشابه لا في أسمائه ولا في صفاته ولا في أفعاله.</p>"
+      }
+    },
+    {
+      "id": 11301, "surahId": 113, "ayahNumber": 1, "verseKey": "113:1",
+      "textUthmani": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ",
+      "textIndopak": "قُلْ اَعُوْذُ بِرَبِّ الْفَلَقِ",
+      "textTajweedHtml": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَ<tajweed class=qalqalah>قِ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 3000,
+      "words": [
+        {"id": 113001, "position": 1, "textUthmani": "قُلْ", "textIndopak": "قُلْ", "transliteration": "Qul", "rootArabic": "ق و ل", "lemmaArabic": "قَالَ", "grammarTag": "Imperative Verb", "meanings": {"bn": "বলুন", "en": "Say", "ur": "کہہ دیجیے"}, "startMs": 0, "endMs": 600},
+        {"id": 113002, "position": 2, "textUthmani": "أَعُوذُ", "textIndopak": "اَعُوْذُ", "transliteration": "aʿūdhu", "rootArabic": "ع و ذ", "lemmaArabic": "عَاذَ", "grammarTag": "Imperfect Verb", "meanings": {"bn": "আমি আশ্রয় চাই", "en": "I seek refuge", "ur": "میں پناہ مانگتا ہوں"}, "startMs": 600, "endMs": 1400},
+        {"id": 113003, "position": 3, "textUthmani": "بِرَبِّ", "textIndopak": "بِرَبِّ", "transliteration": "bi-Rabbi", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Preposition + Noun", "meanings": {"bn": "রবের কাছে", "en": "in the Lord", "ur": "رب کی"}, "startMs": 1400, "endMs": 2200},
+        {"id": 113004, "position": 4, "textUthmani": "ٱلْفَلَقِ", "textIndopak": "الْفَلَقِ", "transliteration": "al-falaq", "rootArabic": "ف ل ق", "lemmaArabic": "فَلَق", "grammarTag": "Noun", "meanings": {"bn": "উষার / প্রভাতের", "en": "of daybreak", "ur": "صبح کے"}, "startMs": 2200, "endMs": 3000}
+      ],
+      "translations": {
+        "161": "বলুন, আমি আশ্রয় প্রার্থনা করছি উষার রবের,",
+        "131": "Say, ˹O Prophet,˺ 'I seek refuge in the Lord of the daybreak",
+        "20": "Say, 'I seek refuge in the Lord of daybreak"
+      },
+      "tafsirs": {
+        "164": "<p>যেভাবে আল্লাহ রাতের অন্ধকার বিদীর্ণ করে প্রভাতের আলো ফোটান, তেমনি তিনি বিপদ-আপদ থেকেও মুমিনকে রক্ষা করেন।</p>",
+        "169": "<p>Seeking refuge in the Lord of Daybreak reminds us that He Who brings light out of darkness can dispel every harm.</p>",
+        "16": "<p>قل أيها الرسول: أعوذ وألتجئ برب الصبح وفالقه.</p>"
+      }
+    },
+    {
+      "id": 11302, "surahId": 113, "ayahNumber": 2, "verseKey": "113:2",
+      "textUthmani": "مِن شَرِّ مَا خَلَقَ",
+      "textIndopak": "مِنْ شَرِّ مَا خَلَقَ",
+      "textTajweedHtml": "مِ<tajweed class=ikhfa>ن شَ</tajweed>رِّ مَا خَلَ<tajweed class=qalqalah>قَ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2400,
+      "words": [
+        {"id": 113005, "position": 1, "textUthmani": "مِن", "textIndopak": "مِنْ", "transliteration": "min", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Preposition", "meanings": {"bn": "থেকে", "en": "from", "ur": "سے"}, "startMs": 0, "endMs": 500},
+        {"id": 113006, "position": 2, "textUthmani": "شَرِّ", "textIndopak": "شَرِّ", "transliteration": "sharri", "rootArabic": "ش ر ر", "lemmaArabic": "شَرّ", "grammarTag": "Noun", "meanings": {"bn": "অনিষ্ট", "en": "the evil of", "ur": "شر"}, "startMs": 500, "endMs": 1200},
+        {"id": 113007, "position": 3, "textUthmani": "مَا", "textIndopak": "مَا", "transliteration": "mā", "rootArabic": "م ا", "lemmaArabic": "مَا", "grammarTag": "Relative Pronoun", "meanings": {"bn": "যা কিছু", "en": "that which", "ur": "جو"}, "startMs": 1200, "endMs": 1700},
+        {"id": 113008, "position": 4, "textUthmani": "خَلَقَ", "textIndopak": "خَلَقَ", "transliteration": "khalaq", "rootArabic": "خ ل ق", "lemmaArabic": "خَلَقَ", "grammarTag": "Perfect Verb", "meanings": {"bn": "তিনি সৃষ্টি করেছেন", "en": "He created", "ur": "اس نے پیدا کیا"}, "startMs": 1700, "endMs": 2400}
+      ],
+      "translations": {
+        "161": "তিনি যা সৃষ্টি করেছেন তার অনিষ্ট থেকে,",
+        "131": "from the evil of whatever He has created,",
+        "20": "From the evil of that which He created"
+      },
+      "tafsirs": {
+        "164": "<p>সমস্ত সৃষ্টির সম্ভাব্য ক্ষতি ও অনিষ্ট থেকে স্রষ্টার কাছেই নিরাপত্তা চাইতে হয়।</p>",
+        "169": "<p>Comprehensive refuge from harm arising from any created being.</p>",
+        "16": "<p>من شر كل مخلوق من إنس أو جن أو دواب أو غير ذلك.</p>"
+      }
+    },
+    {
+      "id": 11303, "surahId": 113, "ayahNumber": 3, "verseKey": "113:3",
+      "textUthmani": "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+      "textIndopak": "وَمِنْ شَرِّ غَاسِقٍ اِذَا وَقَبَ",
+      "textTajweedHtml": "وَمِ<tajweed class=ikhfa>ن شَ</tajweed>رِّ غَاسِقٍ إِذَا وَقَ<tajweed class=qalqalah>بَ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 3200,
+      "words": [
+        {"id": 113009, "position": 1, "textUthmani": "وَمِن", "textIndopak": "وَمِنْ", "transliteration": "wa-min", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Conjunction + Preposition", "meanings": {"bn": "এবং থেকে", "en": "and from", "ur": "اور سے"}, "startMs": 0, "endMs": 700},
+        {"id": 113010, "position": 2, "textUthmani": "شَرِّ", "textIndopak": "شَرِّ", "transliteration": "sharri", "rootArabic": "ش ر ر", "lemmaArabic": "شَرّ", "grammarTag": "Noun", "meanings": {"bn": "অনিষ্ট", "en": "the evil", "ur": "شر"}, "startMs": 700, "endMs": 1300},
+        {"id": 113011, "position": 3, "textUthmani": "غَاسِقٍ", "textIndopak": "غَاسِقٍ", "transliteration": "ghāsiqin", "rootArabic": "غ س ق", "lemmaArabic": "غَاسِق", "grammarTag": "Noun", "meanings": {"bn": "রাতের অন্ধকারের", "en": "of darkness", "ur": "اندھیری رات کے"}, "startMs": 1300, "endMs": 2000},
+        {"id": 113012, "position": 4, "textUthmani": "إِذَا", "textIndopak": "اِذَا", "transliteration": "idhā", "rootArabic": "إ ذ ا", "lemmaArabic": "إِذَا", "grammarTag": "Adverb", "meanings": {"bn": "যখন", "en": "when", "ur": "جب"}, "startMs": 2000, "endMs": 2500},
+        {"id": 113013, "position": 5, "textUthmani": "وَقَبَ", "textIndopak": "وَقَبَ", "transliteration": "waqab", "rootArabic": "و ق ب", "lemmaArabic": "وَقَبَ", "grammarTag": "Perfect Verb", "meanings": {"bn": "তা গভীর হয়", "en": "it settles", "ur": "چھا جائے"}, "startMs": 2500, "endMs": 3200}
+      ],
+      "translations": {
+        "161": "এবং রাতের অন্ধকারের অনিষ্ট থেকে যখন তা গভীর হয়,",
+        "131": "and from the evil of the night when it grows dark,",
+        "20": "And from the evil of darkness when it settles"
+      },
+      "tafsirs": {
+        "164": "<p>গভীর রাতের অন্ধকারে যেসব অনিষ্ট ছড়িয়ে পড়ে তা থেকে আল্লাহর আশ্রয় প্রার্থনা।</p>",
+        "169": "<p>Protection during the stillness and hidden dangers of deep night.</p>",
+        "16": "<p>ومن شر ليل شديد الظلمة إذا دخل وتغلغل.</p>"
+      }
+    },
+    {
+      "id": 11304, "surahId": 113, "ayahNumber": 4, "verseKey": "113:4",
+      "textUthmani": "وَمِن شَرِّ ٱلنَّفَّـٰثَـٰتِ فِى ٱلْعُقَدِ",
+      "textIndopak": "وَمِنْ شَرِّ النَّفّٰثٰتِ فِي الْعُقَدِ",
+      "textTajweedHtml": "وَمِ<tajweed class=ikhfa>ن شَ</tajweed>رِّ ٱل<tajweed class=ghunnah>نَّ</tajweed>فَّـٰثَـٰتِ فِى ٱلْعُقَ<tajweed class=qalqalah>دِ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 3600,
+      "words": [
+        {"id": 113014, "position": 1, "textUthmani": "وَمِن", "textIndopak": "وَمِنْ", "transliteration": "wa-min", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Conjunction + Preposition", "meanings": {"bn": "এবং থেকে", "en": "and from", "ur": "اور سے"}, "startMs": 0, "endMs": 700},
+        {"id": 113015, "position": 2, "textUthmani": "شَرِّ", "textIndopak": "شَرِّ", "transliteration": "sharri", "rootArabic": "ش ر ر", "lemmaArabic": "شَرّ", "grammarTag": "Noun", "meanings": {"bn": "অনিষ্ট", "en": "the evil of", "ur": "شر"}, "startMs": 700, "endMs": 1300},
+        {"id": 113016, "position": 3, "textUthmani": "ٱلنَّفَّـٰثَـٰتِ", "textIndopak": "النَّفّٰثٰتِ", "transliteration": "an-naffāthāti", "rootArabic": "ن ف ث", "lemmaArabic": "نَفَّاثَة", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "ফুঁকদানকারিনীদের", "en": "those who blow", "ur": "پھونکنے والیوں"}, "startMs": 1300, "endMs": 2500},
+        {"id": 113017, "position": 4, "textUthmani": "فِى", "textIndopak": "فِي", "transliteration": "fī", "rootArabic": "ف ي", "lemmaArabic": "فِي", "grammarTag": "Preposition", "meanings": {"bn": "মধ্যে", "en": "into", "ur": "میں"}, "startMs": 2500, "endMs": 2900},
+        {"id": 113018, "position": 5, "textUthmani": "ٱلْعُقَدِ", "textIndopak": "الْعُقَدِ", "transliteration": "al-ʿuqad", "rootArabic": "ع ق د", "lemmaArabic": "عُقْدَة", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "গ্রন্থিগুলোতে", "en": "knots", "ur": "گرہوں"}, "startMs": 2900, "endMs": 3600}
+      ],
+      "translations": {
+        "161": "এবং গ্রন্থিতে ফুঁকদানকারিনীদের (জাদুকরদের) অনিষ্ট থেকে,",
+        "131": "and from the evil of those ˹witches˺ casting spells by blowing onto knots,",
+        "20": "And from the evil of the blowers in knots"
+      },
+      "tafsirs": {
+        "164": "<p>জাদু-টোনা ও কু-মন্ত্রের অনিষ্ট থেকে আল্লাহর রক্ষাকবচ প্রার্থনা করা হয়েছে।</p>",
+        "169": "<p>Seeking Allah's protection from sorcery and hidden malice.</p>",
+        "16": "<p>ومن شر السواحر اللاتي ينفثن في ما يعقدنه من خيوط بقصد السحر.</p>"
+      }
+    },
+    {
+      "id": 11305, "surahId": 113, "ayahNumber": 5, "verseKey": "113:5",
+      "textUthmani": "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+      "textIndopak": "وَمِنْ شَرِّ حَاسِدٍ اِذَا حَسَدَ",
+      "textTajweedHtml": "وَمِ<tajweed class=ikhfa>ن شَ</tajweed>رِّ حَاسِدٍ إِذَا حَسَ<tajweed class=qalqalah>دَ</tajweed>",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 3200,
+      "words": [
+        {"id": 113019, "position": 1, "textUthmani": "وَمِن", "textIndopak": "وَمِنْ", "transliteration": "wa-min", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Conjunction + Preposition", "meanings": {"bn": "এবং থেকে", "en": "and from", "ur": "اور سے"}, "startMs": 0, "endMs": 700},
+        {"id": 113020, "position": 2, "textUthmani": "شَرِّ", "textIndopak": "شَرِّ", "transliteration": "sharri", "rootArabic": "ش ر ر", "lemmaArabic": "شَرّ", "grammarTag": "Noun", "meanings": {"bn": "অনিষ্ট", "en": "the evil of", "ur": "شر"}, "startMs": 700, "endMs": 1300},
+        {"id": 113021, "position": 3, "textUthmani": "حَاسِدٍ", "textIndopak": "حَاسِدٍ", "transliteration": "ḥāsidin", "rootArabic": "ح س د", "lemmaArabic": "حَاسِد", "grammarTag": "Active Participle", "meanings": {"bn": "হিংসুকের", "en": "an envier", "ur": "حسد کرنے والے کے"}, "startMs": 1300, "endMs": 2000},
+        {"id": 113022, "position": 4, "textUthmani": "إِذَا", "textIndopak": "اِذَا", "transliteration": "idhā", "rootArabic": "إ ذ ا", "lemmaArabic": "إِذَا", "grammarTag": "Adverb", "meanings": {"bn": "যখন", "en": "when", "ur": "جب"}, "startMs": 2000, "endMs": 2500},
+        {"id": 113023, "position": 5, "textUthmani": "حَسَدَ", "textIndopak": "حَسَدَ", "transliteration": "ḥasad", "rootArabic": "ح س د", "lemmaArabic": "حَسَدَ", "grammarTag": "Perfect Verb", "meanings": {"bn": "সে হিংসা করে", "en": "he envies", "ur": "وہ حسد کرے"}, "startMs": 2500, "endMs": 3200}
+      ],
+      "translations": {
+        "161": "এবং হিংসুকের অনিষ্ট থেকে যখন সে হিংসা করে।",
+        "131": "and from the evil of an envier when they envy.'",
+        "20": "And from the evil of an envier when he envies.'"
+      },
+      "tafsirs": {
+        "164": "<p>হিংসুকের কুদৃষ্টি ও হিংসাত্মক ক্ষতি থেকে বাঁচার জন্য সকাল-সন্ধ্যায় সূরা ফালাক ও নাস পাঠ করা সুন্নাত।</p>",
+        "169": "<p>Reciting Al-Falaq and An-Nas morning and evening shields the believer from envy and harm.</p>",
+        "16": "<p>ومن شر حاسد مبغض للنعم يتمنى زوالها عنك إذا أظهر حسده وعمل بمقتضاه.</p>"
+      }
+    },
+    {
+      "id": 11401, "surahId": 114, "ayahNumber": 1, "verseKey": "114:1",
+      "textUthmani": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ",
+      "textIndopak": "قُلْ اَعُوْذُ بِرَبِّ النَّاسِ",
+      "textTajweedHtml": "قُلْ أَعُوذُ بِرَبِّ ٱل<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2900,
+      "words": [
+        {"id": 114001, "position": 1, "textUthmani": "قُلْ", "textIndopak": "قُلْ", "transliteration": "Qul", "rootArabic": "ق و ل", "lemmaArabic": "قَالَ", "grammarTag": "Imperative Verb", "meanings": {"bn": "বলুন", "en": "Say", "ur": "کہہ دیجیے"}, "startMs": 0, "endMs": 600},
+        {"id": 114002, "position": 2, "textUthmani": "أَعُوذُ", "textIndopak": "اَعُوْذُ", "transliteration": "aʿūdhu", "rootArabic": "ع و ذ", "lemmaArabic": "عَاذَ", "grammarTag": "Imperfect Verb", "meanings": {"bn": "আমি আশ্রয় চাই", "en": "I seek refuge", "ur": "میں پناہ مانگتا ہوں"}, "startMs": 600, "endMs": 1400},
+        {"id": 114003, "position": 3, "textUthmani": "بِرَبِّ", "textIndopak": "بِرَبِّ", "transliteration": "bi-Rabbi", "rootArabic": "ر ب ب", "lemmaArabic": "رَبّ", "grammarTag": "Preposition + Noun", "meanings": {"bn": "রবের কাছে", "en": "in the Lord", "ur": "رب کی"}, "startMs": 1400, "endMs": 2100},
+        {"id": 114004, "position": 4, "textUthmani": "ٱلنَّاسِ", "textIndopak": "النَّاسِ", "transliteration": "an-nās", "rootArabic": "ن و س", "lemmaArabic": "نَاس", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "মানুষের", "en": "of mankind", "ur": "لوگوں کے"}, "startMs": 2100, "endMs": 2900}
+      ],
+      "translations": {
+        "161": "বলুন, আমি আশ্রয় চাই মানুষের রবের,",
+        "131": "Say, ˹O Prophet,˺ 'I seek refuge in the Lord of humankind,",
+        "20": "Say, 'I seek refuge in the Lord of mankind,"
+      },
+      "tafsirs": {
+        "164": "<p>সূরা আন-নাসে মানুষের অন্তরের কুমন্ত্রণা থেকে রক্ষার জন্য আল্লাহর তিনটি মহান গুণের ওয়াসীলায় আশ্রয় চাওয়া হয়েছে: রব্বুন-নাস, মালিকুন-নাস ও ইলাহুন-নাস।</p>",
+        "169": "<p>The Quran closes with seeking refuge in Allah's Lordship, Sovereignty, and Divinity over all humanity.</p>",
+        "16": "<p>قل أيها الرسول: أعتصم وأستجير برب الناس، القادر وحده على رد شر الوسواس.</p>"
+      }
+    },
+    {
+      "id": 11402, "surahId": 114, "ayahNumber": 2, "verseKey": "114:2",
+      "textUthmani": "مَلِكِ ٱلنَّاسِ",
+      "textIndopak": "مَلِكِ النَّاسِ",
+      "textTajweedHtml": "مَلِكِ ٱل<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2000,
+      "words": [
+        {"id": 114005, "position": 1, "textUthmani": "مَلِكِ", "textIndopak": "مَلِكِ", "transliteration": "Maliki", "rootArabic": "م ل ك", "lemmaArabic": "مَلِك", "grammarTag": "Noun", "meanings": {"bn": "অধিপতি / বাদশাহ", "en": "the Sovereign", "ur": "بادشاہ"}, "startMs": 0, "endMs": 950},
+        {"id": 114006, "position": 2, "textUthmani": "ٱلنَّاسِ", "textIndopak": "النَّاسِ", "transliteration": "an-nās", "rootArabic": "ن و س", "lemmaArabic": "نَاس", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "মানুষের", "en": "of mankind", "ur": "لوگوں کے"}, "startMs": 950, "endMs": 2000}
+      ],
+      "translations": {
+        "161": "মানুষের অধিপতির,",
+        "131": "the Master of humankind,",
+        "20": "The Sovereign of mankind,"
+      },
+      "tafsirs": {
+        "164": "<p>তিনি সমস্ত মানুষের প্রকৃত অধিপতি ও শাসক।</p>",
+        "169": "<p>Allah is the true King over all kings and rulers of humanity.</p>",
+        "16": "<p>ملك الناس المتصرف فيهم، الغني عنهم.</p>"
+      }
+    },
+    {
+      "id": 11403, "surahId": 114, "ayahNumber": 3, "verseKey": "114:3",
+      "textUthmani": "إِلَـٰهِ ٱلنَّاسِ",
+      "textIndopak": "اِلٰهِ النَّاسِ",
+      "textTajweedHtml": "إِلَـٰهِ ٱل<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null, "audioDurationMs": 2100,
+      "words": [
+        {"id": 114007, "position": 1, "textUthmani": "إِلَـٰهِ", "textIndopak": "اِلٰهِ", "transliteration": "Ilāhi", "rootArabic": "أ ل ه", "lemmaArabic": "إِلٰه", "grammarTag": "Noun", "meanings": {"bn": "প্রকৃত ইলাহ (উপাস্য)", "en": "the God", "ur": "معبود"}, "startMs": 0, "endMs": 1000},
+        {"id": 114008, "position": 2, "textUthmani": "ٱلنَّاسِ", "textIndopak": "النَّاسِ", "transliteration": "an-nās", "rootArabic": "ن و س", "lemmaArabic": "نَاس", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "মানুষের", "en": "of mankind", "ur": "لوگوں کے"}, "startMs": 1000, "endMs": 2100}
+      ],
+      "translations": {
+        "161": "মানুষের ইলাহের (কাছে),",
+        "131": "the God of humankind,",
+        "20": "The God of mankind,"
+      },
+      "tafsirs": {
+        "164": "<p>তিনিই মানুষের একমাত্র সত্য উপাস্য।</p>",
+        "169": "<p>The sole object of devotion and worship for humankind.</p>",
+        "16": "<p>معبودهم الحق الذي لا معبود بحق سواه.</p>"
+      }
+    },
+    {
+      "id": 11404, "surahId": 114, "ayahNumber": 4, "verseKey": "114:4",
+      "textUthmani": "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+      "textIndopak": "مِنْ شَرِّ الْوَسْوَاسِ ۙ الْخَنَّاسِ",
+      "textTajweedHtml": "مِ<tajweed class=ikhfa>ن شَ</tajweed>رِّ ٱلْوَسْوَاسِ ٱلْخَ<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null, "audioDurationMs": 3300,
+      "words": [
+        {"id": 114009, "position": 1, "textUthmani": "مِن", "textIndopak": "مِنْ", "transliteration": "min", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Preposition", "meanings": {"bn": "থেকে", "en": "from", "ur": "سے"}, "startMs": 0, "endMs": 600},
+        {"id": 114010, "position": 2, "textUthmani": "شَرِّ", "textIndopak": "شَرِّ", "transliteration": "sharri", "rootArabic": "ش ر ر", "lemmaArabic": "شَرّ", "grammarTag": "Noun", "meanings": {"bn": "অনিষ্ট", "en": "the evil of", "ur": "شر"}, "startMs": 600, "endMs": 1200},
+        {"id": 114011, "position": 3, "textUthmani": "ٱلْوَسْوَاسِ", "textIndopak": "الْوَسْوَاسِ", "transliteration": "al-waswāsi", "rootArabic": "و س و س", "lemmaArabic": "وَسْوَاس", "grammarTag": "Noun", "meanings": {"bn": "কুমন্ত্রণাদাতার", "en": "the whisperer", "ur": "وسوسہ ڈالنے والے"}, "startMs": 1200, "endMs": 2300},
+        {"id": 114012, "position": 4, "textUthmani": "ٱلْخَنَّاسِ", "textIndopak": "الْخَنَّاسِ", "transliteration": "al-khannās", "rootArabic": "خ ن س", "lemmaArabic": "خَنَّاس", "grammarTag": "Intensive Adjective", "meanings": {"bn": "যে আত্মগোপন করে", "en": "who withdraws", "ur": "پیچھے ہٹ جانے والے کے"}, "startMs": 2300, "endMs": 3300}
+      ],
+      "translations": {
+        "161": "আত্মগোপনকারী কুমন্ত্রণাদাতার অনিষ্ট থেকে,",
+        "131": "from the evil of ˹Satan˺ the lurking whisperer—",
+        "20": "From the evil of the retreating whisperer -"
+      },
+      "tafsirs": {
+        "164": "<p>'খান্নাস' বলা হয় কারণ মানুষ যখন আল্লাহর যিকির করে তখন শয়তান পিছু হটে এবং আত্মগোপন করে, আর গাফেল হলেই আবার কুমন্ত্রণা দেয়।</p>",
+        "169": "<p>Al-Khannas retreats whenever the heart remembers Allah, and whispers again when a person becomes heedless.</p>",
+        "16": "<p>من أذى الشيطان الذي يوسوس عند الغفلة، ويختفي عند ذكر الله.</p>"
+      }
+    },
+    {
+      "id": 11405, "surahId": 114, "ayahNumber": 5, "verseKey": "114:5",
+      "textUthmani": "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ",
+      "textIndopak": "الَّذِيْ يُوَسْوِسُ فِيْ صُدُوْرِ النَّاسِ",
+      "textTajweedHtml": "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱل<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null, "audioDurationMs": 3600,
+      "words": [
+        {"id": 114013, "position": 1, "textUthmani": "ٱلَّذِى", "textIndopak": "الَّذِيْ", "transliteration": "alladhī", "rootArabic": "ل ذ ي", "lemmaArabic": "الَّذِي", "grammarTag": "Relative Pronoun", "meanings": {"bn": "যে", "en": "who", "ur": "جو"}, "startMs": 0, "endMs": 700},
+        {"id": 114014, "position": 2, "textUthmani": "يُوَسْوِسُ", "textIndopak": "يُوَسْوِسُ", "transliteration": "yuwaswisu", "rootArabic": "و س و س", "lemmaArabic": "وَسْوَسَ", "grammarTag": "Imperfect Verb", "meanings": {"bn": "কুমন্ত্রণা দেয়", "en": "whispers", "ur": "وسوسہ ڈالتا ہے"}, "startMs": 700, "endMs": 1700},
+        {"id": 114015, "position": 3, "textUthmani": "فِى", "textIndopak": "فِيْ", "transliteration": "fī", "rootArabic": "ف ي", "lemmaArabic": "فِي", "grammarTag": "Preposition", "meanings": {"bn": "মধ্যে", "en": "into", "ur": "میں"}, "startMs": 1700, "endMs": 2200},
+        {"id": 114016, "position": 4, "textUthmani": "صُدُورِ", "textIndopak": "صُدُوْرِ", "transliteration": "ṣudūri", "rootArabic": "ص د ر", "lemmaArabic": "صَدْر", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "অন্তরসমূহের", "en": "the breasts of", "ur": "سینوں"}, "startMs": 2200, "endMs": 2900},
+        {"id": 114017, "position": 5, "textUthmani": "ٱلنَّاسِ", "textIndopak": "النَّاسِ", "transliteration": "an-nās", "rootArabic": "ن و س", "lemmaArabic": "نَاس", "grammarTag": "Noun (Pl.)", "meanings": {"bn": "মানুষের", "en": "mankind", "ur": "لوگوں کے"}, "startMs": 2900, "endMs": 3600}
+      ],
+      "translations": {
+        "161": "যে মানুষের অন্তরসমূহে কুমন্ত্রণা দেয়,",
+        "131": "who whispers into the hearts of humankind—",
+        "20": "Who whispers [evil] into the breasts of mankind -"
+      },
+      "tafsirs": {
+        "164": "<p>অন্তর পবিত্র ও নিরাপদ রাখার একমাত্র উপায় হলো আল্লাহর স্মরণ ও কুরআনের আশ্রয় গ্রহণ।</p>",
+        "169": "<p>Guarding the heart with remembrance of Allah repels inner whispers.</p>",
+        "16": "<p>الذي يبث الشك والشر في صدور الناس وقلوبهم.</p>"
+      }
+    },
+    {
+      "id": 11406, "surahId": 114, "ayahNumber": 6, "verseKey": "114:6",
+      "textUthmani": "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+      "textIndopak": "مِنَ الْجِنَّةِ وَالنَّاسِ",
+      "textTajweedHtml": "مِنَ ٱلْجِ<tajweed class=ghunnah>نَّ</tajweed>ةِ وَٱل<tajweed class=ghunnah>نَّ</tajweed><tajweed class=madd>ا</tajweed>سِ",
+      "juzNumber": 30, "hizbNumber": 60, "pageNumber": 604, "sajdahType": null,
+      "audioDurationMs": 2700,
+      "words": [
+        {"id": 114018, "position": 1, "textUthmani": "مِنَ", "textIndopak": "مِنَ", "transliteration": "mina", "rootArabic": "م ن", "lemmaArabic": "مِنْ", "grammarTag": "Preposition", "meanings": {"bn": "মধ্য থেকে", "en": "from among", "ur": "میں سے"}, "startMs": 0, "endMs": 700},
+        {"id": 114019, "position": 2, "textUthmani": "ٱلْجِنَّةِ", "textIndopak": "الْجِنَّةِ", "transliteration": "al-jinnati", "rootArabic": "ج ن ن", "lemmaArabic": "جِنَّة", "grammarTag": "Noun", "meanings": {"bn": "জিন", "en": "the jinn", "ur": "جنوں"}, "startMs": 700, "endMs": 1700},
+        {"id": 114020, "position": 3, "textUthmani": "وَٱلنَّاسِ", "textIndopak": "وَالنَّاسِ", "transliteration": "wan-nās", "rootArabic": "ن و س", "lemmaArabic": "نَاس", "grammarTag": "Conjunction + Noun", "meanings": {"bn": "এবং মানুষের", "en": "and mankind", "ur": "اور انسانوں"}, "startMs": 1700, "endMs": 2700}
+      ],
+      "translations": {
+        "161": "জিন ও মানুষের মধ্য থেকে।",
+        "131": "from among jinn and humankind.'",
+        "20": "From among the jinn and mankind.'"
+      },
+      "tafsirs": {
+        "164": "<p>কুমন্ত্রণাদাতা কেবল অদৃশ্য জিন শয়তানই নয়, বরং খারাপ সঙ্গী ও অসৎ মানুষেরাও কু-প্ররোচনা দিয়ে থাকে; উভয়ের অনিষ্ট থেকেই আল্লাহর আশ্রয় চাওয়া হয়েছে।</p>",
+        "169": "<p>Whispers can come from unseen jinn or from misguided human companions; refuge is sought in Allah from both.</p>",
+        "16": "<p>من شياطين الجن والإنس الذين يوسوسون بالشر.</p>"
+      }
+    }
+  ]
+}

@@ -1,0 +1,389 @@
+Skip to main content
+Noor Al-Quran
+Act as a Principal Android Engineer, Islamic EdTech Architect, and UI/UX Specialist. Build a production-grade, ad-free, offline-first Native Android application in Kotlin and Jetpack Compose (Material 3) called "Noor Al-Quran" — combining the deep Word-by-Word & Tafsir precision of "Al Quran (Tafsir & by Word)" with the serene daily worship habit-tracking experience of the "Sadiq" app.
+============================================================
+NON-NEGOTIABLE SACRED TEXT & DATA INTEGRITY RULES
+============================================================
+ZERO AI HALLUCINATION ON REVELATION: NEVER use Gemini or any generative AI model to produce, reconstruct, vowelize (harakat), translate, or invent Quranic Arabic text, Ayah numbers, or classical Tafsir from model weights.
+DETERMINISTIC VERIFIED DATA ONLY: 100% of Quranic scripts, word-by-word meanings, translations, Tafsirs, and audio segment timestamps MUST originate strictly from verified static local JSON/SQLite assets (structured compatibly with QUL / Quranic Universal Library by Tarteel and Tanzil.net) and authenticated API fetches (Quran Foundation / Quran.com API v4).
+GROUNDED AI USAGE ONLY: Generative AI (via Firebase AI Logic / Gemini) may ONLY be used for:
+(a) Semantic search query expansion to map natural-language user queries (in Bangla, English, Arabic, etc.) to verified Surah:Ayah keys.
+(b) Summarizing or answering user questions strictly grounded in the retrieved verified Tafsir text passed inside the prompt context, with mandatory citations (e.g., [Surah Al-Baqarah 2:153]) and strict refusal to fabricate rulings or external claims.
+(c) Personalized reading/Hifz scheduling suggestions based on user streak metrics.
+============================================================
+2. FULL MULTILINGUAL ARCHITECTURE (ARABIC, BANGLA & ALL LANGUAGES)
+Design the entire application from the ground up to seamlessly support Arabic, Bangla (বাংলা), English, and an extensible unlimited library of global languages (e.g., Urdu, Indonesian, Turkish, French, Spanish, Hindi, Malay, German):
+A. Dynamic In-App Localization & Bidirectional (Bidi) UI:
+Implement full Android App Localization (res/values/strings.xml, values-bn/strings.xml, values-ar/strings.xml, values-ur/strings.xml, values-id/strings.xml, values-tr/strings.xml, plus clean fallback to English).
+Allow users to switch the UI language dynamically inside Settings independently of the device OS language using AppCompatDelegate.setApplicationLocales().
+Properly handle Bidirectional (RTL + LTR) layout rendering:
+When UI language is Arabic or Urdu, mirror navigation and UI chrome to RTL (LayoutDirection.Rtl).
+When UI language is Bangla, English, or other LTR languages, keep app chrome LTR while strictly forcing all Quranic Arabic verses and Word-by-Word Arabic flow rows to render RTL (CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl)).
+Wrap inline Arabic phrases inside Bangla or English sentences with Unicode Bidi isolation (BidiFormatter) so brackets, verse numbers, and punctuation never reverse or break.
+B. Authentic Arabic & Bangla Typography Engine:
+Bundle and configure support for multiple authentic Quranic scripts and downloadable fonts:
+Uthmani Script (King Fahd Complex / Madani Mushaf style).
+IndoPak / South Asian Nastaleeq-Naskh Script (essential for users in Bangladesh, India, and Pakistan, featuring clear harakat, waqf symbols, and 15-line Mushaf familiarity).
+Tajweed Color-Coded Rendering (parsing Tajweed rule tags to highlight Ghunnah, Ikhfa, Idgham, Qalqalah, Madd with soft, readable colors).
+Configure dedicated Bangla typography (e.g., Noto Sans Bengali / Hind Siliguri) with generous lineHeight (1.5x–1.65x) and includeFontPadding = true or safe vertical metrics so Bangla conjunct characters (যুক্তবর্ণ) and top/bottom vowel signs (ি, ী, ু, ূ, ৃ, ঁ) never clip or overlap.
+Provide independent font-size sliders for (1) Arabic Script, (2) Word-by-Word Meaning, and (3) Full Translation/Tafsir.
+C. Unlimited Multi-Language Content Manager:
+Separate "UI Language" from "Quran Content Languages" so a user in Bangladesh can, for example, keep the UI in Bangla or English while simultaneously viewing Word-by-Word meanings in Bangla + full translations in both Bangla (e.g., Dr. Abu Bakr Zakaria, Muhiuddin Khan, Al-Bayan) and English (Sahih International, The Clear Quran).
+Support downloading, caching, and toggling multiple translations and Tafsirs per language for offline reading, with a clean Download Manager screen showing language search, file sizes, and local storage status.
+============================================================
+3. VISUAL DESIGN SYSTEM & SERENE UX
+Craft a calm, respectful, distraction-free Material 3 interface inspired by Sadiq and Al Quran (Tafsir & by Word):
+Themes: (1) Serene Cream & Emerald (Light), (2) Soft Sepia (Long Reading), (3) Deep Slate Teal (Dark), and (4) Pure AMOLED Black (Night/Tahajjud Reading).
+Color Palette: Deep Emerald (#0F5C4D), Warm Gold Accent (#C89D54), Warm Parchment (#FAF7F0), Soft Charcoal (#1E2421).
+Zero ads, zero gamified clutter, subtle haptic feedback on Ayah bookmarking and Tasbeeh taps, and smooth shared-element transitions.
+============================================================
+4. TECHNICAL ARCHITECTURE & DATABASE SCHEMA
+Use MVVM + Clean Architecture with Repository Pattern, Kotlin Coroutines + StateFlow, Hilt for Dependency Injection, Retrofit/Ktor for network calls, Media3/ExoPlayer for audio, and Room (SQLite) for offline persistence.
+Implement the following Room Entities and relationships:
+SurahEntity: id (1..114), nameArabic, nameTransliteration, localizedNamesJson (Map of bn, en, ar, ur, etc.), revelationPlace (Meccan/Medinan), ayahCount, bismillahPre.
+AyahEntity: id, surahId, ayahNumber, verseKey ("2:255"), textUthmani, textIndopak, textTajweedHtml, juzNumber, hizbNumber, pageNumber, sajdahType.
+WordEntity: id, ayahId, position, textUthmani, textIndopak, transliteration, rootArabic, lemmaArabic, grammarTagJson, audioUrl.
+WordTranslationEntity: wordId, languageCode (bn, en, ur, id, etc.), meaningText.
+TranslationSourceEntity & AyahTranslationEntity: sourceId, languageCode, translatorName, ayahId, translatedText, footnotesJson.
+TafsirSourceEntity & AyahTafsirEntity: sourceId, languageCode, tafsirName, ayahId, tafsirHtmlOrMarkdown.
+AudioReciterEntity & AudioSegmentEntity: reciterId, ayahId, audioUrl, localFilePath, wordTimestampSegmentsJson (startMs/endMs per word position for real-time highlighting).
+UserBookmarkEntity, UserCollectionEntity, UserNoteEntity, ReadingProgressEntity, HabitStreakEntity.
+Bundled Starter Offline Dataset:
+Include a clean, pre-populated starter JSON asset in assets/quran_starter/ containing Surah Al-Fatihah (1) and key Surahs from Juz Amma (e.g., 112–114, plus Ayat al-Kursi 2:255) with real Uthmani & IndoPak Arabic text, Word-by-Word meanings in Bangla, English, and Urdu, translations in Bangla & English, and sample word-audio timestamps so the app renders immediately and works offline on first launch in the emulator.
+Build a modular QuranSyncRepository structured to download full Surahs, additional languages, and audio packs from Quran Foundation API v4 / QUL endpoints and persist them into Room.
+Firebase Backend Integration (via Google AI Studio Firebase Setup):
+Firebase Authentication: Optional Google Sign-In + Anonymous/Guest mode (never force login to read Quran!).
+Cloud Firestore: Sync bookmarks, collections, personal notes, last-read position, and daily reading streaks across devices.
+Firebase AI Logic + App Check: Securely power the grounded AI study assistant without exposing API keys in the client binary.
+============================================================
+5. CORE SCREENS & FEATURE SPECIFICATIONS
+Screen 1: Sadiq-Style Ibadah Home Dashboard
+Time-aware greeting in the active UI language (e.g., "আসসালামু আলাইকুম" / "Assalamu Alaikum") with Hijri + Gregorian date display (localized digits/months).
+Prominent "Continue Reading" card showing Surah name, Ayah number, Juz, and percentage completed.
+Daily Quran Goal & Streak Tracker: Interactive circular progress ring (e.g., "12 / 20 Ayahs today", current streak counter, gentle weekly calendar bar).
+"Verse of the Day" card displaying Arabic + user's chosen language (e.g., Bangla + English) with one-tap Jump-to-Ayah, Bookmark, and Share actions.
+Quick Shortcuts Row: Surah Al-Kahf, Surah Yasin, Surah Al-Mulk, Ayat al-Kursi, Bookmarks, and Prayer/Qibla quick card (local coordinate-based prayer time calculation + Qibla compass sensor + simple Tasbeeh counter modal).
+Screen 2: Quran Explorer & Universal Multilingual Search
+Segmented tabs: Surah (1–114 with localized names, meaning, Makki/Madani badge, Ayah count), Juz / Para (1–30), Mushaf Page (1–604), and Topics/Duas (Quranic Rabbana Duas).
+High-speed Local + Semantic Search bar supporting queries in Arabic (with or without harakat via normalized text column), Bangla (e.g., "ধৈর্য", "নামাজ", "মা-বাবা"), English (e.g., "patience", "mercy", "2:255"), and phonetic transliteration ("Ayatul Kursi", "Ar-Rahman").
+Screen 3: Dual-Mode Quran Reader (The Core Experience)
+Top App Bar: Surah selector dropdown, Juz/Page indicator, Quick Display Settings gear sheet, and Search icon.
+Mode A — Word-by-Word & Translation Study View:
+Each Ayah sits in a clean, breathing card with Ayah badge, Bookmark, Play, Tafsir, and Copy/Share actions.
+Inside the card, render a custom RTL FlowRow where every single Arabic word is stacked neatly in a vertical tile: [Arabic Word] on top, [Transliteration] (toggleable) in the middle, and [Localized Word Meaning — e.g., Bangla / English] directly underneath.
+Interactive Tap-a-Word Inspector: Tapping any word highlights it and opens a ModalBottomSheet showing:
+Large Arabic word + single-word pronunciation play button.
+Meanings across active languages (e.g., Bangla & English).
+Root letters (e.g., ر ح م), Lemma, and Grammatical Morphology (Noun/Verb, tense, case) in localized labels.
+"Occurrences in the Quran" preview list.
+Below the Word-by-Word block, display one or more stacked full translations (e.g., Bangla + English together) with toggleable footnotes.
+Mode B — Distraction-Free Mushaf / Tilawah View:
+Continuous, page-aligned or Surah-flowing Uthmani/IndoPak script with ornate localized Ayah end markers (۝), tap-and-hold Ayah popup menu (Play, Tafsir, Bookmark, Note, Copy), and auto-hide toolbars on tap for immersive recitation.
+Synchronized Audio & Hifz Memorization Bar:
+Persistent collapsible bottom player powered by Media3 ExoPlayer with foreground notification controls.
+Real-Time Word Highlighting: Read wordTimestampSegmentsJson during playback to highlight the exact Arabic word and its meaning tile as the Qari recites.
+Hifz Tools: Select Qari (e.g., Mishary Rashid Alafasy, Mahmoud Khalil Al-Husary, Muhammad Siddiq Al-Minshawi), A-B Ayah Range Loop, Repeat per Ayah (1x, 3x, 5x, 10x, ∞), Pause interval between Ayahs (for repeating after Qari), Playback speed (0.5x–2.0x), and auto-scroll.
+Screen 4: Tafsir, Notes & Image Sharing Sheet
+Tabbed or switchable Tafsir viewer supporting downloaded Tafsirs in Bangla (e.g., Tafsir Abu Bakr Zakaria / Ibn Kathir Bangla), English (Tafsir Ibn Kathir), and Arabic (Al-Muyassar / Ibn Kathir).
+Clean HTML/Markdown reader with adjustable font size and personal reflection note editor synced to Firestore.
+"Share as Card" generator: Render a beautiful calligraphic Ayah card (Arabic + chosen translation + Surah:Ayah citation) exportable to WhatsApp/social apps.
+Screen 5: Grounded AI Study Companion (Firebase AI Logic)
+On any Ayah or Tafsir screen, offer an optional "Ask AI Study Helper" button.
+System prompt rules enforced in code: Pass ONLY the selected Ayah Arabic text, verified translations, and loaded Tafsir passages into Gemini. Instruct Gemini to respond in the user's selected UI language (Bangla, English, Arabic, etc.), explain strictly from the supplied authentic text, cite exact Surah:Ayah keys, and clearly state if a question goes beyond the provided Tafsir context.
+Screen 6: Bookmarks, Reading Plans & Language Settings
+Folder-based Bookmarks & Collections (e.g., "Hifz", "Favorites", "Comfort"), Khatam progress calculator (e.g., finish Quran in 30 days), Backup/Sync status, and comprehensive Language/Script/Audio Download Managers.
+============================================================
+6. CODE QUALITY, ACCESSIBILITY & INITIAL EXECUTION
+Write clean, modular, documented Kotlin files organized by feature (feature/home, feature/reader, feature/search, feature/tafsir, feature/settings, core/database, core/network, core/localization, core/audio, core/ai).
+Add meaningful accessibility contentDescription strings in localized resources, handle system configuration changes gracefully, and include unit tests covering: (1) Arabic-Bangla Bidi formatting, (2) Ayah loop range logic, and (3) Daily streak calculation.
+Ensure the project compiles cleanly out-of-the-box with zero placeholder TODO crashes, rendering the full interactive UI immediately with the bundled Arabic + Bangla + English starter dataset. This should strictly adhere to MVVM architecture and modular dependency injection patterns.
+Build an Android app
+Gemini 4 Hydrogen
+Ran for 4m 34s
+
+Action history
+Here are key actions taken for the app:
+
+Edited 4 files
+app/build.gradle.kts
+app/src/main/res/values/strings.xml
+settings.gradle.kts
+metadata.json
+Please review and confirm the Firebase setup prompt to enable Cloud Firestore and Firebase AI Logic for Noor Al-Quran. Once confirmed, I will provision the backend and build the full application.
+Checkpoint
+Firebase terms accepted, continue setting up integrations.
+Gemini 4 Hydrogen
+Canceled
+
+Action history
+Here are key actions taken for the app:
+
+Edited 66 files
+gradle/libs.versions.toml
+app/build.gradle.kts
+.env.example
+.gitignore
+app/src/main/res/drawable/ic_launcher_foreground.xml
+app/src/main/res/drawable/ic_launcher_background.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+firebase-blueprint.json
+firestore.rules
+firebase.json
+firestore.test.js
+app/src/main/res/xml/locales_config.xml
+app/src/main/res/xml/file_paths.xml
+app/src/main/res/values/themes.xml
+app/src/main/AndroidManifest.xml
+app/src/main/res/values/strings.xml
+app/src/main/res/values-bn/strings.xml
+app/src/main/res/values-ar/strings.xml
+app/src/main/res/values-ur/strings.xml
+app/src/main/res/values-id/strings.xml
+app/src/main/res/values-tr/strings.xml
+app/src/main/assets/quran_starter/surahs_index.json
+app/src/main/assets/quran_starter/quran_starter.json
+app/src/main/java/com/example/core/database/Entities.kt
+app/src/main/java/com/example/core/database/Daos.kt
+app/src/main/java/com/example/core/database/NoorDatabase.kt
+app/src/main/java/com/example/core/database/QuranDatabaseSeeder.kt
+app/src/main/java/com/example/core/localization/BidiUtils.kt
+app/src/main/java/com/example/core/localization/PreferencesDataStore.kt
+app/src/main/java/com/example/core/network/QuranComApiService.kt
+app/src/main/java/com/example/core/network/QuranSyncRepository.kt
+app/src/main/java/com/example/core/ai/AppCheckInit.kt
+app/src/main/java/com/example/core/ai/GroundedAiRepository.kt
+app/src/main/java/com/example/core/firebase/FirestoreErrorHandler.kt
+app/src/main/java/com/example/core/firebase/FirestoreModels.kt
+app/src/main/java/com/example/core/firebase/FirestoreSyncRepository.kt
+app/src/main/java/com/example/core/audio/HifzLoopEngine.kt
+app/src/main/java/com/example/core/audio/QuranPlaybackService.kt
+app/src/main/java/com/example/core/audio/QuranAudioController.kt
+app/src/main/java/com/example/core/ibadah/PrayerTimeCalculator.kt
+app/src/main/java/com/example/core/ibadah/StreakCalculator.kt
+app/src/main/java/com/example/core/di/AppContainer.kt
+app/src/main/java/com/example/ui/theme/Color.kt
+app/src/main/java/com/example/ui/theme/Type.kt
+app/src/main/java/com/example/ui/theme/Theme.kt
+app/src/main/java/com/example/ui/components/TajweedTextFormatter.kt
+app/src/main/java/com/example/ui/components/WordByWordFlowRow.kt
+app/src/main/java/com/example/ui/components/AudioHifzBar.kt
+app/src/main/java/com/example/ui/components/ShareCardGenerator.kt
+app/src/main/java/com/example/feature/home/HomeViewModel.kt
+app/src/main/java/com/example/feature/home/HomeScreen.kt
+app/src/main/java/com/example/feature/explorer/ExplorerViewModel.kt
+app/src/main/java/com/example/feature/explorer/ExplorerScreen.kt
+app/src/main/java/com/example/feature/tafsir/TafsirSheet.kt
+app/src/main/java/com/example/feature/tafsir/AiCompanionSheet.kt
+app/src/main/java/com/example/feature/reader/ReaderViewModel.kt
+app/src/main/java/com/example/feature/reader/ReaderSheets.kt
+app/src/main/java/com/example/feature/reader/ReaderScreen.kt
+app/src/main/java/com/example/feature/library/LibraryViewModel.kt
+app/src/main/java/com/example/feature/library/LibraryScreen.kt
+app/src/main/java/com/example/feature/settings/SettingsViewModel.kt
+app/src/main/java/com/example/feature/settings/SettingsScreen.kt
+app/src/main/java/com/example/ui/navigation/NoorNavHost.kt
+app/src/main/java/com/example/MainActivity.kt
+app/src/test/java/com/example/NoorUnitTests.kt
+Testing Kotlin compilation...
+Checkpoint
+Restart your work Skip to main content
+Noor Al-Quran
+Act as a Principal Android Engineer, Islamic EdTech Architect, and UI/UX Specialist. Build a production-grade, ad-free, offline-first Native Android application in Kotlin and Jetpack Compose (Material 3) called "Noor Al-Quran" — combining the deep Word-by-Word & Tafsir precision of "Al Quran (Tafsir & by Word)" with the serene daily worship habit-tracking experience of the "Sadiq" app.
+NON-NEGOTIABLE SACRED TEXT & DATA INTEGRITY RULES
+ZERO AI HALLUCINATION ON REVELATION: NEVER use Gemini or any generative AI model to produce, reconstruct, vowelize (harakat), translate, or invent Quranic Arabic text, Ayah numbers, or classical Tafsir from model weights.
+DETERMINISTIC VERIFIED DATA ONLY: 100% of Quranic scripts, word-by-word meanings, translations, Tafsirs, and audio segment timestamps MUST originate strictly from verified static local JSON/SQLite assets (structured compatibly with QUL / Quranic Universal Library by Tarteel and Tanzil.net) and authenticated API fetches (Quran Foundation / Quran.com API v4).
+GROUNDED AI USAGE ONLY: Generative AI (via Firebase AI Logic / Gemini) may ONLY be used for:
+(a) Semantic search query expansion to map natural-language user queries (in Bangla, English, Arabic, etc.) to verified Surah:Ayah keys.
+(b) Summarizing or answering user questions strictly grounded in the retrieved verified Tafsir text passed inside the prompt context, with mandatory citations (e.g., [Surah Al-Baqarah 2:153]) and strict refusal to fabricate rulings or external claims.
+(c) Personalized reading/Hifz scheduling suggestions based on user streak metrics.
+FULL MULTILINGUAL ARCHITECTURE (ARABIC, BANGLA & ALL LANGUAGES)
+Design the entire application from the ground up to seamlessly support Arabic, Bangla (বাংলা), English, and an extensible unlimited library of global languages (e.g., Urdu, Indonesian, Turkish, French, Spanish, Hindi, Malay, German):
+A. Dynamic In-App Localization & Bidirectional (Bidi) UI:
+Implement full Android App Localization (res/values/strings.xml, values-bn/strings.xml, values-ar/strings.xml, values-ur/strings.xml, values-id/strings.xml, values-tr/strings.xml, plus clean fallback to English).
+Allow users to switch the UI language dynamically inside Settings independently of the device OS language using AppCompatDelegate.setApplicationLocales().
+Properly handle Bidirectional (RTL + LTR) layout rendering:
+When UI language is Arabic or Urdu, mirror navigation and UI chrome to RTL (LayoutDirection.Rtl).
+When UI language is Bangla, English, or other LTR languages, keep app chrome LTR while strictly forcing all Quranic Arabic verses and Word-by-Word Arabic flow rows to render RTL (CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl)).
+Wrap inline Arabic phrases inside Bangla or English sentences with Unicode Bidi isolation (BidiFormatter) so brackets, verse numbers, and punctuation never reverse or break.
+B. Authentic Arabic & Bangla Typography Engine:
+Bundle and configure support for multiple authentic Quranic scripts and downloadable fonts:
+Uthmani Script (King Fahd Complex / Madani Mushaf style).
+IndoPak / South Asian Nastaleeq-Naskh Script (essential for users in Bangladesh, India, and Pakistan, featuring clear harakat, waqf symbols, and 15-line Mushaf familiarity).
+Tajweed Color-Coded Rendering (parsing Tajweed rule tags to highlight Ghunnah, Ikhfa, Idgham, Qalqalah, Madd with soft, readable colors).
+Configure dedicated Bangla typography (e.g., Noto Sans Bengali / Hind Siliguri) with generous lineHeight (1.5x–1.65x) and includeFontPadding = true or safe vertical metrics so Bangla conjunct characters (যুক্তবর্ণ) and top/bottom vowel signs (ি, ী, ু, ূ, ৃ, ঁ) never clip or overlap.
+Provide independent font-size sliders for (1) Arabic Script, (2) Word-by-Word Meaning, and (3) Full Translation/Tafsir.
+C. Unlimited Multi-Language Content Manager:
+Separate "UI Language" from "Quran Content Languages" so a user in Bangladesh can, for example, keep the UI in Bangla or English while simultaneously viewing Word-by-Word meanings in Bangla + full translations in both Bangla (e.g., Dr. Abu Bakr Zakaria, Muhiuddin Khan, Al-Bayan) and English (Sahih International, The Clear Quran).
+Support downloading, caching, and toggling multiple translations and Tafsirs per language for offline reading, with a clean Download Manager screen showing language search, file sizes, and local storage status.
+============================================================
+VISUAL DESIGN SYSTEM & SERENE UX
+Craft a calm, respectful, distraction-free Material 3 interface inspired by Sadiq and Al Quran (Tafsir & by Word):
+Themes: (1) Serene Cream & Emerald (Light), (2) Soft Sepia (Long Reading), (3) Deep Slate Teal (Dark), and (4) Pure AMOLED Black (Night/Tahajjud Reading).
+Color Palette: Deep Emerald (#0F5C4D), Warm Gold Accent (#C89D54), Warm Parchment (#FAF7F0), Soft Charcoal (#1E2421).
+Zero ads, zero gamified clutter, subtle haptic feedback on Ayah bookmarking and Tasbeeh taps, and smooth shared-element transitions.
+============================================================
+TECHNICAL ARCHITECTURE & DATABASE SCHEMA
+Use MVVM + Clean Architecture with Repository Pattern, Kotlin Coroutines + StateFlow, Hilt for Dependency Injection, Retrofit/Ktor for network calls, Media3/ExoPlayer for audio, and Room (SQLite) for offline persistence.
+Implement the following Room Entities and relationships:
+SurahEntity: id (1..114), nameArabic, nameTransliteration, localizedNamesJson (Map of bn, en, ar, ur, etc.), revelationPlace (Meccan/Medinan), ayahCount, bismillahPre.
+AyahEntity: id, surahId, ayahNumber, verseKey ("2:255"), textUthmani, textIndopak, textTajweedHtml, juzNumber, hizbNumber, pageNumber, sajdahType.
+WordEntity: id, ayahId, position, textUthmani, textIndopak, transliteration, rootArabic, lemmaArabic, grammarTagJson, audioUrl.
+WordTranslationEntity: wordId, languageCode (bn, en, ur, id, etc.), meaningText.
+TranslationSourceEntity & AyahTranslationEntity: sourceId, languageCode, translatorName, ayahId, translatedText, footnotesJson.
+TafsirSourceEntity & AyahTafsirEntity: sourceId, languageCode, tafsirName, ayahId, tafsirHtmlOrMarkdown.
+AudioReciterEntity & AudioSegmentEntity: reciterId, ayahId, audioUrl, localFilePath, wordTimestampSegmentsJson (startMs/endMs per word position for real-time highlighting).
+UserBookmarkEntity, UserCollectionEntity, UserNoteEntity, ReadingProgressEntity, HabitStreakEntity.
+Bundled Starter Offline Dataset:
+Include a clean, pre-populated starter JSON asset in assets/quran_starter/ containing Surah Al-Fatihah (1) and key Surahs from Juz Amma (e.g., 112–114, plus Ayat al-Kursi 2:255) with real Uthmani & IndoPak Arabic text, Word-by-Word meanings in Bangla, English, and Urdu, translations in Bangla & English, and sample word-audio timestamps so the app renders immediately and works offline on first launch in the emulator.
+Build a modular QuranSyncRepository structured to download full Surahs, additional languages, and audio packs from Quran Foundation API v4 / QUL endpoints and persist them into Room.
+Firebase Backend Integration (via Google AI Studio Firebase Setup):
+Firebase Authentication: Optional Google Sign-In + Anonymous/Guest mode (never force login to read Quran!).
+Cloud Firestore: Sync bookmarks, collections, personal notes, last-read position, and daily reading streaks across devices.
+Firebase AI Logic + App Check: Securely power the grounded AI study assistant without exposing API keys in the client binary.
+============================================================
+CORE SCREENS & FEATURE SPECIFICATIONS
+Screen 1: Sadiq-Style Ibadah Home Dashboard
+Time-aware greeting in the active UI language (e.g., "আসসালামু আলাইকুম" / "Assalamu Alaikum") with Hijri + Gregorian date display (localized digits/months).
+Prominent "Continue Reading" card showing Surah name, Ayah number, Juz, and percentage completed.
+Daily Quran Goal & Streak Tracker: Interactive circular progress ring (e.g., "12 / 20 Ayahs today", current streak counter, gentle weekly calendar bar).
+"Verse of the Day" card displaying Arabic + user's chosen language (e.g., Bangla + English) with one-tap Jump-to-Ayah, Bookmark, and Share actions.
+Quick Shortcuts Row: Surah Al-Kahf, Surah Yasin, Surah Al-Mulk, Ayat al-Kursi, Bookmarks, and Prayer/Qibla quick card (local coordinate-based prayer time calculation + Qibla compass sensor + simple Tasbeeh counter modal).
+Screen 2: Quran Explorer & Universal Multilingual Search
+Segmented tabs: Surah (1–114 with localized names, meaning, Makki/Madani badge, Ayah count), Juz / Para (1–30), Mushaf Page (1–604), and Topics/Duas (Quranic Rabbana Duas).
+High-speed Local + Semantic Search bar supporting queries in Arabic (with or without harakat via normalized text column), Bangla (e.g., "ধৈর্য", "নামাজ", "মা-বাবা"), English (e.g., "patience", "mercy", "2:255"), and phonetic transliteration ("Ayatul Kursi", "Ar-Rahman").
+Screen 3: Dual-Mode Quran Reader (The Core Experience)
+Top App Bar: Surah selector dropdown, Juz/Page indicator, Quick Display Settings gear sheet, and Search icon.
+Mode A — Word-by-Word & Translation Study View:
+Each Ayah sits in a clean, breathing card with Ayah badge, Bookmark, Play, Tafsir, and Copy/Share actions.
+Inside the card, render a custom RTL FlowRow where every single Arabic word is stacked neatly in a vertical tile: [Arabic Word] on top, [Transliteration] (toggleable) in the middle, and [Localized Word Meaning — e.g., Bangla / English] directly underneath.
+Interactive Tap-a-Word Inspector: Tapping any word highlights it and opens a ModalBottomSheet showing:
+Large Arabic word + single-word pronunciation play button.
+Meanings across active languages (e.g., Bangla & English).
+Root letters (e.g., ر ح م), Lemma, and Grammatical Morphology (Noun/Verb, tense, case) in localized labels.
+"Occurrences in the Quran" preview list.
+Below the Word-by-Word block, display one or more stacked full translations (e.g., Bangla + English together) with toggleable footnotes.
+Mode B — Distraction-Free Mushaf / Tilawah View:
+Continuous, page-aligned or Surah-flowing Uthmani/IndoPak script with ornate localized Ayah end markers (۝), tap-and-hold Ayah popup menu (Play, Tafsir, Bookmark, Note, Copy), and auto-hide toolbars on tap for immersive recitation.
+Synchronized Audio & Hifz Memorization Bar:
+Persistent collapsible bottom player powered by Media3 ExoPlayer with foreground notification controls.
+Real-Time Word Highlighting: Read wordTimestampSegmentsJson during playback to highlight the exact Arabic word and its meaning tile as the Qari recites.
+Hifz Tools: Select Qari (e.g., Mishary Rashid Alafasy, Mahmoud Khalil Al-Husary, Muhammad Siddiq Al-Minshawi), A-B Ayah Range Loop, Repeat per Ayah (1x, 3x, 5x, 10x, ∞), Pause interval between Ayahs (for repeating after Qari), Playback speed (0.5x–2.0x), and auto-scroll.
+Screen 4: Tafsir, Notes & Image Sharing Sheet
+Tabbed or switchable Tafsir viewer supporting downloaded Tafsirs in Bangla (e.g., Tafsir Abu Bakr Zakaria / Ibn Kathir Bangla), English (Tafsir Ibn Kathir), and Arabic (Al-Muyassar / Ibn Kathir).
+Clean HTML/Markdown reader with adjustable font size and personal reflection note editor synced to Firestore.
+"Share as Card" generator: Render a beautiful calligraphic Ayah card (Arabic + chosen translation + Surah:Ayah citation) exportable to WhatsApp/social apps.
+Screen 5: Grounded AI Study Companion (Firebase AI Logic)
+On any Ayah or Tafsir screen, offer an optional "Ask AI Study Helper" button.
+System prompt rules enforced in code: Pass ONLY the selected Ayah Arabic text, verified translations, and loaded Tafsir passages into Gemini. Instruct Gemini to respond in the user's selected UI language (Bangla, English, Arabic, etc.), explain strictly from the supplied authentic text, cite exact Surah:Ayah keys, and clearly state if a question goes beyond the provided Tafsir context.
+Screen 6: Bookmarks, Reading Plans & Language Settings
+Folder-based Bookmarks & Collections (e.g., "Hifz", "Favorites", "Comfort"), Khatam progress calculator (e.g., finish Quran in 30 days), Backup/Sync status, and comprehensive Language/Script/Audio Download Managers.
+============================================================
+CODE QUALITY, ACCESSIBILITY & INITIAL EXECUTION
+Write clean, modular, documented Kotlin files organized by feature (feature/home, feature/reader, feature/search, feature/tafsir, feature/settings, core/database, core/network, core/localization, core/audio, core/ai).
+Add meaningful accessibility contentDescription strings in localized resources, handle system configuration changes gracefully, and include unit tests covering: (1) Arabic-Bangla Bidi formatting, (2) Ayah loop range logic, and (3) Daily streak calculation.
+Ensure the project compiles cleanly out-of-the-box with zero placeholder TODO crashes, rendering the full interactive UI immediately with the bundled Arabic + Bangla + English starter dataset. This should strictly adhere to MVVM architecture and modular dependency injection patterns.
+Build an Android app
+Gemini 4 Hydrogen
+Ran for 4m 34s
+Action history
+Here are key actions taken for the app:
+Edited 4 files
+app/build.gradle.kts
+app/src/main/res/values/strings.xml
+settings.gradle.kts
+metadata.json
+Please review and confirm the Firebase setup prompt to enable Cloud Firestore and Firebase AI Logic for Noor Al-Quran. Once confirmed, I will provision the backend and build the full application.
+Checkpoint
+Firebase terms accepted, continue setting up integrations.
+Gemini 4 Hydrogen
+Canceled
+Action history
+Here are key actions taken for the app:
+Edited 66 files
+gradle/libs.versions.toml
+app/build.gradle.kts
+.env.example
+.gitignore
+app/src/main/res/drawable/ic_launcher_foreground.xml
+app/src/main/res/drawable/ic_launcher_background.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+firebase-blueprint.json
+firestore.rules
+firebase.json
+firestore.test.js
+app/src/main/res/xml/locales_config.xml
+app/src/main/res/xml/file_paths.xml
+app/src/main/res/values/themes.xml
+app/src/main/AndroidManifest.xml
+app/src/main/res/values/strings.xml
+app/src/main/res/values-bn/strings.xml
+app/src/main/res/values-ar/strings.xml
+app/src/main/res/values-ur/strings.xml
+app/src/main/res/values-id/strings.xml
+app/src/main/res/values-tr/strings.xml
+app/src/main/assets/quran_starter/surahs_index.json
+app/src/main/assets/quran_starter/quran_starter.json
+app/src/main/java/com/example/core/database/Entities.kt
+app/src/main/java/com/example/core/database/Daos.kt
+app/src/main/java/com/example/core/database/NoorDatabase.kt
+app/src/main/java/com/example/core/database/QuranDatabaseSeeder.kt
+app/src/main/java/com/example/core/localization/BidiUtils.kt
+app/src/main/java/com/example/core/localization/PreferencesDataStore.kt
+app/src/main/java/com/example/core/network/QuranComApiService.kt
+app/src/main/java/com/example/core/network/QuranSyncRepository.kt
+app/src/main/java/com/example/core/ai/AppCheckInit.kt
+app/src/main/java/com/example/core/ai/GroundedAiRepository.kt
+app/src/main/java/com/example/core/firebase/FirestoreErrorHandler.kt
+app/src/main/java/com/example/core/firebase/FirestoreModels.kt
+app/src/main/java/com/example/core/firebase/FirestoreSyncRepository.kt
+app/src/main/java/com/example/core/audio/HifzLoopEngine.kt
+app/src/main/java/com/example/core/audio/QuranPlaybackService.kt
+app/src/main/java/com/example/core/audio/QuranAudioController.kt
+app/src/main/java/com/example/core/ibadah/PrayerTimeCalculator.kt
+app/src/main/java/com/example/core/ibadah/StreakCalculator.kt
+app/src/main/java/com/example/core/di/AppContainer.kt
+app/src/main/java/com/example/ui/theme/Color.kt
+app/src/main/java/com/example/ui/theme/Type.kt
+app/src/main/java/com/example/ui/theme/Theme.kt
+app/src/main/java/com/example/ui/components/TajweedTextFormatter.kt
+app/src/main/java/com/example/ui/components/WordByWordFlowRow.kt
+app/src/main/java/com/example/ui/components/AudioHifzBar.kt
+app/src/main/java/com/example/ui/components/ShareCardGenerator.kt
+app/src/main/java/com/example/feature/home/HomeViewModel.kt
+app/src/main/java/com/example/feature/home/HomeScreen.kt
+app/src/main/java/com/example/feature/explorer/ExplorerViewModel.kt
+app/src/main/java/com/example/feature/explorer/ExplorerScreen.kt
+app/src/main/java/com/example/feature/tafsir/TafsirSheet.kt
+app/src/main/java/com/example/feature/tafsir/AiCompanionSheet.kt
+app/src/main/java/com/example/feature/reader/ReaderViewModel.kt
+app/src/main/java/com/example/feature/reader/ReaderSheets.kt
+app/src/main/java/com/example/feature/reader/ReaderScreen.kt
+app/src/main/java/com/example/feature/library/LibraryViewModel.kt
+app/src/main/java/com/example/feature/library/LibraryScreen.kt
+app/src/main/java/com/example/feature/settings/SettingsViewModel.kt
+app/src/main/java/com/example/feature/settings/SettingsScreen.kt
+app/src/main/java/com/example/ui/navigation/NoorNavHost.kt
+app/src/main/java/com/example/MainActivity.kt
+app/src/test/java/com/example/NoorUnitTests.kt
+Testing Kotlin compilation...
+Checkpoint
+Suggestions
+Make changes, add new features, ask for anything
+Chat
+Preview
+Artifacts
+Checkpoint created
+Gemini 4 Hydrogen
+Canceled
+gradle :app:compileDebugKotlin :app:testDebugUnitTest --console=plain
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for detailsCalculating task graph as no cached configuration is available for tasks: :app:compileDebugKotlin :app:testDebugUnitTest> Task :app:preBuild UP-TO-DATE> Task :app:generateDebugAssets UP-TO-DATE> Task :app:preDebugUnitTestBuild UP-TO-DATE> Task :app:preDebugBuild UP-TO-DATE> Task :app:generateDebugResources UP-TO-DATE> Task :app:generateDebugBuildConfig UP-TO-DATE> Task :app:processDebugGoogleServices UP-TO-DATE> Task :app:packageDebugResources UP-TO-DATE> Task :app:javaPreCompileDebug UP-TO-DATE> Task :app:mapDebugSourceSetPaths> Task :app:processDebugNavigationResources UP-TO-DATE> Task :app:parseDebugLocalResources UP-TO-DATE> Task :app:checkDebugAarMetadata> Task :app:generateDebugRFile> Task :app:compileDebugNavigationResources> Task :app:createDebugCompatibleScreenManifests> Task :app:extractDeepLinksDebug> Task :app:javaPreCompileDebugUnitTest> Task :app:mergeDebugAssets UP-TO-DATE> Task :app:processDebugMainManifest> Task :app:processDebugManifest> Task :app:processDebugManifestForPackage> Task :app:processDebugUnitTestManifest> Task :app:mergeDebugResources> Task :app:kspDebugKotlin> Task :app:processDebugResources> Task :app:packageDebugUnitTestForUnitTest> Task :app:generateDebugUnitTestConfig> Task :app:compileDebugKotlin
+Compiling Kotlin sources and running unit tests...
+Suggestions
+Make changes, add new features, ask for anything
+
+Chat
+Preview
+Artifacts
+Thinking...

@@ -1,0 +1,93 @@
+<resources>
+    <string name="app_name">নূর আল-কুরআন</string>
+    <string name="nav_home">হোম</string>
+    <string name="nav_quran">কুরআন</string>
+    <string name="nav_search">অনুসন্ধান</string>
+    <string name="nav_bookmarks">সংগ্রহ</string>
+    <string name="nav_settings">সেটিংস</string>
+
+    <string name="greeting_morning">আসসালামু আলাইকুম, শুভ সকাল</string>
+    <string name="greeting_afternoon">আসসালামু আলাইকুম, শুভ অপরাহ্ণ</string>
+    <string name="greeting_evening">আসসালামু আলাইকুম, শুভ সন্ধ্যা</string>
+    <string name="greeting_night">আসসালামু আলাইকুম, বরকতময় রাত্রি</string>
+
+    <string name="continue_reading">পড়া চালিয়ে যান</string>
+    <string name="ayah_progress_fmt">আয়াত %1$s • পারা %2$s</string>
+    <string name="daily_goal_title">দৈনিক কুরআন লক্ষ্য</string>
+    <string name="daily_goal_progress_fmt">আজ %1$s / %2$s আয়াত</string>
+    <string name="streak_days_fmt">%1$s দিনের ধারাবাহিকতা</string>
+    <string name="verse_of_the_day">আজকের আয়াত</string>
+    <string name="quick_shortcuts">দ্রুত প্রবেশ</string>
+    <string name="ibadah_tools">দৈনিক ইবাদত ও নামাজ</string>
+    <string name="prayer_times_title">নামাজের সময়সূচী</string>
+    <string name="qibla_compass_title">কিবলা দিক</string>
+    <string name="tasbeeh_counter_title">ডিজিটাল তাসবীহ</string>
+    <string name="detect_location">জিপিএস অবস্থান ব্যবহার করুন</string>
+
+    <string name="tab_surah">সূরা</string>
+    <string name="tab_juz">পারা / জুয</string>
+    <string name="tab_page">পৃষ্ঠা</string>
+    <string name="tab_duas">রব্বানা দোয়া</string>
+    <string name="search_hint">আরবি, বাংলা, ইংরেজি বা ২:২৫৫ লিখুন…</string>
+    <string name="ai_semantic_search">এআই স্মার্ট অনুসন্ধান</string>
+
+    <string name="mode_word_by_word">শব্দে শব্দে</string>
+    <string name="mode_mushaf">মুসহাফ</string>
+    <string name="display_settings">প্রদর্শন ও ফন্ট সেটিংস</string>
+    <string name="script_uthmani">উসমানী (মাদানী)</string>
+    <string name="script_indopak">ইন্দোপাক (নাস্তালিক)</string>
+    <string name="tajweed_colors">তাজবীদ রঙ চিহ্ন</string>
+    <string name="show_transliteration">উচ্চারণ দেখান</string>
+    <string name="arabic_font_size">আরবি ফন্টের আকার</string>
+    <string name="wbw_font_size">শাব্দিক অর্থের আকার</string>
+    <string name="translation_font_size">অনুবাদ ও তাফসীর আকার</string>
+
+    <string name="word_inspector_title">শব্দের ব্যাকরণ ও অর্থ</string>
+    <string name="word_root_label">মূল ধাতু (মাদ্দাহ)</string>
+    <string name="word_lemma_label">শব্দমূল</string>
+    <string name="word_grammar_label">ব্যাকরণ</string>
+    <string name="word_occurrences_label">কুরআনে ব্যবহার</string>
+    <string name="play_word_audio">শব্দটি শুনুন</string>
+
+    <string name="tafsir_title">তাফসীর ও অনুধ্যান</string>
+    <string name="personal_note_hint">এই আয়াত সম্পর্কে আপনার ব্যক্তিগত নোট লিখুন…</string>
+    <string name="save_note">নোট সংরক্ষণ করুন</string>
+    <string name="ask_ai_study_helper">এআই স্টাডি সহায়ক</string>
+    <string name="share_as_card">কার্ড হিসেবে শেয়ার করুন</string>
+    <string name="ai_grounding_notice">শুধুমাত্র যাচাইকৃত আয়াত ও লোড করা তাফসীরের ওপর ভিত্তি করে উত্তর দেওয়া হয়।</string>
+    <string name="ai_ask_hint">এই আয়াত বা তাফসীর সম্পর্কে প্রশ্ন করুন…</string>
+
+    <string name="hifz_controls">হিফয ও অডিও</string>
+    <string name="repeat_ayah">আয়াত পুনরাবৃত্তি</string>
+    <string name="pause_between_ayahs">আয়াতের মাঝে বিরতি</string>
+    <string name="loop_range">ক-খ লুপ</string>
+    <string name="playback_speed">গতি</string>
+
+    <string name="ui_language_title">অ্যাপের ভাষা</string>
+    <string name="content_languages_title">কুরআন অনুবাদ ও শাব্দিক অর্থ</string>
+    <string name="theme_title">পড়ার থিম</string>
+    <string name="theme_serene_emerald">প্রশান্ত ক্রিম ও পান্না</string>
+    <string name="theme_sepia">নরম সেপিয়া</string>
+    <string name="theme_slate_dark">গভীর স্লেট টিল</string>
+    <string name="theme_amoled">অ্যামোলেড রাতের মোড</string>
+
+    <string name="cloud_sync_title">ক্লাউড ব্যাকআপ ও সিঙ্ক</string>
+    <string name="guest_mode_desc">অফলাইন গেস্ট মোডে পড়ছেন। ডিভাইস জুড়ে বুকমার্ক, নোট ও স্ট্রিক সিঙ্ক করতে Google দিয়ে সাইন ইন করুন।</string>
+    <string name="sign_in_google">Google দিয়ে সাইন ইন করুন</string>
+    <string name="sign_out">সাইন আউট</string>
+    <string name="download_manager_title">অফলাইন কন্টেন্ট ও ডাউনলোড ম্যানেজার</string>
+    <string name="download_surah">সূরা ডাউনলোড করুন</string>
+    <string name="downloaded_badge">অফলাইনে প্রস্তুত</string>
+
+    <string name="khatam_plan_title">খতম কুরআন পরিকল্পনা</string>
+    <string name="collections_title">বুকমার্ক সংকলন</string>
+
+    <string name="cd_bookmark_ayah">আয়াত বুকমার্ক করুন</string>
+    <string name="cd_play_ayah">আয়াত তিলাওয়াত চালান</string>
+    <string name="cd_open_tafsir">তাফসীর ও নোট খুলুন</string>
+    <string name="cd_share_ayah">আয়াত কার্ড শেয়ার করুন</string>
+    <string name="cd_copy_ayah">আয়াত কপি করুন</string>
+    <string name="cd_qibla_needle">কিবলা কম্পাস কাঁটা</string>
+    <string name="cd_back">ফিরে যান</string>
+    <string name="cd_settings">প্রদর্শন সেটিংস</string>
+</resources>

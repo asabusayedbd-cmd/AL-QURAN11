@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Noor Al-Quran</string>
+    <string name="nav_home">Ana Sayfa</string>
+    <string name="nav_quran">Kuran</string>
+    <string name="nav_search">Ara</string>
+    <string name="nav_bookmarks">Kitaplık</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="continue_reading">Okumaya Devam Et</string>
+    <string name="daily_goal_title">Günlük Kuran Hedefi</string>
+    <string name="verse_of_the_day">Günün Ayeti</string>
+    <string name="prayer_times_title">Namaz Vakitleri</string>
+    <string name="qibla_compass_title">Kıble Yönü</string>
+    <string name="tasbeeh_counter_title">Dijital Tesbih</string>
+    <string name="tab_surah">Sure</string>
+    <string name="tab_juz">Cüz</string>
+    <string name="tab_page">Sayfa</string>
+    <string name="tab_duas">Rabbena Duaları</string>
+    <string name="mode_word_by_word">Kelime Kelime</string>
+    <string name="mode_mushaf">Mushaf</string>
+    <string name="tafsir_title">Tefsir &amp; Notlar</string>
+    <string name="sign_in_google">Google ile Giriş Yap</string>
+    <string name="sign_out">Çıkış Yap</string>
+</resources>

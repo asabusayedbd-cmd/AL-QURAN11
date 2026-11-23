@@ -1,0 +1,6 @@
+{
+  "name": "Noor Al-Quran",
+  "description": "Offline-first multilingual Quran reader with word-by-word meanings, Tafsir, synchronized audio, worship habit tracking, and grounded study insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
