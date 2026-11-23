@@ -233,6 +233,39 @@ interface QuranDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAudioSegments(segments: List<AudioSegmentEntity>)
+
+    @Query("DELETE FROM ayahs WHERE surahId = :surahId")
+    suspend fun deleteAyahsBySurah(surahId: Int)
+
+    @Query("DELETE FROM words WHERE ayahId IN (SELECT id FROM ayahs WHERE surahId = :surahId)")
+    suspend fun deleteWordsBySurah(surahId: Int)
+
+    @Query("DELETE FROM word_translations WHERE wordId IN (SELECT w.id FROM words w INNER JOIN ayahs a ON a.id = w.ayahId WHERE a.surahId = :surahId)")
+    suspend fun deleteWordTranslationsBySurah(surahId: Int)
+
+    @Query("DELETE FROM ayah_translations WHERE ayahId IN (SELECT id FROM ayahs WHERE surahId = :surahId)")
+    suspend fun deleteAyahTranslationsBySurah(surahId: Int)
+
+    @Query("DELETE FROM ayah_tafsirs WHERE ayahId IN (SELECT id FROM ayahs WHERE surahId = :surahId)")
+    suspend fun deleteAyahTafsirsBySurah(surahId: Int)
+
+    @Query("DELETE FROM audio_segments WHERE ayahId IN (SELECT id FROM ayahs WHERE surahId = :surahId)")
+    suspend fun deleteAudioSegmentsBySurah(surahId: Int)
+
+    @Query("DELETE FROM ayah_translations WHERE sourceId = :sourceId")
+    suspend fun deleteTranslationsBySource(sourceId: Int)
+
+    @Query("DELETE FROM ayah_tafsirs WHERE sourceId = :sourceId")
+    suspend fun deleteTafsirsBySource(sourceId: Int)
+
+    @Query("SELECT COUNT(*) FROM ayahs WHERE surahId = :surahId")
+    suspend fun countAyahsInSurah(surahId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM ayah_translations WHERE sourceId = :sourceId")
+    suspend fun countTranslationsForSource(sourceId: Int): Int
+
+    @Query("SELECT COUNT(*) FROM ayah_tafsirs WHERE sourceId = :sourceId")
+    suspend fun countTafsirsForSource(sourceId: Int): Int
 }
 
 data class WordOccurrenceProjection(

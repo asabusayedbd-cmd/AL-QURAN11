@@ -1,5 +1,6 @@
 package com.example.core.network
 
+import android.content.Context
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.core.database.AyahEntity
@@ -18,10 +19,12 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 
 class QuranSyncRepository(
     private val database: NoorDatabase,
-    private val apiService: QuranComApiService
+    private val apiService: QuranComApiService,
+    private val context: Context? = null
 ) {
     private val quranDao = database.quranDao()
 
@@ -142,7 +145,7 @@ class QuranSyncRepository(
                                 sourceId = tr.resourceId,
                                 ayahId = v.id,
                                 languageCode = langCode,
-                                translatorName = tr.resourceName ?: "Verified Translation",
+                                translatorName = tr.resourceName ?: "Quran Translation",
                                 translatedText = cleanHtml(tr.text)
                             )
                         )
@@ -340,6 +343,95 @@ class QuranSyncRepository(
             throw e
         } catch (e: Exception) {
             Log.e("QuranSync", "Failed downloading translation pack $sourceId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteSurahOffline(surahId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            context?.let { ctx ->
+                val audioRoot = File(ctx.filesDir, "audio")
+                val s = surahId.toString().padStart(3, '0')
+                if (audioRoot.exists()) {
+                    audioRoot.listFiles()?.forEach { qariDir ->
+                        if (qariDir.isDirectory) {
+                            qariDir.listFiles { f -> f.name.startsWith(s) }?.forEach { it.delete() }
+                        }
+                    }
+                }
+            }
+            val starterSurahIds = setOf(1, 103, 108, 112, 113, 114)
+            database.withTransaction {
+                quranDao.deleteAudioSegmentsBySurah(surahId)
+                if (surahId !in starterSurahIds) {
+                    quranDao.deleteAyahTafsirsBySurah(surahId)
+                    quranDao.deleteAyahTranslationsBySurah(surahId)
+                    quranDao.deleteWordTranslationsBySurah(surahId)
+                    quranDao.deleteWordsBySurah(surahId)
+                    quranDao.deleteAyahsBySurah(surahId)
+                }
+                quranDao.markSurahDownloaded(surahId, false)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("QuranSync", "Failed to delete Surah $surahId offline data", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteAllDownloadedSurahs(): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            context?.let { ctx ->
+                val audioRoot = File(ctx.filesDir, "audio")
+                audioRoot.deleteRecursively()
+            }
+            val downloadedIds = quranDao.getDownloadedSurahIds()
+            val starterSurahIds = setOf(1, 103, 108, 112, 113, 114)
+            var count = 0
+            database.withTransaction {
+                for (id in downloadedIds) {
+                    quranDao.deleteAudioSegmentsBySurah(id)
+                    if (id !in starterSurahIds) {
+                        quranDao.deleteAyahTafsirsBySurah(id)
+                        quranDao.deleteAyahTranslationsBySurah(id)
+                        quranDao.deleteWordTranslationsBySurah(id)
+                        quranDao.deleteWordsBySurah(id)
+                        quranDao.deleteAyahsBySurah(id)
+                        count++
+                    }
+                    quranDao.markSurahDownloaded(id, false)
+                }
+            }
+            Result.success(count)
+        } catch (e: Exception) {
+            Log.e("QuranSync", "Failed to delete all downloaded surahs", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteTranslationPack(sourceId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            database.withTransaction {
+                quranDao.deleteTranslationsBySource(sourceId)
+                quranDao.setTranslationDownloaded(sourceId, false)
+                quranDao.setTranslationEnabled(sourceId, false)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("QuranSync", "Failed to delete translation pack $sourceId", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteTafsirPack(sourceId: Int): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            database.withTransaction {
+                quranDao.deleteTafsirsBySource(sourceId)
+                quranDao.updateTafsirSourceStatus(sourceId, downloaded = false, enabled = false)
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("QuranSync", "Failed to delete tafsir pack $sourceId", e)
             Result.failure(e)
         }
     }

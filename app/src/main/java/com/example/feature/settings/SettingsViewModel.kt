@@ -2,7 +2,6 @@ package com.example.feature.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.core.audio.AudioPlaybackState
 import com.example.core.audio.QuranAudioController
 import com.example.core.database.AudioReciterEntity
 import com.example.core.database.NoorDatabase
@@ -15,15 +14,23 @@ import com.example.core.localization.QuranScriptType
 import com.example.core.localization.UserPreferences
 import com.example.core.network.QuranSyncRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class BatchDownloadProgress(
+    val current: Int,
+    val total: Int,
+    val surahName: String
+)
 
 data class SettingsUiState(
     val preferences: UserPreferences = UserPreferences(),
@@ -36,7 +43,9 @@ data class SettingsUiState(
     val statusMessage: String? = null,
     val busySourceId: Int? = null,
     val busySurahId: Int? = null,
-    val isRefreshingTafsirs: Boolean = false
+    val isRefreshingTafsirs: Boolean = false,
+    val batchDownloadProgress: BatchDownloadProgress? = null,
+    val downloadedAudioSurahIds: Set<Int> = emptySet()
 )
 
 class SettingsViewModel(
@@ -51,6 +60,10 @@ class SettingsViewModel(
     private val _busySourceId = MutableStateFlow<Int?>(null)
     private val _busySurahId = MutableStateFlow<Int?>(null)
     private val _isRefreshingTafsirs = MutableStateFlow(false)
+    private val _batchDownloadProgress = MutableStateFlow<BatchDownloadProgress?>(null)
+    private val _downloadedAudioSurahIds = MutableStateFlow<Set<Int>>(emptySet())
+    private var batchDownloadJob: Job? = null
+
     private val fallbackAudioSummaryFlow = MutableStateFlow(0L to (null as Int?))
     private val audioSummaryFlow = (
         audioController?.state
@@ -72,21 +85,28 @@ class SettingsViewModel(
         _statusMessage,
         _busySourceId,
         _busySurahId,
-        _isRefreshingTafsirs
-    ) { msg, busySrc, busySurah, refreshingTaf ->
-        Pair(msg to busySrc, busySurah to refreshingTaf)
+        _isRefreshingTafsirs,
+        _batchDownloadProgress
+    ) { msg, busySrc, busySurah, refreshingTaf, batchProgress ->
+        Triple(msg to busySrc, busySurah to refreshingTaf, batchProgress)
+    }
+
+    init {
+        refreshAudioSurahIds()
     }
 
     val uiState: StateFlow<SettingsUiState> = combine(
         preferencesRepository.preferencesFlow,
         audioSummaryFlow,
         catalogsFlow,
-        statusFlow
-    ) { prefs, audioSummary, catalogs, statuses ->
+        statusFlow,
+        _downloadedAudioSurahIds
+    ) { prefs, audioSummary, catalogs, statuses, audioSurahs ->
         val (trSources, tafSources) = catalogs.first
         val (reciters, surahs) = catalogs.second
         val (msg, busySrc) = statuses.first
         val (busySurah, refreshingTaf) = statuses.second
+        val batchProgress = statuses.third
         val (cacheBytes, sleepRem) = audioSummary
 
         SettingsUiState(
@@ -100,7 +120,9 @@ class SettingsViewModel(
             statusMessage = msg,
             busySourceId = busySrc,
             busySurahId = busySurah,
-            isRefreshingTafsirs = refreshingTaf
+            isRefreshingTafsirs = refreshingTaf,
+            batchDownloadProgress = batchProgress,
+            downloadedAudioSurahIds = audioSurahs
         )
     }
         .flowOn(Dispatchers.Default)
@@ -109,6 +131,13 @@ class SettingsViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = SettingsUiState()
         )
+
+    fun refreshAudioSurahIds() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val audioSet = audioController?.getDownloadedAudioSurahIds() ?: emptySet()
+            _downloadedAudioSurahIds.value = audioSet
+        }
+    }
 
     fun setUiLanguage(languageCode: String) {
         viewModelScope.launch {
@@ -137,16 +166,34 @@ class SettingsViewModel(
     fun toggleTranslationSource(source: TranslationSourceEntity, enabled: Boolean) {
         viewModelScope.launch {
             if (!source.isDownloaded && enabled) {
-                _busySourceId.value = source.id
-                val res = syncRepository.downloadTranslationPack(source.id)
-                _statusMessage.value = res.fold(
-                    onSuccess = { "Downloaded ${source.translatorName}" },
-                    onFailure = { "Download error: ${it.localizedMessage}" }
-                )
-                _busySourceId.value = null
+                downloadTranslationPack(source.id)
             } else {
                 quranDao.setTranslationEnabled(source.id, enabled)
             }
+        }
+    }
+
+    fun downloadTranslationPack(sourceId: Int) {
+        viewModelScope.launch {
+            _busySourceId.value = sourceId
+            val res = syncRepository.downloadTranslationPack(sourceId)
+            _statusMessage.value = res.fold(
+                onSuccess = { "Translation pack downloaded and ready offline" },
+                onFailure = { "Download error: ${it.localizedMessage}" }
+            )
+            _busySourceId.value = null
+        }
+    }
+
+    fun deleteTranslationPack(sourceId: Int) {
+        viewModelScope.launch {
+            _busySourceId.value = sourceId
+            val res = syncRepository.deleteTranslationPack(sourceId)
+            _statusMessage.value = res.fold(
+                onSuccess = { "Deleted translation offline cache" },
+                onFailure = { "Delete error: ${it.localizedMessage}" }
+            )
+            _busySourceId.value = null
         }
     }
 
@@ -163,8 +210,91 @@ class SettingsViewModel(
                 onSuccess = { "Surah $surahId ready offline ($it Ayahs)" },
                 onFailure = { "Failed: ${it.localizedMessage}" }
             )
+            refreshAudioSurahIds()
             _busySurahId.value = null
         }
+    }
+
+    fun deleteSurahOffline(surahId: Int) {
+        viewModelScope.launch {
+            _busySurahId.value = surahId
+            val res = syncRepository.deleteSurahOffline(surahId)
+            _statusMessage.value = res.fold(
+                onSuccess = { "Deleted Surah $surahId offline cache" },
+                onFailure = { "Failed: ${it.localizedMessage}" }
+            )
+            refreshAudioSurahIds()
+            _busySurahId.value = null
+        }
+    }
+
+    fun downloadAllSurahs() {
+        batchDownloadJob?.cancel()
+        batchDownloadJob = viewModelScope.launch {
+            val allSurahs = quranDao.observeAllSurahs().first()
+            val toDownload = allSurahs.filter { !it.isDownloaded }
+            if (toDownload.isEmpty()) {
+                _statusMessage.value = "All 114 Surahs are already downloaded!"
+                return@launch
+            }
+            val total = toDownload.size
+            var completed = 0
+            val prefs = uiState.value.preferences
+            for (surah in toDownload) {
+                _batchDownloadProgress.value = BatchDownloadProgress(
+                    current = completed + 1,
+                    total = total,
+                    surahName = surah.nameTransliteration
+                )
+                _busySurahId.value = surah.id
+                syncRepository.downloadSurahForOffline(
+                    surahId = surah.id,
+                    wbwLanguages = listOf(prefs.wbwLanguageCode),
+                    reciterId = prefs.activeReciterId
+                )
+                completed++
+            }
+            _busySurahId.value = null
+            _batchDownloadProgress.value = null
+            _statusMessage.value = "Downloaded $completed Surahs. Complete Quran is ready offline!"
+            refreshAudioSurahIds()
+        }
+    }
+
+    fun cancelBatchDownload() {
+        batchDownloadJob?.cancel()
+        batchDownloadJob = null
+        _batchDownloadProgress.value = null
+        _busySurahId.value = null
+        _statusMessage.value = "Batch download cancelled"
+    }
+
+    fun deleteAllDownloadedSurahs() {
+        viewModelScope.launch {
+            val res = syncRepository.deleteAllDownloadedSurahs()
+            _statusMessage.value = res.fold(
+                onSuccess = { "Deleted all cached Surahs ($it removed) and audio" },
+                onFailure = { "Failed: ${it.localizedMessage}" }
+            )
+            refreshAudioSurahIds()
+        }
+    }
+
+    fun downloadSurahAudio(surahId: Int, reciterId: Int) {
+        audioController?.downloadSurahAudioForQari(surahId, reciterId)
+        _statusMessage.value = "Downloading audio for Surah $surahId..."
+    }
+
+    fun deleteSurahAudio(surahId: Int, reciterId: Int? = null) {
+        audioController?.deleteSurahAudio(surahId, reciterId)
+        _statusMessage.value = "Deleted audio for Surah $surahId"
+        refreshAudioSurahIds()
+    }
+
+    fun deleteReciterAudio(reciterId: Int) {
+        audioController?.deleteReciterAudio(reciterId)
+        _statusMessage.value = "Deleted reciter audio cache"
+        refreshAudioSurahIds()
     }
 
     fun setActiveReciter(reciter: AudioReciterEntity) {
@@ -172,6 +302,7 @@ class SettingsViewModel(
             preferencesRepository.setActiveReciterId(reciter.id)
             audioController?.updateReciter(reciter.id, reciter.name)
             _statusMessage.value = "Default Qari set to ${reciter.name}"
+            refreshAudioSurahIds()
         }
     }
 
@@ -224,12 +355,41 @@ class SettingsViewModel(
     fun clearOfflineAudioCache() {
         audioController?.clearOfflineAudioCache()
         _statusMessage.value = "Offline audio cache cleared"
+        refreshAudioSurahIds()
     }
 
     fun selectDefaultTafsirSource(source: TafsirSourceEntity) {
         viewModelScope.launch {
             preferencesRepository.setActiveTafsirSourceId(source.id)
             _statusMessage.value = "Default Tafsir set to ${source.tafsirName}"
+        }
+    }
+
+    fun downloadTafsirPack(source: TafsirSourceEntity) {
+        viewModelScope.launch {
+            _busySourceId.value = source.id
+            val targetSurahs = quranDao.getDownloadedSurahIds().ifEmpty { listOf(1, 103, 108, 112, 113, 114) }
+            for (sid in targetSurahs) {
+                val ayahs = quranDao.getAyahsBySurah(sid)
+                for (a in ayahs.take(15)) {
+                    syncRepository.fetchAyahTafsirIfMissing(a.id, a.verseKey, source.id, source.languageCode, source.tafsirName)
+                }
+            }
+            quranDao.updateTafsirSourceStatus(source.id, downloaded = true, enabled = true)
+            _busySourceId.value = null
+            _statusMessage.value = "Tafsir ${source.tafsirName} cached offline"
+        }
+    }
+
+    fun deleteTafsirPack(sourceId: Int) {
+        viewModelScope.launch {
+            _busySourceId.value = sourceId
+            val res = syncRepository.deleteTafsirPack(sourceId)
+            _statusMessage.value = res.fold(
+                onSuccess = { "Deleted Tafsir offline cache" },
+                onFailure = { "Delete error: ${it.localizedMessage}" }
+            )
+            _busySourceId.value = null
         }
     }
 

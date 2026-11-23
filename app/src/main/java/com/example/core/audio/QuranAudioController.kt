@@ -546,6 +546,66 @@ class QuranAudioController(
         }
     }
 
+    fun deleteSurahAudio(surahId: Int, reciterId: Int? = null) {
+        scope.launch(Dispatchers.IO) {
+            val prefix = surahId.toString().padStart(3, '0')
+            val audioRoot = File(context.filesDir, "audio")
+            if (reciterId != null) {
+                val qariDir = File(audioRoot, reciterId.toString())
+                qariDir.listFiles { f -> f.name.startsWith(prefix) }?.forEach { it.delete() }
+            } else {
+                audioRoot.listFiles()?.forEach { qariDir ->
+                    if (qariDir.isDirectory) {
+                        qariDir.listFiles { f -> f.name.startsWith(prefix) }?.forEach { it.delete() }
+                    }
+                }
+            }
+            refreshCacheSize()
+        }
+    }
+
+    fun deleteReciterAudio(reciterId: Int) {
+        scope.launch(Dispatchers.IO) {
+            val qariDir = File(context.filesDir, "audio/$reciterId")
+            qariDir.deleteRecursively()
+            refreshCacheSize()
+        }
+    }
+
+    fun hasSurahAudioDownloaded(surahId: Int, reciterId: Int? = null): Boolean {
+        val prefix = surahId.toString().padStart(3, '0')
+        val audioRoot = File(context.filesDir, "audio")
+        if (!audioRoot.exists()) return false
+        return if (reciterId != null) {
+            val qariDir = File(audioRoot, reciterId.toString())
+            qariDir.listFiles { f -> f.name.startsWith(prefix) && f.length() > 1024L }?.isNotEmpty() == true
+        } else {
+            audioRoot.listFiles()?.any { qariDir ->
+                qariDir.isDirectory && qariDir.listFiles { f -> f.name.startsWith(prefix) && f.length() > 1024L }?.isNotEmpty() == true
+            } == true
+        }
+    }
+
+    fun getDownloadedAudioSurahIds(reciterId: Int? = null): Set<Int> {
+        val audioRoot = File(context.filesDir, "audio")
+        if (!audioRoot.exists()) return emptySet()
+        val result = mutableSetOf<Int>()
+        val dirs = if (reciterId != null) {
+            listOf(File(audioRoot, reciterId.toString()))
+        } else {
+            audioRoot.listFiles()?.filter { it.isDirectory } ?: emptyList()
+        }
+        dirs.forEach { dir ->
+            dir.listFiles()?.forEach { file ->
+                if (file.name.endsWith(".mp3") && file.length() > 1024L) {
+                    val sidStr = file.name.take(3)
+                    sidStr.toIntOrNull()?.let { result.add(it) }
+                }
+            }
+        }
+        return result
+    }
+
     private fun refreshCacheSize() {
         scope.launch(Dispatchers.IO) {
             val root = File(context.filesDir, "audio")

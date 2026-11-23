@@ -524,7 +524,7 @@ fun HomeScreen(
                                             verseKey = votd.ayah.verseKey,
                                             arabicText = votd.ayah.textUthmani,
                                             translationText = votd.translation?.translatedText.orEmpty(),
-                                            translatorName = votd.translation?.translatorName ?: "Verified Translation"
+                                            translatorName = votd.translation?.translatorName ?: "Quran Translation"
                                         )
                                     },
                                     modifier = Modifier.testTag("votd_share_button")

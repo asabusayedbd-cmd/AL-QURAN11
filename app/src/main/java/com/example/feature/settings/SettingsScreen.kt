@@ -62,6 +62,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.core.localization.BidiUtils
@@ -105,6 +106,7 @@ fun SettingsScreen(
     var showQariPicker by remember { mutableStateOf(false) }
     var translationLangFilter by remember { mutableStateOf("ALL") }
     var tafsirLangFilter by remember { mutableStateOf("ALL") }
+    var showDownloadManagerSheet by remember { mutableStateOf(false) }
 
     val activeReciter = remember(state.reciters, state.preferences.activeReciterId) {
         state.reciters.firstOrNull { it.id == state.preferences.activeReciterId }
@@ -434,7 +436,7 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. Verified Tafsir Library (Lazy items for fast 1 GB RAM scrolling)
+            // 5. Tafsir Library (Lazy items for fast 1 GB RAM scrolling)
             item(key = "tafsir_header") {
                 ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(
@@ -601,13 +603,68 @@ fun SettingsScreen(
                 }
             }
 
-            // 7. Offline Surah Download Manager (Highlights popular Surahs)
+            // 7. Offline Surah Download Manager (Full Download & Delete Controls)
             item(key = "dl_manager_header") {
-                Text(
-                    text = stringResource(R.string.download_manager_title),
-                    style = MaterialTheme.typography.titleMedium
-                )
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(18.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.download_manager_title),
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    text = "$downloadedSurahsCount / 114 Surahs offline • Complete control to download or delete any item",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            FilledTonalButton(
+                                onClick = { showDownloadManagerSheet = true },
+                                modifier = Modifier.testTag("open_download_manager_button")
+                            ) {
+                                Text("Manage All")
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { viewModel.downloadAllSurahs() },
+                                modifier = Modifier.weight(1f),
+                                enabled = state.batchDownloadProgress == null && downloadedSurahsCount < 114
+                            ) {
+                                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Download All (114)", fontSize = 12.sp, maxLines = 1)
+                            }
+
+                            OutlinedButton(
+                                onClick = { viewModel.deleteAllDownloadedSurahs() },
+                                modifier = Modifier.weight(1f),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
+                                enabled = downloadedSurahsCount > 0
+                            ) {
+                                Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Delete All", fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
             }
+
             items(featuredSurahs, key = { "dl_surah_${it.id}" }, contentType = { "dl_surah_row" }) { surah ->
                 val name = BidiUtils.extractLocalizedSurahName(
                     surah.localizedNamesJson,
@@ -631,7 +688,30 @@ fun SettingsScreen(
                     }
                     when {
                         state.busySurahId == surah.id -> CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        surah.isDownloaded -> Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        surah.isDownloaded -> {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = stringResource(R.string.downloaded_badge),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                IconButton(
+                                    onClick = { viewModel.deleteSurahOffline(surah.id) },
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("settings_delete_surah_${surah.id}")
+                                ) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete Surah",
+                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
                         else -> IconButton(
                             onClick = { viewModel.downloadSurahOffline(surah.id) },
                             modifier = Modifier.testTag("settings_dl_surah_${surah.id}")
@@ -717,6 +797,14 @@ fun SettingsScreen(
                 showQariPicker = false
             },
             onDismiss = { showQariPicker = false }
+        )
+    }
+
+    if (showDownloadManagerSheet) {
+        DownloadManagerSheet(
+            state = state,
+            viewModel = viewModel,
+            onDismiss = { showDownloadManagerSheet = false }
         )
     }
 }

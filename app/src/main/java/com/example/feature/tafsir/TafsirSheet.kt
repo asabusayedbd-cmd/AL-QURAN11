@@ -118,7 +118,7 @@ fun TafsirSheet(
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = "$surahName • ${ayah.verseKey} • ${tafsirSources.size} Verified Tafsirs",
+                        text = "$surahName • ${ayah.verseKey} • ${tafsirSources.size} Tafsir Sources",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -172,7 +172,7 @@ fun TafsirSheet(
                 }
             }
 
-            // Verified Tafsir body (proper RTL alignment for Arabic / Urdu Tafsirs)
+            // Tafsir body (proper RTL alignment for Arabic / Urdu Tafsirs)
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),

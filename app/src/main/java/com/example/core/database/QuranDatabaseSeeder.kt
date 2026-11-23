@@ -223,7 +223,7 @@ class QuranDatabaseSeeder(
                             while (keys.hasNext()) {
                                 val sourceIdStr = keys.next()
                                 val sourceId = sourceIdStr.toIntOrNull() ?: continue
-                                val (langCode, translatorName) = translatorNamesById[sourceId] ?: ("en" to "Verified Translation")
+                                val (langCode, translatorName) = translatorNamesById[sourceId] ?: ("en" to "Quran Translation")
                                 ayahTranslations.add(
                                     AyahTranslationEntity(
                                         sourceId = sourceId,

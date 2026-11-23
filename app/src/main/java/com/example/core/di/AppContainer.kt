@@ -54,7 +54,7 @@ class AppContainer(context: Context) {
     }
 
     val quranSyncRepository: QuranSyncRepository by lazy {
-        QuranSyncRepository(database, apiService)
+        QuranSyncRepository(database, apiService, appContext)
     }
 
     val audioController: QuranAudioController by lazy {

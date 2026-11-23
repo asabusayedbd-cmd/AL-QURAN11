@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Fullscreen
@@ -317,6 +318,29 @@ fun ReaderScreen(
                                 Icon(
                                     Icons.Default.Fullscreen,
                                     contentDescription = "Distraction-free Mushaf reading"
+                                )
+                            }
+                        }
+                        if (state.surah?.isDownloaded == true) {
+                            IconButton(
+                                onClick = { viewModel.deleteCurrentSurah() },
+                                modifier = Modifier.testTag("reader_delete_surah_button")
+                            ) {
+                                Icon(
+                                    Icons.Default.DeleteOutline,
+                                    contentDescription = "Delete Surah",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            IconButton(
+                                onClick = { viewModel.downloadCurrentSurah() },
+                                modifier = Modifier.testTag("reader_download_surah_button")
+                            ) {
+                                Icon(
+                                    Icons.Default.CloudDownload,
+                                    contentDescription = "Download Surah",
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -785,7 +809,7 @@ fun ReaderScreen(
                                                             verseKey = bundle.ayah.verseKey,
                                                             arabicText = bundle.ayah.textUthmani,
                                                             translationText = tr?.translatedText.orEmpty(),
-                                                            translatorName = tr?.translatorName ?: "Verified Translation"
+                                                            translatorName = tr?.translatorName ?: "Quran Translation"
                                                         )
                                                     },
                                                     modifier = Modifier.testTag("share_card_${bundle.ayah.verseKey}")
@@ -1070,7 +1094,7 @@ fun ReaderScreen(
                                 verseKey = mushafAyah.verseKey,
                                 arabicText = mushafAyah.textUthmani,
                                 translationText = firstTranslation?.translatedText.orEmpty(),
-                                translatorName = firstTranslation?.translatorName ?: "Verified Translation"
+                                translatorName = firstTranslation?.translatorName ?: "Quran Translation"
                             )
                         },
                         modifier = Modifier.testTag("mushaf_action_share")
@@ -1243,7 +1267,7 @@ fun ReaderScreen(
                     verseKey = selectedAyah.verseKey,
                     arabicText = selectedAyah.textUthmani,
                     translationText = tr?.translatedText.orEmpty(),
-                    translatorName = tr?.translatorName ?: "Verified Translation"
+                    translatorName = tr?.translatorName ?: "Quran Translation"
                 )
             },
             onDismiss = viewModel::closeTafsir

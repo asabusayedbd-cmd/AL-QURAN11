@@ -593,8 +593,8 @@ fun RecitationSettingsModalSheet(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Active Qari (${reciters.size} Verified Reciters)",
-                        style = MaterialTheme.typography.labelLarge,
+                        text = "Active Qari (${reciters.size} Reciters)",
+                        style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
@@ -801,7 +801,7 @@ fun QariPickerModalSheet(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Select Qari / Reciter (${reciters.size} Verified Reciters)",
+                text = "Select Qari / Reciter (${reciters.size} Reciters)",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold
             )

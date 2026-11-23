@@ -141,6 +141,20 @@ class ExplorerViewModel(
         }
     }
 
+    fun deleteSurah(surahId: Int) {
+        viewModelScope.launch {
+            _downloadingSurahId.value = surahId
+            _downloadMessage.value = null
+            val res = syncRepository.deleteSurahOffline(surahId)
+            res.onSuccess {
+                _downloadMessage.value = "Deleted Surah $surahId offline cache"
+            }.onFailure { err ->
+                _downloadMessage.value = err.localizedMessage ?: "Delete failed"
+            }
+            _downloadingSurahId.value = null
+        }
+    }
+
     fun clearMessage() {
         _downloadMessage.value = null
     }

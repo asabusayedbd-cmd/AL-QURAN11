@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
@@ -351,12 +352,27 @@ fun ExplorerScreen(
                                     if (isDownloading) {
                                         CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
                                     } else if (surah.isDownloaded) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = stringResource(R.string.downloaded_badge),
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
+                                        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = stringResource(R.string.downloaded_badge),
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            IconButton(
+                                                onClick = { viewModel.deleteSurah(surah.id) },
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .testTag("delete_surah_${surah.id}")
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.DeleteOutline,
+                                                    contentDescription = "Delete Surah",
+                                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
                                     } else {
                                         IconButton(
                                             onClick = { viewModel.downloadSurah(surah.id) },

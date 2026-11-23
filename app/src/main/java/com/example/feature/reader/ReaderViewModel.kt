@@ -528,7 +528,17 @@ class ReaderViewModel(
     fun updateHifzConfig(transform: (HifzLoopConfig) -> HifzLoopConfig) = audioController.updateHifzConfig(transform)
     fun setSleepTimerMinutes(minutes: Int) = audioController.setSleepTimerMinutes(minutes)
     fun downloadSurahAudio(surahId: Int, reciterId: Int) = audioController.downloadSurahAudioForQari(surahId, reciterId)
+    fun deleteSurahAudio(surahId: Int) = audioController.deleteSurahAudio(surahId)
     fun clearAudioCache() = audioController.clearOfflineAudioCache()
+    fun deleteCurrentSurah() {
+        val sid = _surahId.value
+        downloadJob?.cancel()
+        downloadJob = viewModelScope.launch {
+            _isDownloadingSurah.value = true
+            syncRepository.deleteSurahOffline(sid)
+            _isDownloadingSurah.value = false
+        }
+    }
     fun setAutoPlayWordOnInspect(enabled: Boolean) {
         viewModelScope.launch { preferencesRepository.setAutoPlayWordOnInspect(enabled) }
     }
