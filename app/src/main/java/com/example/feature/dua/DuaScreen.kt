@@ -67,7 +67,7 @@ import com.example.ui.components.ShareCardGenerator
 @Composable
 fun DuaScreen(
     viewModel: DuaViewModel,
-    onBack: () -> Unit
+    onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val duas by viewModel.duas.collectAsStateWithLifecycle()
@@ -100,11 +100,13 @@ fun DuaScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.testTag("dua_back_button")
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    if (onBack != null) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.testTag("dua_back_button")
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.database.AyahEntity
 import com.example.core.database.AyahTranslationEntity
 import com.example.core.database.NoorDatabase
+import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.SurahEntity
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.PreferencesRepository
@@ -41,7 +42,8 @@ data class ExplorerUiState(
 class ExplorerViewModel(
     private val database: NoorDatabase,
     private val preferencesRepository: PreferencesRepository,
-    private val syncRepository: QuranSyncRepository
+    private val syncRepository: QuranSyncRepository,
+    private val seeder: QuranDatabaseSeeder? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -127,15 +129,18 @@ class ExplorerViewModel(
             _downloadingSurahId.value = surahId
             _downloadMessage.value = null
             val prefs = uiState.value.preferences
+            val restoredLocal = seeder?.ensureSurahLoadedFromAssets(surahId) == true
             val res = syncRepository.downloadSurahForOffline(
                 surahId = surahId,
                 wbwLanguages = listOf(prefs.wbwLanguageCode),
                 reciterId = prefs.activeReciterId
             )
-            res.onSuccess { count ->
-                _downloadMessage.value = "Downloaded Surah $surahId ($count Ayahs)"
-            }.onFailure { err ->
-                _downloadMessage.value = err.localizedMessage ?: "Download failed"
+            if (res.isSuccess) {
+                _downloadMessage.value = "Downloaded Surah $surahId (${res.getOrNull()} Ayahs)"
+            } else if (restoredLocal) {
+                _downloadMessage.value = "Surah $surahId ready offline"
+            } else {
+                _downloadMessage.value = res.exceptionOrNull()?.localizedMessage ?: "Download failed"
             }
             _downloadingSurahId.value = null
         }
@@ -179,6 +184,7 @@ class ExplorerViewModel(
             } ?: "Surah ${ayah.surahId}"
             val trs = trsByAyahId[ayah.id].orEmpty()
             val bestTr = trs.firstOrNull { it.languageCode == prefs.uiLanguageCode }
+                ?: trs.firstOrNull { it.languageCode == "en" }
                 ?: trs.firstOrNull { it.languageCode == "bn" }
                 ?: trs.firstOrNull()
             ExplorerSearchResult(ayah, surahName, bestTr)

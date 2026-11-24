@@ -183,7 +183,7 @@ fun TafsirSheet(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Loading verified Tafsir from Quran Foundation API…", style = MaterialTheme.typography.bodyMedium)
+                            Text("Loading Tafsir from Quran.com…", style = MaterialTheme.typography.bodyMedium)
                         }
                     } else if (activeTafsir != null) {
                         Text(
@@ -223,7 +223,7 @@ fun TafsirSheet(
                             )
                         }
                         Text(
-                            text = "This Tafsir entry is not yet cached locally for ${ayah.verseKey}. Tap below to fetch from the verified Quran Foundation repository.",
+                            text = "This Tafsir entry is not yet cached locally for ${ayah.verseKey}. Tap below to download it for offline reading.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

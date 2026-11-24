@@ -261,6 +261,12 @@ interface QuranDao {
     @Query("SELECT COUNT(*) FROM ayahs WHERE surahId = :surahId")
     suspend fun countAyahsInSurah(surahId: Int): Int
 
+    @Query("SELECT COUNT(*) FROM ayahs")
+    suspend fun countAllAyahs(): Int
+
+    @Query("DELETE FROM ayahs WHERE id > 6236 OR (id IN (2255, 2201, 3008) AND surahId IN (2, 3))")
+    suspend fun deleteLegacyStarterAyahs()
+
     @Query("SELECT COUNT(*) FROM ayah_translations WHERE sourceId = :sourceId")
     suspend fun countTranslationsForSource(sourceId: Int): Int
 

@@ -70,6 +70,7 @@ class AppContainer(context: Context) {
             seeder.seedIfNeeded()
         }
         warmScope.launch {
+            kotlinx.coroutines.delay(350L)
             val fontResIds = intArrayOf(
                 R.font.plus_jakarta_sans,
                 R.font.amiri,

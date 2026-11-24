@@ -1,10 +1,10 @@
 {
   "translationSources": [
-    {"id": 161, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "ড. আবু বকর মুহাম্মাদ যাকারিয়া", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 1850},
+    {"id": 161, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "ড. আবু বকর মুহাম্মাদ যাকারিয়া", "isDownloaded": true, "isEnabled": false, "fileSizeKb": 1850},
     {"id": 162, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "মাওলানা মুহিউদ্দীন খান (তাইসীরুল কুরআন)", "isDownloaded": true, "isEnabled": false, "fileSizeKb": 1720},
     {"id": 163, "languageCode": "bn", "languageName": "বাংলা (Bangla)", "translatorName": "আল-বায়ান ফাউন্ডেশন", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1790},
-    {"id": 131, "languageCode": "en", "languageName": "English", "translatorName": "Dr. Mustafa Khattab (The Clear Quran)", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 1450},
-    {"id": 20, "languageCode": "en", "languageName": "English", "translatorName": "Saheeh International", "isDownloaded": true, "isEnabled": false, "fileSizeKb": 1390},
+    {"id": 131, "languageCode": "en", "languageName": "English", "translatorName": "Dr. Mustafa Khattab (The Clear Quran)", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1450},
+    {"id": 20, "languageCode": "en", "languageName": "English", "translatorName": "Saheeh International", "isDownloaded": true, "isEnabled": true, "fileSizeKb": 1390},
     {"id": 85, "languageCode": "en", "languageName": "English", "translatorName": "M.A.S. Abdel Haleem", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1410},
     {"id": 84, "languageCode": "en", "languageName": "English", "translatorName": "Mufti Taqi Usmani", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1430},
     {"id": 22, "languageCode": "en", "languageName": "English", "translatorName": "Abdullah Yusuf Ali", "isDownloaded": false, "isEnabled": false, "fileSizeKb": 1520},

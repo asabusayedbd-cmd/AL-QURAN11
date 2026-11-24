@@ -44,7 +44,7 @@ class QuranSyncRepository(
                 ?: allTranslationSources
                     .filter { it.isEnabled }
                     .map { it.id }
-                    .ifEmpty { listOf(161, 131) }
+                    .ifEmpty { listOf(20, 161) }
 
             val reciter = quranDao.getReciter(reciterId)
             val totalPages = ((surah.ayahCount - 1) / 50) + 1
@@ -360,16 +360,13 @@ class QuranSyncRepository(
                     }
                 }
             }
-            val starterSurahIds = setOf(1, 103, 108, 112, 113, 114)
             database.withTransaction {
                 quranDao.deleteAudioSegmentsBySurah(surahId)
-                if (surahId !in starterSurahIds) {
-                    quranDao.deleteAyahTafsirsBySurah(surahId)
-                    quranDao.deleteAyahTranslationsBySurah(surahId)
-                    quranDao.deleteWordTranslationsBySurah(surahId)
-                    quranDao.deleteWordsBySurah(surahId)
-                    quranDao.deleteAyahsBySurah(surahId)
-                }
+                quranDao.deleteAyahTafsirsBySurah(surahId)
+                quranDao.deleteAyahTranslationsBySurah(surahId)
+                quranDao.deleteWordTranslationsBySurah(surahId)
+                quranDao.deleteWordsBySurah(surahId)
+                quranDao.deleteAyahsBySurah(surahId)
                 quranDao.markSurahDownloaded(surahId, false)
             }
             Result.success(Unit)
@@ -386,20 +383,17 @@ class QuranSyncRepository(
                 audioRoot.deleteRecursively()
             }
             val downloadedIds = quranDao.getDownloadedSurahIds()
-            val starterSurahIds = setOf(1, 103, 108, 112, 113, 114)
             var count = 0
             database.withTransaction {
                 for (id in downloadedIds) {
                     quranDao.deleteAudioSegmentsBySurah(id)
-                    if (id !in starterSurahIds) {
-                        quranDao.deleteAyahTafsirsBySurah(id)
-                        quranDao.deleteAyahTranslationsBySurah(id)
-                        quranDao.deleteWordTranslationsBySurah(id)
-                        quranDao.deleteWordsBySurah(id)
-                        quranDao.deleteAyahsBySurah(id)
-                        count++
-                    }
+                    quranDao.deleteAyahTafsirsBySurah(id)
+                    quranDao.deleteAyahTranslationsBySurah(id)
+                    quranDao.deleteWordTranslationsBySurah(id)
+                    quranDao.deleteWordsBySurah(id)
+                    quranDao.deleteAyahsBySurah(id)
                     quranDao.markSurahDownloaded(id, false)
+                    count++
                 }
             }
             Result.success(count)

@@ -244,12 +244,34 @@ class NoorUnitTests {
             async { container.seeder.seedIfNeeded() }
         ).awaitAll()
         assertEquals(114, container.database.quranDao().countSurahs())
+        assertEquals(6236, container.database.quranDao().countAllAyahs())
         assertTrue(container.database.quranDao().countReciters() >= 75)
         assertTrue(container.database.quranDao().countTranslationSources() >= 35)
         assertTrue(
             "Expected >= 150 seeded Duas",
             container.database.duaDao().countDuas() >= 150
         )
+
+        // Verify Surah 2 (Al-Baqarah) has all 286 ayahs, words, English WBW meanings, and Saheeh International offline
+        val baqarah = container.database.quranDao().getAyahsBySurah(2)
+        assertEquals(286, baqarah.size)
+        val kursi = container.database.quranDao().getAyahByKey("2:255")!!
+        val kursiWords = container.database.quranDao().getWordsForAyah(kursi.id)
+        assertTrue("Expected words for 2:255 offline", kursiWords.isNotEmpty())
+        assertTrue(
+            "Expected English WBW meanings for Surah 2",
+            container.database.quranDao().countWordTranslationsForSurah(2, "en") > 0
+        )
+        assertTrue(
+            "Expected Saheeh International translation for 2:255",
+            container.database.quranDao().getTranslationsForAyah(kursi.id).any { it.sourceId == 20 }
+        )
+
+        // Verify delete + on-demand offline restore of Surah 18 works without network
+        container.quranSyncRepository.deleteSurahOffline(18)
+        assertEquals(0, container.database.quranDao().countAyahsInSurah(18))
+        assertTrue(container.seeder.ensureSurahLoadedFromAssets(18))
+        assertEquals(110, container.database.quranDao().countAyahsInSurah(18))
 
         // Verify Dua bookmark survives re-seeding
         container.database.duaDao().setDuaBookmarked(1, true)

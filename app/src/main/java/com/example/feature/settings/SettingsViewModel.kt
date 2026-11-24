@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.audio.QuranAudioController
 import com.example.core.database.AudioReciterEntity
 import com.example.core.database.NoorDatabase
+import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.SurahEntity
 import com.example.core.database.TafsirSourceEntity
 import com.example.core.database.TranslationSourceEntity
@@ -52,7 +53,8 @@ class SettingsViewModel(
     private val database: NoorDatabase,
     private val preferencesRepository: PreferencesRepository,
     private val syncRepository: QuranSyncRepository,
-    private val audioController: QuranAudioController? = null
+    private val audioController: QuranAudioController? = null,
+    private val seeder: QuranDatabaseSeeder? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -201,15 +203,19 @@ class SettingsViewModel(
         viewModelScope.launch {
             _busySurahId.value = surahId
             val prefs = uiState.value.preferences
+            val restoredLocal = seeder?.ensureSurahLoadedFromAssets(surahId) == true
             val res = syncRepository.downloadSurahForOffline(
                 surahId = surahId,
                 wbwLanguages = listOf(prefs.wbwLanguageCode),
                 reciterId = prefs.activeReciterId
             )
-            _statusMessage.value = res.fold(
-                onSuccess = { "Surah $surahId ready offline ($it Ayahs)" },
-                onFailure = { "Failed: ${it.localizedMessage}" }
-            )
+            _statusMessage.value = if (res.isSuccess) {
+                "Surah $surahId ready offline (${res.getOrNull()} Ayahs)"
+            } else if (restoredLocal) {
+                "Surah $surahId Arabic & English WBW restored offline"
+            } else {
+                "Failed: ${res.exceptionOrNull()?.localizedMessage}"
+            }
             refreshAudioSurahIds()
             _busySurahId.value = null
         }
@@ -247,11 +253,14 @@ class SettingsViewModel(
                     surahName = surah.nameTransliteration
                 )
                 _busySurahId.value = surah.id
-                syncRepository.downloadSurahForOffline(
-                    surahId = surah.id,
-                    wbwLanguages = listOf(prefs.wbwLanguageCode),
-                    reciterId = prefs.activeReciterId
-                )
+                seeder?.ensureSurahLoadedFromAssets(surah.id, surah.ayahCount)
+                if (prefs.wbwLanguageCode != "en") {
+                    syncRepository.downloadSurahForOffline(
+                        surahId = surah.id,
+                        wbwLanguages = listOf(prefs.wbwLanguageCode),
+                        reciterId = prefs.activeReciterId
+                    )
+                }
                 completed++
             }
             _busySurahId.value = null
@@ -398,7 +407,7 @@ class SettingsViewModel(
             _isRefreshingTafsirs.value = true
             val res = syncRepository.refreshRemoteTafsirCatalog()
             _statusMessage.value = res.fold(
-                onSuccess = { count -> "Synced $count verified Tafsirs from Quran Foundation API" },
+                onSuccess = { count -> "Synced $count Tafsirs from Quran.com catalog" },
                 onFailure = { err -> "Could not refresh catalog: ${err.localizedMessage}" }
             )
             _isRefreshingTafsirs.value = false

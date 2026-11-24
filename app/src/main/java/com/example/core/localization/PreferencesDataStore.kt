@@ -34,7 +34,7 @@ enum class ReaderViewMode {
 
 data class UserPreferences(
     val uiLanguageCode: String = "en",
-    val wbwLanguageCode: String = "bn",
+    val wbwLanguageCode: String = "en",
     val activeTafsirSourceId: Int = 164,
     val activeReciterId: Int = 7,
     val themeMode: NoorThemeMode = NoorThemeMode.SERENE_EMERALD,
@@ -89,7 +89,7 @@ class PreferencesRepository(private val context: Context) {
     val preferencesFlow: Flow<UserPreferences> = context.noorDataStore.data.map { prefs ->
         UserPreferences(
             uiLanguageCode = prefs[Keys.UI_LANGUAGE] ?: "en",
-            wbwLanguageCode = prefs[Keys.WBW_LANGUAGE] ?: "bn",
+            wbwLanguageCode = prefs[Keys.WBW_LANGUAGE] ?: "en",
             activeTafsirSourceId = prefs[Keys.ACTIVE_TAFSIR_ID] ?: 164,
             activeReciterId = prefs[Keys.ACTIVE_RECITER_ID] ?: 7,
             themeMode = enumValues<NoorThemeMode>().firstOrNull { it.name == prefs[Keys.THEME_MODE] }

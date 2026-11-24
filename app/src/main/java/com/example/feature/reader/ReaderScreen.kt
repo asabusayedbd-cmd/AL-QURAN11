@@ -494,14 +494,21 @@ fun ReaderScreen(
                             CircularProgressIndicator(modifier = Modifier.size(36.dp))
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Fetching verified Quranic text, Word-by-Word meanings & translations for offline study…",
+                                text = "Loading Quranic text, Word-by-Word meanings & translations for offline study…",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.cancelDownload() },
+                                modifier = Modifier.testTag("cancel_surah_download_button")
+                            ) {
+                                Text("Cancel")
+                            }
                         } else {
                             Text(
-                                text = "This Surah can be downloaded from the verified Quran Foundation (Quran.com API v4) repository for offline Word-by-Word & Mushaf study.",
+                                text = "This Surah can be restored offline or downloaded with extra translations from Quran.com.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant

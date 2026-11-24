@@ -11,6 +11,7 @@ import com.example.core.database.AyahTafsirEntity
 import com.example.core.database.AyahTranslationEntity
 import com.example.core.database.HabitStreakEntity
 import com.example.core.database.NoorDatabase
+import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.ReadingProgressEntity
 import com.example.core.database.SurahEntity
 import com.example.core.database.TafsirSourceEntity
@@ -94,7 +95,8 @@ class ReaderViewModel(
     private val database: NoorDatabase,
     private val preferencesRepository: PreferencesRepository,
     private val syncRepository: QuranSyncRepository,
-    private val audioController: QuranAudioController
+    private val audioController: QuranAudioController,
+    private val seeder: QuranDatabaseSeeder? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -107,8 +109,8 @@ class ReaderViewModel(
     private val _isDownloadingSurah = MutableStateFlow(false)
     private val _downloadError = MutableStateFlow<String?>(null)
     private val _inspectedWord = MutableStateFlow<WordInspectorState?>(null)
-    private val autoSyncedSurahLangKeys = mutableSetOf<String>()
     private var downloadJob: kotlinx.coroutines.Job? = null
+    private var assetLoadJob: kotlinx.coroutines.Job? = null
 
     val playbackState: StateFlow<AudioPlaybackState> = audioController.state
     val playbackCursor: StateFlow<ActivePlaybackCursor> = audioController.state
@@ -271,30 +273,17 @@ class ReaderViewModel(
         val targetId = surahId.coerceIn(1, 114)
         _surahId.value = targetId
         _downloadError.value = null
-        autoDownloadIfIncomplete(targetId)
+        ensureLocalSurahLoaded(targetId)
     }
 
-    private fun autoDownloadIfIncomplete(surahId: Int) {
-        downloadJob?.cancel()
-        downloadJob = viewModelScope.launch {
-            val prefs = preferencesRepository.preferencesFlow.first()
-            val wbwLang = prefs.wbwLanguageCode
-            val key = "$surahId:$wbwLang"
-            if (key in autoSyncedSurahLangKeys) return@launch
-
-            val surah = quranDao.getSurah(surahId) ?: return@launch
-            val existingAyahs = quranDao.getAyahsBySurah(surahId)
-            val missingVerses = existingAyahs.size < surah.ayahCount
-            val missingWords = existingAyahs.isNotEmpty() && quranDao.getWordsForAyah(existingAyahs.first().id).isEmpty()
-            val missingWbwLang = existingAyahs.isNotEmpty() &&
-                quranDao.countWordTranslationsForSurah(surahId, wbwLang) == 0
-            if (missingVerses || missingWords || missingWbwLang) {
-                val succeeded = downloadSurahById(surahId)
-                if (succeeded) {
-                    autoSyncedSurahLangKeys.add(key)
-                }
-            } else {
-                autoSyncedSurahLangKeys.add(key)
+    private fun ensureLocalSurahLoaded(surahId: Int) {
+        assetLoadJob?.cancel()
+        assetLoadJob = viewModelScope.launch {
+            val surah = quranDao.getSurah(surahId)
+            val existingCount = quranDao.countAyahsInSurah(surahId)
+            val isMissingLocally = surah == null || (surah.isDownloaded && existingCount < surah.ayahCount)
+            if (isMissingLocally) {
+                seeder?.ensureSurahLoadedFromAssets(surahId, surah?.ayahCount)
             }
         }
     }
@@ -328,11 +317,14 @@ class ReaderViewModel(
         val sid = _surahId.value
         downloadJob?.cancel()
         downloadJob = viewModelScope.launch {
-            val wbwLang = preferencesRepository.preferencesFlow.first().wbwLanguageCode
-            if (downloadSurahById(sid)) {
-                autoSyncedSurahLangKeys.add("$sid:$wbwLang")
-            }
+            downloadSurahById(sid)
         }
+    }
+
+    fun cancelDownload() {
+        downloadJob?.cancel()
+        downloadJob = null
+        _isDownloadingSurah.value = false
     }
 
     private suspend fun downloadSurahById(sid: Int): Boolean {
@@ -340,10 +332,29 @@ class ReaderViewModel(
         _downloadError.value = null
         return try {
             val prefs = preferencesRepository.preferencesFlow.first()
+            val surah = quranDao.getSurah(sid)
+            val needsBaseText = surah == null || quranDao.countAyahsInSurah(sid) < surah.ayahCount
+            if (needsBaseText && seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount) == true) {
+                // Restored complete offline Arabic + English WBW + Saheeh International instantly.
+                // Also try syncing extra user-selected translations/WBW language silently if online.
+                val enabledIds = quranDao.getAllTranslationSources()
+                    .filter { it.isEnabled && it.id != 20 }
+                    .map { it.id }
+                if (enabledIds.isNotEmpty() || prefs.wbwLanguageCode != "en") {
+                    syncRepository.downloadSurahForOffline(
+                        surahId = sid,
+                        translationIds = (enabledIds + 20).distinct(),
+                        wbwLanguages = listOf(prefs.wbwLanguageCode),
+                        reciterId = prefs.activeReciterId
+                    )
+                }
+                return true
+            }
+
             val enabledIds = quranDao.getAllTranslationSources()
                 .filter { it.isEnabled }
                 .map { it.id }
-                .ifEmpty { listOf(161, 131) }
+                .ifEmpty { listOf(20, 161) }
             val res = syncRepository.downloadSurahForOffline(
                 surahId = sid,
                 translationIds = enabledIds,

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
@@ -25,8 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -80,6 +83,7 @@ fun NoorAppRoot(
         TopNavDestination(ROUTE_HOME, R.string.nav_home, Icons.Default.Home),
         TopNavDestination(ROUTE_EXPLORER, R.string.nav_quran, Icons.AutoMirrored.Filled.MenuBook),
         TopNavDestination(ROUTE_SEARCH, R.string.nav_search, Icons.Default.Search),
+        TopNavDestination(ROUTE_DUA, R.string.nav_dua, Icons.Default.AutoAwesome),
         TopNavDestination(ROUTE_LIBRARY, R.string.nav_bookmarks, Icons.Default.Bookmark),
         TopNavDestination(ROUTE_SETTINGS, R.string.nav_settings, Icons.Default.Settings)
     )
@@ -120,7 +124,15 @@ fun NoorAppRoot(
                                     selected = selected,
                                     onClick = { navigateTopLevel(dest.route) },
                                     icon = { Icon(dest.icon, contentDescription = label) },
-                                    label = { Text(label) },
+                                    label = {
+                                        Text(
+                                            text = label,
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    },
                                     modifier = Modifier.testTag("nav_bar_${dest.route}")
                                 )
                             }
@@ -170,7 +182,7 @@ fun NoorAppRoot(
                                     onOpenReader = openReader,
                                     onOpenExplorer = { navigateTopLevel(ROUTE_EXPLORER) },
                                     onOpenLibrary = { navigateTopLevel(ROUTE_LIBRARY) },
-                                    onOpenDua = { navController.navigate(ROUTE_DUA) }
+                                    onOpenDua = { navigateTopLevel(ROUTE_DUA) }
                                 )
                             }
 
@@ -189,7 +201,7 @@ fun NoorAppRoot(
                                 )
                                 DuaScreen(
                                     viewModel = vm,
-                                    onBack = { navController.popBackStack() }
+                                    onBack = null
                                 )
                             }
 
@@ -201,7 +213,8 @@ fun NoorAppRoot(
                                             ExplorerViewModel(
                                                 database = appContainer.database,
                                                 preferencesRepository = appContainer.preferencesRepository,
-                                                syncRepository = appContainer.quranSyncRepository
+                                                syncRepository = appContainer.quranSyncRepository,
+                                                seeder = appContainer.seeder
                                             )
                                         }
                                     }
@@ -222,7 +235,8 @@ fun NoorAppRoot(
                                             ExplorerViewModel(
                                                 database = appContainer.database,
                                                 preferencesRepository = appContainer.preferencesRepository,
-                                                syncRepository = appContainer.quranSyncRepository
+                                                syncRepository = appContainer.quranSyncRepository,
+                                                seeder = appContainer.seeder
                                             )
                                         }
                                     }
@@ -260,7 +274,8 @@ fun NoorAppRoot(
                                                 database = appContainer.database,
                                                 preferencesRepository = appContainer.preferencesRepository,
                                                 syncRepository = appContainer.quranSyncRepository,
-                                                audioController = appContainer.audioController
+                                                audioController = appContainer.audioController,
+                                                seeder = appContainer.seeder
                                             )
                                         }
                                     }
@@ -291,7 +306,8 @@ fun NoorAppRoot(
                                                 database = appContainer.database,
                                                 preferencesRepository = appContainer.preferencesRepository,
                                                 syncRepository = appContainer.quranSyncRepository,
-                                                audioController = appContainer.audioController
+                                                audioController = appContainer.audioController,
+                                                seeder = appContainer.seeder
                                             )
                                         }
                                     }
