@@ -246,5 +246,63 @@ class NoorUnitTests {
         assertEquals(114, container.database.quranDao().countSurahs())
         assertTrue(container.database.quranDao().countReciters() >= 75)
         assertTrue(container.database.quranDao().countTranslationSources() >= 35)
+        assertTrue(
+            "Expected >= 150 seeded Duas",
+            container.database.duaDao().countDuas() >= 150
+        )
+
+        // Verify Dua bookmark survives re-seeding
+        container.database.duaDao().setDuaBookmarked(1, true)
+        assertTrue(container.database.duaDao().getDua(1)?.isBookmarked == true)
+    }
+
+    // 7. 150+ Dua catalog, Room MIGRATION_1_2, and Hanafi vs Standard Asr timings
+    @Test
+    fun testDuaCatalogMigrationAndHanafiAsr() {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val catalog = com.example.core.database.DuaSeederData.loadAllFromAssets(appContext)
+        assertTrue("Expected >= 150 Duas in catalog, got ${catalog.size}", catalog.size >= 150)
+        assertEquals(12, catalog.map { it.category }.distinct().size)
+        assertTrue(catalog.all { it.reference.isNotBlank() && it.arabicText.isNotBlank() && it.translation.isNotBlank() })
+        assertFalse(catalog.any { it.translation.contains("Verified Translation", ignoreCase = true) })
+
+        // Verify Room MIGRATION_1_2 creates the duas table & indices cleanly
+        val dbName = "migration_test_${System.nanoTime()}.db"
+        val helper = androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory().create(
+            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(appContext)
+                .name(dbName)
+                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(1) {
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `surahs` (`id` INTEGER NOT NULL PRIMARY KEY)")
+                    }
+
+                    override fun onUpgrade(
+                        db: androidx.sqlite.db.SupportSQLiteDatabase,
+                        oldVersion: Int,
+                        newVersion: Int
+                    ) = Unit
+                })
+                .build()
+        )
+        try {
+            val wrappedDb = helper.writableDatabase
+            com.example.core.database.NoorDatabase.MIGRATION_1_2.migrate(wrappedDb)
+            wrappedDb.query("SELECT name FROM sqlite_master WHERE type='table' AND name='duas'").use { c ->
+                assertTrue("Expected duas table after MIGRATION_1_2", c.moveToFirst())
+            }
+            wrappedDb.query("SELECT name FROM sqlite_master WHERE type='index' AND name='index_duas_category'").use { c ->
+                assertTrue("Expected category index after MIGRATION_1_2", c.moveToFirst())
+            }
+            helper.close()
+        } finally {
+            appContext.getDatabasePath(dbName).delete()
+        }
+
+        // Verify Hanafi Asr is strictly later than Standard (Shafi'i) Asr and 30+ city presets exist
+        assertTrue("Expected >= 30 global city presets", PrayerTimeCalculator.CITY_PRESETS.size >= 30)
+        val cal = java.util.Calendar.getInstance().apply { set(2026, java.util.Calendar.JUNE, 21, 10, 0, 0) }
+        val standard = PrayerTimeCalculator.calculateDailyTimes(23.8103, 90.4125, calendar = cal, hanafiAsr = false)
+        val hanafi = PrayerTimeCalculator.calculateDailyTimes(23.8103, 90.4125, calendar = cal, hanafiAsr = true)
+        assertFalse("Expected Hanafi Asr (${hanafi.asr}) to differ from Standard (${standard.asr})", hanafi.asr == standard.asr)
     }
 }

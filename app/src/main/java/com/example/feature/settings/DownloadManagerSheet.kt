@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
@@ -21,7 +22,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -124,7 +124,7 @@ fun DownloadManagerSheet(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            val audioMb = String.format("%.1f MB", state.offlineCacheSizeBytes / (1024.0 * 1024.0))
+                            val audioMb = String.format(java.util.Locale.US, "%.1f MB", state.offlineCacheSizeBytes / (1024.0 * 1024.0))
                             Text(
                                 text = "Audio Cache: $audioMb • $downloadedTrsCount Translations • $downloadedTafsirsCount Tafsirs",
                                 style = MaterialTheme.typography.bodySmall,
@@ -380,7 +380,7 @@ fun DownloadManagerSheet(
                                                     modifier = Modifier.testTag("download_audio_${surah.id}")
                                                 ) {
                                                     Icon(
-                                                        Icons.Default.VolumeUp,
+                                                        Icons.AutoMirrored.Filled.VolumeUp,
                                                         contentDescription = "Download Audio",
                                                         tint = MaterialTheme.colorScheme.primary
                                                     )

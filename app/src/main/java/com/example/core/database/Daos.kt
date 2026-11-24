@@ -345,3 +345,31 @@ interface UserLibraryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertStreaks(streaks: List<HabitStreakEntity>)
 }
+
+@Dao
+interface DuaDao {
+    @Query("SELECT * FROM duas ORDER BY id ASC")
+    fun observeAllDuas(): Flow<List<DuaEntity>>
+
+    @Query("SELECT * FROM duas WHERE category = :category ORDER BY id ASC")
+    fun observeDuasByCategory(category: String): Flow<List<DuaEntity>>
+
+    @Query("SELECT * FROM duas WHERE id = :duaId LIMIT 1")
+    suspend fun getDua(duaId: Int): DuaEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertDuas(duas: List<DuaEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertDuasIfAbsent(duas: List<DuaEntity>)
+
+    @Query("UPDATE duas SET isBookmarked = :isBookmarked WHERE id = :duaId")
+    suspend fun setDuaBookmarked(duaId: Int, isBookmarked: Boolean)
+
+    @Query("SELECT id FROM duas WHERE isBookmarked = 1")
+    suspend fun getBookmarkedDuaIds(): List<Int>
+
+    @Query("SELECT COUNT(*) FROM duas")
+    suspend fun countDuas(): Int
+}
+

@@ -54,7 +54,8 @@ data class UserPreferences(
     val audioPauseSeconds: Int = 0,
     val audioWordByWordMode: Boolean = false,
     val autoPlayNextSurah: Boolean = true,
-    val autoPlayWordOnInspect: Boolean = false
+    val autoPlayWordOnInspect: Boolean = false,
+    val hanafiAsr: Boolean = false
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -82,6 +83,7 @@ class PreferencesRepository(private val context: Context) {
         val AUDIO_WBW_MODE = booleanPreferencesKey("audio_wbw_mode")
         val AUTO_NEXT_SURAH = booleanPreferencesKey("auto_next_surah")
         val AUTO_PLAY_WORD_ON_INSPECT = booleanPreferencesKey("auto_play_word_on_inspect")
+        val HANAFI_ASR = booleanPreferencesKey("hanafi_asr")
     }
 
     val preferencesFlow: Flow<UserPreferences> = context.noorDataStore.data.map { prefs ->
@@ -110,7 +112,8 @@ class PreferencesRepository(private val context: Context) {
             audioPauseSeconds = prefs[Keys.AUDIO_PAUSE_SEC] ?: 0,
             audioWordByWordMode = prefs[Keys.AUDIO_WBW_MODE] ?: false,
             autoPlayNextSurah = prefs[Keys.AUTO_NEXT_SURAH] ?: true,
-            autoPlayWordOnInspect = prefs[Keys.AUTO_PLAY_WORD_ON_INSPECT] ?: false
+            autoPlayWordOnInspect = prefs[Keys.AUTO_PLAY_WORD_ON_INSPECT] ?: false,
+            hanafiAsr = prefs[Keys.HANAFI_ASR] ?: false
         )
     }
 
@@ -194,5 +197,9 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setAutoPlayWordOnInspect(enabled: Boolean) {
         context.noorDataStore.edit { it[Keys.AUTO_PLAY_WORD_ON_INSPECT] = enabled }
+    }
+
+    suspend fun setHanafiAsr(enabled: Boolean) {
+        context.noorDataStore.edit { it[Keys.HANAFI_ASR] = enabled }
     }
 }

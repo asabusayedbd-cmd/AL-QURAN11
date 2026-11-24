@@ -2,6 +2,7 @@ package com.example.core.database
 
 import android.content.Context
 import android.util.Log
+import androidx.core.content.edit
 import androidx.room.withTransaction
 import com.example.core.localization.BidiUtils
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ class QuranDatabaseSeeder(
 ) {
     private val quranDao = database.quranDao()
     private val userLibraryDao = database.userLibraryDao()
+    private val duaDao = database.duaDao()
     private val seedMutex = Mutex()
     private val seedPrefs by lazy {
         context.getSharedPreferences("noor_seed_state", Context.MODE_PRIVATE)
@@ -30,7 +32,7 @@ class QuranDatabaseSeeder(
 
     companion object {
         private const val KEY_SEED_VERSION = "seed_version"
-        private const val CURRENT_SEED_VERSION = 3
+        private const val CURRENT_SEED_VERSION = 4
     }
 
     suspend fun seedIfNeeded() {
@@ -39,8 +41,11 @@ class QuranDatabaseSeeder(
             seedMutex.withLock {
                 if (verifiedSeeded) return@withLock
                 try {
+                    val currentDuaCount = duaDao.countDuas()
+                    val hasAllDuas = currentDuaCount >= DuaSeederData.EXPECTED_MIN_DUA_COUNT
                     if (seedPrefs.getInt(KEY_SEED_VERSION, 0) >= CURRENT_SEED_VERSION &&
-                        quranDao.countSurahs() >= 114
+                        quranDao.countSurahs() >= 114 &&
+                        hasAllDuas
                     ) {
                         verifiedSeeded = true
                         return@withLock
@@ -51,9 +56,17 @@ class QuranDatabaseSeeder(
                         quranDao.countTafsirSources() < 15 ||
                         quranDao.countTranslationSources() < 35
 
-                    if (alreadyHasCoreText && !needsCatalogUpgrade) {
+                    if (alreadyHasCoreText && !needsCatalogUpgrade && hasAllDuas) {
                         ensureDefaultUserLibraryState()
-                        seedPrefs.edit().putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION).apply()
+                        seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
+                        verifiedSeeded = true
+                        return@withLock
+                    }
+
+                    if (alreadyHasCoreText && !needsCatalogUpgrade && !hasAllDuas) {
+                        seedDuasInChunks()
+                        ensureDefaultUserLibraryState()
+                        seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
                         verifiedSeeded = true
                         return@withLock
                     }
@@ -112,8 +125,9 @@ class QuranDatabaseSeeder(
                             quranDao.insertTafsirSources(mergedTafsir)
                             quranDao.insertReciters(reciters)
                         }
+                        seedDuasInChunks()
                         ensureDefaultUserLibraryState()
-                        seedPrefs.edit().putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION).apply()
+                        seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
                         verifiedSeeded = true
                         return@withLock
                     }
@@ -268,11 +282,28 @@ class QuranDatabaseSeeder(
                         quranDao.insertAudioSegments(audioSegments)
                     }
 
-                    seedPrefs.edit().putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION).apply()
+                    seedDuasInChunks()
+                    seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
                     verifiedSeeded = true
                 } catch (e: Exception) {
                     Log.e("QuranSeeder", "Failed seeding starter Quran data", e)
                 }
+            }
+        }
+    }
+
+    private suspend fun seedDuasInChunks() {
+        val bookmarkedIds = duaDao.getBookmarkedDuaIds().toHashSet()
+        DuaSeederData.readInChunks(context, chunkSize = 30).forEach { chunk ->
+            val merged = if (bookmarkedIds.isEmpty()) {
+                chunk
+            } else {
+                chunk.map { dua ->
+                    if (dua.id in bookmarkedIds) dua.copy(isBookmarked = true) else dua
+                }
+            }
+            database.withTransaction {
+                duaDao.insertDuas(merged)
             }
         }
     }

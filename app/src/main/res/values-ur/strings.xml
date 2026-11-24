@@ -5,23 +5,89 @@
     <string name="nav_search">تلاش</string>
     <string name="nav_bookmarks">لائبریری</string>
     <string name="nav_settings">ترتیبات</string>
+
     <string name="greeting_morning">السلام علیکم، صبح بخیر</string>
     <string name="greeting_afternoon">السلام علیکم، سہ پہر بخیر</string>
     <string name="greeting_evening">السلام علیکم، شام بخیر</string>
     <string name="greeting_night">السلام علیکم، بابرکت رات</string>
+
     <string name="continue_reading">تلاوت جاری رکھیں</string>
+    <string name="ayah_progress_fmt">آیت %1$s • پارہ %2$s</string>
     <string name="daily_goal_title">روزانہ قرآن کا ہدف</string>
+    <string name="daily_goal_progress_fmt">آج %1$s / %2$s آیات</string>
+    <string name="streak_days_fmt">%1$s دن کا تسلسل</string>
     <string name="verse_of_the_day">آج کی آیت</string>
+    <string name="quick_shortcuts">فوری رسائی</string>
+    <string name="ibadah_tools">روزانہ عبادت اور نماز</string>
     <string name="prayer_times_title">نماز کے اوقات</string>
     <string name="qibla_compass_title">قبلہ رخ</string>
     <string name="tasbeeh_counter_title">ڈیجیٹل تسبیح</string>
+    <string name="detect_location">GPS مقام استعمال کریں</string>
+
     <string name="tab_surah">سورت</string>
     <string name="tab_juz">پارہ</string>
     <string name="tab_page">صفحہ</string>
     <string name="tab_duas">ربنا دعائیں</string>
+    <string name="search_hint">عربی، اردو، انگریزی یا 2:255 تلاش کریں…</string>
+    <string name="ai_semantic_search">سمارٹ تلاش</string>
+
     <string name="mode_word_by_word">لفظ بہ لفظ</string>
     <string name="mode_mushaf">مصحف</string>
+    <string name="display_settings">ڈسپلے اور فونٹ</string>
+    <string name="script_uthmani">عثمانی (مدنی)</string>
+    <string name="script_indopak">انڈوپاک (برصغیر)</string>
+    <string name="tajweed_colors">تجوید کے رنگ</string>
+    <string name="show_transliteration">تلفظ دکھائیں</string>
+    <string name="arabic_font_size">عربی فونٹ کا سائز</string>
+    <string name="wbw_font_size">لفظی معنی کا سائز</string>
+    <string name="translation_font_size">ترجمہ اور تفسیر کا سائز</string>
+
+    <string name="word_inspector_title">لفظ کی صرف و نحو اور معنی</string>
+    <string name="word_root_label">مادہ</string>
+    <string name="word_lemma_label">بنیادی لفظ</string>
+    <string name="word_grammar_label">گرامر</string>
+    <string name="word_occurrences_label">قرآن میں استعمال</string>
+    <string name="play_word_audio">لفظ سنیں</string>
+
     <string name="tafsir_title">تفسیر و تدبر</string>
+    <string name="personal_note_hint">اس آیت کے بارے میں اپنا ذاتی نوٹ لکھیں…</string>
+    <string name="save_note">نوٹ محفوظ کریں</string>
+    <string name="ask_ai_study_helper">مطالعہ معاون</string>
+    <string name="share_as_card">کارڈ کے طور پر شیئر کریں</string>
+    <string name="ai_grounding_notice">مستند قرآنی متن اور لوڈ کردہ تفسیر پر مبنی۔</string>
+    <string name="ai_ask_hint">اس آیت یا تفسیر کے بارے میں سوال پوچھیں…</string>
+
+    <string name="hifz_controls">حفظ اور آڈیو</string>
+    <string name="repeat_ayah">آیت دہرائیں</string>
+    <string name="pause_between_ayahs">آیت کے بعد وقفہ</string>
+    <string name="loop_range">A-B لوپ</string>
+    <string name="playback_speed">رفتار</string>
+
+    <string name="ui_language_title">ایپ کی زبان</string>
+    <string name="content_languages_title">قرآنی تراجم اور لفظ بہ لفظ</string>
+    <string name="theme_title">مطالعہ تھیم</string>
+    <string name="theme_serene_emerald">پُرسکون کریم اور زمرد</string>
+    <string name="theme_sepia">نرم سیپیا</string>
+    <string name="theme_slate_dark">گہرا سلیٹ ٹیل</string>
+    <string name="theme_amoled">خالص AMOLED نائٹ</string>
+
+    <string name="cloud_sync_title">کلاؤڈ بیک اپ اور سنک</string>
+    <string name="guest_mode_desc">آف لائن گیسٹ موڈ میں پڑھ رہے ہیں۔ بک مارکس اور نوٹس سنک کرنے کے لیے Google سے سائن ان کریں۔</string>
     <string name="sign_in_google">Google سے سائن ان کریں</string>
     <string name="sign_out">سائن آؤٹ</string>
+    <string name="download_manager_title">آف لائن مواد اور ڈاؤن لوڈ مینیجر</string>
+    <string name="download_surah">سورت ڈاؤن لوڈ کریں</string>
+    <string name="downloaded_badge">آف لائن دستیاب</string>
+
+    <string name="khatam_plan_title">ختمِ قرآن کا منصوبہ</string>
+    <string name="collections_title">بک مارک کلیکشنز</string>
+
+    <string name="cd_bookmark_ayah">آیت بک مارک کریں</string>
+    <string name="cd_play_ayah">آیت کی تلاوت چلائیں</string>
+    <string name="cd_open_tafsir">تفسیر اور نوٹس کھولیں</string>
+    <string name="cd_share_ayah">آیت کارڈ شیئر کریں</string>
+    <string name="cd_copy_ayah">آیت کا متن کاپی کریں</string>
+    <string name="cd_qibla_needle">قبلہ کمپاس کی سوئی</string>
+    <string name="cd_back">واپس جائیں</string>
+    <string name="cd_settings">ڈسپلے ترتیبات</string>
 </resources>

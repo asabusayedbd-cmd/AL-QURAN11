@@ -144,7 +144,11 @@ class HomeViewModel(
             todayAyahsRead = todayStreak?.ayahsReadCount ?: 0,
             todayTasbeehCount = todayStreak?.tasbeehCount ?: 0,
             verseOfTheDay = votdItem,
-            prayerTimes = PrayerTimeCalculator.calculateDailyTimes(prefs.latitude, prefs.longitude),
+            prayerTimes = PrayerTimeCalculator.calculateDailyTimes(
+                latitude = prefs.latitude,
+                longitude = prefs.longitude,
+                hanafiAsr = prefs.hanafiAsr
+            ),
             qiblaBearingDegrees = PrayerTimeCalculator.calculateQiblaBearing(prefs.latitude, prefs.longitude),
             gregorianDate = gregorian,
             hijriDate = hijri,
@@ -186,6 +190,12 @@ class HomeViewModel(
     fun updateLocation(name: String, latitude: Double, longitude: Double) {
         viewModelScope.launch {
             preferencesRepository.setLocation(name, latitude, longitude)
+        }
+    }
+
+    fun setHanafiAsr(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setHanafiAsr(enabled)
         }
     }
 

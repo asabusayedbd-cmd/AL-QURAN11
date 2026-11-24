@@ -39,6 +39,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.R
 import com.example.core.di.AppContainer
+import com.example.feature.dua.DuaScreen
+import com.example.feature.dua.DuaViewModel
 import com.example.feature.explorer.ExplorerScreen
 import com.example.feature.explorer.ExplorerViewModel
 import com.example.feature.home.HomeScreen
@@ -55,6 +57,7 @@ const val ROUTE_EXPLORER = "explorer"
 const val ROUTE_SEARCH = "search"
 const val ROUTE_LIBRARY = "library"
 const val ROUTE_SETTINGS = "settings"
+const val ROUTE_DUA = "dua"
 const val ROUTE_READER = "reader/{surahId}/{ayahNumber}?page={targetPage}"
 
 private data class TopNavDestination(
@@ -166,7 +169,27 @@ fun NoorAppRoot(
                                     viewModel = vm,
                                     onOpenReader = openReader,
                                     onOpenExplorer = { navigateTopLevel(ROUTE_EXPLORER) },
-                                    onOpenLibrary = { navigateTopLevel(ROUTE_LIBRARY) }
+                                    onOpenLibrary = { navigateTopLevel(ROUTE_LIBRARY) },
+                                    onOpenDua = { navController.navigate(ROUTE_DUA) }
+                                )
+                            }
+
+                            composable(ROUTE_DUA) {
+                                val context = androidx.compose.ui.platform.LocalContext.current
+                                val vm: DuaViewModel = viewModel(
+                                    factory = viewModelFactory {
+                                        initializer {
+                                            DuaViewModel(
+                                                context = context,
+                                                database = appContainer.database,
+                                                okHttpClient = appContainer.okHttpClient
+                                            )
+                                        }
+                                    }
+                                )
+                                DuaScreen(
+                                    viewModel = vm,
+                                    onBack = { navController.popBackStack() }
                                 )
                             }
 

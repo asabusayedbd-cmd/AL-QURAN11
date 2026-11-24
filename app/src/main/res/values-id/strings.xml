@@ -5,19 +5,89 @@
     <string name="nav_search">Cari</string>
     <string name="nav_bookmarks">Pustaka</string>
     <string name="nav_settings">Pengaturan</string>
+
+    <string name="greeting_morning">Assalamu Alaikum, Selamat Pagi</string>
+    <string name="greeting_afternoon">Assalamu Alaikum, Selamat Siang</string>
+    <string name="greeting_evening">Assalamu Alaikum, Selamat Sore</string>
+    <string name="greeting_night">Assalamu Alaikum, Malam Penuh Berkah</string>
+
     <string name="continue_reading">Lanjutkan Membaca</string>
+    <string name="ayah_progress_fmt">Ayat %1$s • Juz %2$s</string>
     <string name="daily_goal_title">Target Harian Al-Quran</string>
+    <string name="daily_goal_progress_fmt">%1$s / %2$s Ayat hari ini</string>
+    <string name="streak_days_fmt">Beruntun %1$s hari</string>
     <string name="verse_of_the_day">Ayat Hari Ini</string>
+    <string name="quick_shortcuts">Akses Cepat</string>
+    <string name="ibadah_tools">Ibadah Harian &amp; Sholat</string>
     <string name="prayer_times_title">Jadwal Sholat</string>
     <string name="qibla_compass_title">Arah Kiblat</string>
     <string name="tasbeeh_counter_title">Tasbih Digital</string>
+    <string name="detect_location">Gunakan Lokasi GPS</string>
+
     <string name="tab_surah">Surah</string>
     <string name="tab_juz">Juz</string>
     <string name="tab_page">Halaman</string>
     <string name="tab_duas">Doa Rabbana</string>
+    <string name="search_hint">Cari Arab, Inggris, atau 2:255…</string>
+    <string name="ai_semantic_search">Pencarian Cerdas</string>
+
     <string name="mode_word_by_word">Kata per Kata</string>
     <string name="mode_mushaf">Mushaf</string>
+    <string name="display_settings">Tampilan &amp; Tipografi</string>
+    <string name="script_uthmani">Utsmani (Madani)</string>
+    <string name="script_indopak">IndoPak (Asia Selatan)</string>
+    <string name="tajweed_colors">Pewarnaan Tajwid</string>
+    <string name="show_transliteration">Tampilkan Transliterasi</string>
+    <string name="arabic_font_size">Ukuran Huruf Arab</string>
+    <string name="wbw_font_size">Ukuran Arti Kata</string>
+    <string name="translation_font_size">Ukuran Terjemahan &amp; Tafsir</string>
+
+    <string name="word_inspector_title">Morfologi &amp; Arti Kata</string>
+    <string name="word_root_label">Akar Kata</string>
+    <string name="word_lemma_label">Lema</string>
+    <string name="word_grammar_label">Tata Bahasa</string>
+    <string name="word_occurrences_label">Kemunculan di Al-Quran</string>
+    <string name="play_word_audio">Dengarkan Kata</string>
+
     <string name="tafsir_title">Tafsir &amp; Catatan</string>
+    <string name="personal_note_hint">Tulis refleksi pribadi tentang ayat ini…</string>
+    <string name="save_note">Simpan Catatan</string>
+    <string name="ask_ai_study_helper">Asisten Belajar</string>
+    <string name="share_as_card">Bagikan sebagai Kartu</string>
+    <string name="ai_grounding_notice">Berdasarkan teks Al-Quran dan Tafsir yang dimuat.</string>
+    <string name="ai_ask_hint">Ajukan pertanyaan tentang ayat atau tafsir ini…</string>
+
+    <string name="hifz_controls">Hifz &amp; Audio</string>
+    <string name="repeat_ayah">Ulangi Ayat</string>
+    <string name="pause_between_ayahs">Jeda Setelah Ayat</string>
+    <string name="loop_range">Putar Ulang A-B</string>
+    <string name="playback_speed">Kecepatan</string>
+
+    <string name="ui_language_title">Bahasa Antarmuka Aplikasi</string>
+    <string name="content_languages_title">Terjemahan Al-Quran &amp; Kata per Kata</string>
+    <string name="theme_title">Tema Membaca</string>
+    <string name="theme_serene_emerald">Krem &amp; Zamrud Tenang</string>
+    <string name="theme_sepia">Sepia Lembut</string>
+    <string name="theme_slate_dark">Slate Teal Gelap</string>
+    <string name="theme_amoled">Malam AMOLED Murni</string>
+
+    <string name="cloud_sync_title">Cadangan &amp; Sinkronisasi Cloud</string>
+    <string name="guest_mode_desc">Membaca offline dalam mode Tamu. Masuk dengan Google untuk menyinkronkan penanda dan catatan.</string>
     <string name="sign_in_google">Masuk dengan Google</string>
     <string name="sign_out">Keluar</string>
+    <string name="download_manager_title">Konten Offline &amp; Pengelola Unduhan</string>
+    <string name="download_surah">Unduh Surah</string>
+    <string name="downloaded_badge">Siap Offline</string>
+
+    <string name="khatam_plan_title">Rencana Khatam Al-Quran</string>
+    <string name="collections_title">Koleksi Penanda</string>
+
+    <string name="cd_bookmark_ayah">Tandai Ayat</string>
+    <string name="cd_play_ayah">Putar bacaan Ayat</string>
+    <string name="cd_open_tafsir">Buka Tafsir dan catatan</string>
+    <string name="cd_share_ayah">Bagikan kartu Ayat</string>
+    <string name="cd_copy_ayah">Salin teks Ayat</string>
+    <string name="cd_qibla_needle">Jarum kompas Kiblat</string>
+    <string name="cd_back">Kembali</string>
+    <string name="cd_settings">Pengaturan tampilan</string>
 </resources>

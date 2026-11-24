@@ -30,17 +30,20 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Flare
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
@@ -54,6 +57,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -126,6 +130,7 @@ fun HomeScreen(
     onOpenReader: (surahId: Int, ayahNumber: Int) -> Unit,
     onOpenExplorer: () -> Unit,
     onOpenLibrary: () -> Unit,
+    onOpenDua: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -725,42 +730,106 @@ fun HomeScreen(
                 }
             }
 
+            // Authentic Duas & Ruqyah Card
+            item(key = "home_dua_card") {
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onOpenDua),
+                    colors = CardDefaults.elevatedCardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Authentic Duas & Ruqyah", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("150+ Topic-based Duas with Sahih Hadith references & flashcard sharing.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        FilledTonalButton(onClick = onOpenDua) {
+                            Text("Explore Duas")
+                        }
+                    }
+                }
+            }
+
             item { Spacer(modifier = Modifier.height(72.dp)) }
         }
     }
 
     if (showCityPicker) {
+        var cityQuery by remember { mutableStateOf("") }
+        val filteredPresets = remember(cityQuery) {
+            if (cityQuery.isBlank()) {
+                PrayerTimeCalculator.CITY_PRESETS
+            } else {
+                PrayerTimeCalculator.CITY_PRESETS.filter {
+                    it.name.contains(cityQuery, ignoreCase = true)
+                }
+            }
+        }
         ModalBottomSheet(onDismissRequest = { showCityPicker = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(stringResource(R.string.prayer_times_title), style = MaterialTheme.typography.titleLarge)
-                PrayerTimeCalculator.CITY_PRESETS.forEach { preset ->
-                    Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = if (preset.name == state.preferences.locationName) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                viewModel.updateLocation(preset.name, preset.latitude, preset.longitude)
-                                showCityPicker = false
+                OutlinedTextField(
+                    value = cityQuery,
+                    onValueChange = { cityQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("city_search_input"),
+                    placeholder = { Text("Search city or country...") },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (cityQuery.isNotEmpty()) {
+                            IconButton(onClick = { cityQuery = "" }) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear city search")
                             }
-                    ) {
-                        Text(
-                            text = preset.name,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(14.dp)
-                        )
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp)
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(340.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredPresets, key = { it.name }) { preset ->
+                        Surface(
+                            shape = MaterialTheme.shapes.medium,
+                            color = if (preset.name == state.preferences.locationName) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("city_preset_${preset.name}")
+                                .clickable {
+                                    viewModel.updateLocation(preset.name, preset.latitude, preset.longitude)
+                                    showCityPicker = false
+                                }
+                        ) {
+                            Text(
+                                text = preset.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(14.dp)
+                            )
+                        }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
@@ -769,7 +838,8 @@ fun HomeScreen(
         QiblaCompassSheet(
             qiblaBearingDeg = state.qiblaBearingDegrees,
             locationName = state.preferences.locationName,
-            onDismiss = { showQiblaSheet = false }
+            onDismiss = { showQiblaSheet = false },
+            onOpenCityPicker = { showCityPicker = true }
         )
     }
 
@@ -777,6 +847,8 @@ fun HomeScreen(
         PrayerScheduleSheet(
             prayerTimes = state.prayerTimes,
             locationName = state.preferences.locationName,
+            hanafiAsr = state.preferences.hanafiAsr,
+            onToggleHanafiAsr = { viewModel.setHanafiAsr(it) },
             onDismiss = { showPrayerScheduleSheet = false },
             onOpenCityPicker = { showCityPicker = true }
         )
@@ -873,7 +945,8 @@ private fun PrayerCell(name: String, time: String) {
 private fun QiblaCompassSheet(
     qiblaBearingDeg: Float,
     locationName: String,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenCityPicker: () -> Unit
 ) {
     val context = LocalContext.current
     var azimuthDeg by remember { mutableFloatStateOf(0f) }
@@ -919,6 +992,17 @@ private fun QiblaCompassSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            FilledTonalButton(
+                onClick = {
+                    onDismiss()
+                    onOpenCityPicker()
+                },
+                modifier = Modifier.testTag("qibla_change_city_button")
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Change City")
+            }
 
             Box(
                 modifier = Modifier
@@ -980,6 +1064,8 @@ private data class PrayerRow(val name: String, val time: String, val isFard: Boo
 private fun PrayerScheduleSheet(
     prayerTimes: PrayerTimesSummary,
     locationName: String,
+    hanafiAsr: Boolean,
+    onToggleHanafiAsr: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onOpenCityPicker: () -> Unit
 ) {
@@ -999,14 +1085,37 @@ private fun PrayerScheduleSheet(
                     Text("Prayer Schedule & Timings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(locationName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                FilledTonalButton(onClick = {
-                    onDismiss()
-                    onOpenCityPicker()
-                }) {
+                FilledTonalButton(
+                    onClick = {
+                        onDismiss()
+                        onOpenCityPicker()
+                    },
+                    modifier = Modifier.testTag("schedule_change_city_button")
+                ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Change City")
                 }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Asr Madhab:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FilterChip(
+                    selected = !hanafiAsr,
+                    onClick = { onToggleHanafiAsr(false) },
+                    label = { Text("Standard (Shafi'i)") },
+                    modifier = Modifier.testTag("madhab_standard_chip")
+                )
+                FilterChip(
+                    selected = hanafiAsr,
+                    onClick = { onToggleHanafiAsr(true) },
+                    label = { Text("Hanafi") },
+                    modifier = Modifier.testTag("madhab_hanafi_chip")
+                )
             }
 
             // Next Prayer Banner

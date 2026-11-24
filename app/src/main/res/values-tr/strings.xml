@@ -5,19 +5,89 @@
     <string name="nav_search">Ara</string>
     <string name="nav_bookmarks">Kitaplık</string>
     <string name="nav_settings">Ayarlar</string>
+
+    <string name="greeting_morning">Esselamu Aleykum, Hayırlı Sabahlar</string>
+    <string name="greeting_afternoon">Esselamu Aleykum, Hayırlı Günler</string>
+    <string name="greeting_evening">Esselamu Aleykum, Hayırlı Akşamlar</string>
+    <string name="greeting_night">Esselamu Aleykum, Hayırlı Geceler</string>
+
     <string name="continue_reading">Okumaya Devam Et</string>
+    <string name="ayah_progress_fmt">Ayet %1$s • Cüz %2$s</string>
     <string name="daily_goal_title">Günlük Kuran Hedefi</string>
+    <string name="daily_goal_progress_fmt">Bugün %1$s / %2$s Ayet</string>
+    <string name="streak_days_fmt">%1$s günlük seri</string>
     <string name="verse_of_the_day">Günün Ayeti</string>
+    <string name="quick_shortcuts">Hızlı Erişim</string>
+    <string name="ibadah_tools">Günlük İbadet ve Namaz</string>
     <string name="prayer_times_title">Namaz Vakitleri</string>
     <string name="qibla_compass_title">Kıble Yönü</string>
     <string name="tasbeeh_counter_title">Dijital Tesbih</string>
+    <string name="detect_location">GPS Konumunu Kullan</string>
+
     <string name="tab_surah">Sure</string>
     <string name="tab_juz">Cüz</string>
     <string name="tab_page">Sayfa</string>
     <string name="tab_duas">Rabbena Duaları</string>
+    <string name="search_hint">Arapça, Türkçe, İngilizce veya 2:255 ara…</string>
+    <string name="ai_semantic_search">Akıllı Arama</string>
+
     <string name="mode_word_by_word">Kelime Kelime</string>
     <string name="mode_mushaf">Mushaf</string>
+    <string name="display_settings">Görünüm ve Yazı Tipi</string>
+    <string name="script_uthmani">Osmani (Medine)</string>
+    <string name="script_indopak">İndoPak (Güney Asya)</string>
+    <string name="tajweed_colors">Tecvid Renklendirmesi</string>
+    <string name="show_transliteration">Okunuşu Göster</string>
+    <string name="arabic_font_size">Arapça Yazı Boyutu</string>
+    <string name="wbw_font_size">Kelime Anlamı Boyutu</string>
+    <string name="translation_font_size">Meal ve Tefsir Boyutu</string>
+
+    <string name="word_inspector_title">Kelime Morfolojisi ve Anlamı</string>
+    <string name="word_root_label">Kök</string>
+    <string name="word_lemma_label">Lemma</string>
+    <string name="word_grammar_label">Dil Bilgisi</string>
+    <string name="word_occurrences_label">Kuran\'da Geçtiği Yerler</string>
+    <string name="play_word_audio">Kelimeyi Dinle</string>
+
     <string name="tafsir_title">Tefsir &amp; Notlar</string>
+    <string name="personal_note_hint">Bu ayet hakkında kişisel bir not yazın…</string>
+    <string name="save_note">Notu Kaydet</string>
+    <string name="ask_ai_study_helper">Çalışma Yardımcısı</string>
+    <string name="share_as_card">Kart Olarak Paylaş</string>
+    <string name="ai_grounding_notice">Yüklü Kuran metni ve Tefsir kaynaklarına dayanmaktadır.</string>
+    <string name="ai_ask_hint">Bu ayet veya tefsir hakkında bir soru sorun…</string>
+
+    <string name="hifz_controls">Hıfz ve Ses</string>
+    <string name="repeat_ayah">Ayeti Tekrarla</string>
+    <string name="pause_between_ayahs">Ayet Sonrası Bekleme</string>
+    <string name="loop_range">A-B Döngüsü</string>
+    <string name="playback_speed">Hız</string>
+
+    <string name="ui_language_title">Uygulama Dili</string>
+    <string name="content_languages_title">Kuran Mealleri ve Kelime Anlamları</string>
+    <string name="theme_title">Okuma Teması</string>
+    <string name="theme_serene_emerald">Huzurlu Krem ve Zümrüt</string>
+    <string name="theme_sepia">Yumuşak Sepya</string>
+    <string name="theme_slate_dark">Koyu Arduvaz Turkuaz</string>
+    <string name="theme_amoled">Saf AMOLED Gece</string>
+
+    <string name="cloud_sync_title">Bulut Yedekleme ve Eşitleme</string>
+    <string name="guest_mode_desc">Misafir modunda çevrimdışı okuma. Yer imlerini ve notları eşitlemek için Google ile giriş yapın.</string>
     <string name="sign_in_google">Google ile Giriş Yap</string>
     <string name="sign_out">Çıkış Yap</string>
+    <string name="download_manager_title">Çevrimdışı İçerik ve İndirme Yöneticisi</string>
+    <string name="download_surah">Sureyi İndir</string>
+    <string name="downloaded_badge">Çevrimdışı Hazır</string>
+
+    <string name="khatam_plan_title">Hatim Okuma Planı</string>
+    <string name="collections_title">Yer İmi Koleksiyonları</string>
+
+    <string name="cd_bookmark_ayah">Ayeti yer imlerine ekle</string>
+    <string name="cd_play_ayah">Ayet tilavetini oynat</string>
+    <string name="cd_open_tafsir">Tefsir ve notları aç</string>
+    <string name="cd_share_ayah">Ayet kartını paylaş</string>
+    <string name="cd_copy_ayah">Ayet metnini kopyala</string>
+    <string name="cd_qibla_needle">Kıble pusulası ibresi</string>
+    <string name="cd_back">Geri git</string>
+    <string name="cd_settings">Görünüm ayarları</string>
 </resources>
