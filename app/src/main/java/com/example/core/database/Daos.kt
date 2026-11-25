@@ -370,6 +370,15 @@ interface QuranDao {
     @Query("SELECT * FROM ayah_tafsirs WHERE ayahId = :ayahId")
     fun observeTafsirsForAyah(ayahId: Int): Flow<List<AyahTafsirEntity>>
 
+    @Query(
+        """
+        SELECT t.* FROM ayah_tafsirs t
+        INNER JOIN ayahs a ON a.id = t.ayahId
+        WHERE a.surahId = :surahId AND t.sourceId = :sourceId
+        """
+    )
+    fun observeTafsirsForSurahBySource(surahId: Int, sourceId: Int): Flow<List<AyahTafsirEntity>>
+
     @Query("SELECT * FROM ayah_tafsirs WHERE ayahId = :ayahId")
     suspend fun getTafsirsForAyah(ayahId: Int): List<AyahTafsirEntity>
 

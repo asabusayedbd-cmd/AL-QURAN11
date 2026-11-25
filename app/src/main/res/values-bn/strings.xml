@@ -295,4 +295,26 @@
     <string name="flashcards_surah_deck">সূরা ডেক</string>
     <string name="flashcards_essential_deck">মৌলিক শব্দ</string>
     <string name="flashcards_bookmarks_deck">বুকমার্ক</string>
+
+    <string name="cd_reader_sidebar">পাঠক সাইডবার সেটিংস খুলুন</string>
+    <string name="sidebar_title">পাঠক স্টুডিও</string>
+    <string name="sidebar_visibility_section">পড়ার স্তর ও দৃশ্যমানতা</string>
+    <string name="sidebar_show_wbw">শব্দে শব্দে অর্থ দেখান</string>
+    <string name="sidebar_show_wbw_desc">প্রতিটি আয়াতের নিচে শব্দ-ভিত্তিক অর্থ</string>
+    <string name="sidebar_show_translation">আয়াতের অনুবাদ দেখান</string>
+    <string name="sidebar_show_translation_desc">শুধু আরবি ও শব্দে শব্দে পড়তে বন্ধ রাখুন</string>
+    <string name="sidebar_show_inline_tafsir">প্রতি আয়াতের নিচে তাফসীর দেখান</string>
+    <string name="sidebar_show_inline_tafsir_desc">প্রতিটি আয়াতের শেষে স্বয়ংক্রিয়ভাবে তাফসীর প্রদর্শন</string>
+    <string name="sidebar_fonts_section">আরবি ফন্ট স্টাইল (%1$dটি ফন্ট)</string>
+    <string name="sidebar_typography_section">ফন্টের আকার ও টাইপোগ্রাফি</string>
+    <string name="sidebar_wbw_lang_section">শব্দে শব্দে অর্থের ভাষা</string>
+    <string name="sidebar_translations_section">কুরআন অনুবাদ (%1$dটি সক্রিয়)</string>
+    <string name="sidebar_browse_translations_fmt">সব %1$dটি অনুবাদ দেখুন…</string>
+    <string name="sidebar_tafsir_section">তাফসীরের উৎস</string>
+    <string name="sidebar_browse_tafsirs_fmt">সব %1$dটি তাফসীর দেখুন…</string>
+    <string name="inline_tafsir_read_more">আরও পড়ুন</string>
+    <string name="inline_tafsir_show_less">সংক্ষিপ্ত করুন</string>
+    <string name="inline_tafsir_full_btn">পূর্ণ তাফসীর ও নোট</string>
+    <string name="inline_tafsir_fetch_btn">তাফসীর লোড করুন</string>
+    <string name="inline_tafsir_loading">তাফসীর লোড হচ্ছে…</string>
 </resources>

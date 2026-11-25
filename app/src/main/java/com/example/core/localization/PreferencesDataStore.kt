@@ -42,6 +42,25 @@ enum class ReaderCardStyle {
     MINIMAL_PAPER
 }
 
+enum class ArabicFontFamilyOption(
+    val displayName: String,
+    val subtitle: String,
+    val arabicSample: String = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ"
+) {
+    AUTO("Auto (Script Default)", "Amiri Quran (Uthmani) • Scheherazade (IndoPak)"),
+    AMIRI_QURAN("Amiri Quran", "Authentic Madani Mushaf typography"),
+    AMIRI("Amiri Classic", "Traditional Cairo Naskh"),
+    SCHEHERAZADE("Scheherazade New", "Tall IndoPak & Uthmani clarity"),
+    LATEEF("Lateef", "South Asian IndoPak calligraphic style"),
+    NOTO_NASKH("Noto Naskh Arabic", "Crisp high-legibility modern Naskh"),
+    HARMATTAN("Harmattan", "Maghribi & clear vowel positioning"),
+    MARKAZI("Markazi Text", "Refined classic editorial Naskh"),
+    MIRZA("Mirza", "Flowing calligraphic Naskh display"),
+    REEM_KUFI("Reem Kufi", "Geometric modern Kufi calligraphy"),
+    AREF_RUQAA("Aref Ruqaa", "Traditional handwritten Ruq'ah"),
+    CAIRO("Cairo", "Clean contemporary Arabic")
+}
+
 data class UserPreferences(
     val uiLanguageCode: String = "en",
     val wbwLanguageCode: String = "en",
@@ -50,7 +69,11 @@ data class UserPreferences(
     val themeMode: NoorThemeMode = NoorThemeMode.SERENE_EMERALD,
     val readerCardStyle: ReaderCardStyle = ReaderCardStyle.CLASSIC_ELEVATED,
     val scriptType: QuranScriptType = QuranScriptType.UTHMANI,
+    val arabicFontFamily: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO,
     val readerViewMode: ReaderViewMode = ReaderViewMode.WORD_BY_WORD,
+    val showWordByWord: Boolean = true,
+    val showTranslation: Boolean = true,
+    val showInlineTafsir: Boolean = false,
     val tajweedColorsEnabled: Boolean = true,
     val showTransliteration: Boolean = true,
     val showFootnotes: Boolean = true,
@@ -79,7 +102,11 @@ class PreferencesRepository(private val context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val READER_CARD_STYLE = stringPreferencesKey("reader_card_style")
         val SCRIPT_TYPE = stringPreferencesKey("script_type")
+        val ARABIC_FONT_FAMILY = stringPreferencesKey("arabic_font_family")
         val READER_VIEW_MODE = stringPreferencesKey("reader_view_mode")
+        val SHOW_WORD_BY_WORD = booleanPreferencesKey("show_word_by_word")
+        val SHOW_TRANSLATION = booleanPreferencesKey("show_translation")
+        val SHOW_INLINE_TAFSIR = booleanPreferencesKey("show_inline_tafsir")
         val TAJWEED_COLORS = booleanPreferencesKey("tajweed_colors")
         val SHOW_TRANSLITERATION = booleanPreferencesKey("show_transliteration")
         val SHOW_FOOTNOTES = booleanPreferencesKey("show_footnotes")
@@ -110,8 +137,13 @@ class PreferencesRepository(private val context: Context) {
                 ?: ReaderCardStyle.CLASSIC_ELEVATED,
             scriptType = enumValues<QuranScriptType>().firstOrNull { it.name == prefs[Keys.SCRIPT_TYPE] }
                 ?: QuranScriptType.UTHMANI,
+            arabicFontFamily = enumValues<ArabicFontFamilyOption>().firstOrNull { it.name == prefs[Keys.ARABIC_FONT_FAMILY] }
+                ?: ArabicFontFamilyOption.AUTO,
             readerViewMode = enumValues<ReaderViewMode>().firstOrNull { it.name == prefs[Keys.READER_VIEW_MODE] }
                 ?: ReaderViewMode.WORD_BY_WORD,
+            showWordByWord = prefs[Keys.SHOW_WORD_BY_WORD] ?: true,
+            showTranslation = prefs[Keys.SHOW_TRANSLATION] ?: true,
+            showInlineTafsir = prefs[Keys.SHOW_INLINE_TAFSIR] ?: false,
             tajweedColorsEnabled = prefs[Keys.TAJWEED_COLORS] ?: true,
             showTransliteration = prefs[Keys.SHOW_TRANSLITERATION] ?: true,
             showFootnotes = prefs[Keys.SHOW_FOOTNOTES] ?: true,
@@ -161,8 +193,24 @@ class PreferencesRepository(private val context: Context) {
         context.noorDataStore.edit { it[Keys.SCRIPT_TYPE] = script.name }
     }
 
+    suspend fun setArabicFontFamily(fontFamily: ArabicFontFamilyOption) {
+        context.noorDataStore.edit { it[Keys.ARABIC_FONT_FAMILY] = fontFamily.name }
+    }
+
     suspend fun setReaderViewMode(mode: ReaderViewMode) {
         context.noorDataStore.edit { it[Keys.READER_VIEW_MODE] = mode.name }
+    }
+
+    suspend fun setShowWordByWord(show: Boolean) {
+        context.noorDataStore.edit { it[Keys.SHOW_WORD_BY_WORD] = show }
+    }
+
+    suspend fun setShowTranslation(show: Boolean) {
+        context.noorDataStore.edit { it[Keys.SHOW_TRANSLATION] = show }
+    }
+
+    suspend fun setShowInlineTafsir(show: Boolean) {
+        context.noorDataStore.edit { it[Keys.SHOW_INLINE_TAFSIR] = show }
     }
 
     suspend fun setTajweedEnabled(enabled: Boolean) {

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.database.WordEntity
+import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.QuranScriptType
 import com.example.ui.theme.arabicScriptFont
@@ -52,7 +53,8 @@ fun WordByWordFlowRow(
     activeWordPosition: Int?,
     ayahNumber: Int,
     onWordClick: (WordDisplayItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    arabicFontFamily: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO
 ) {
     val visibleWords = remember(words) {
         words.filterNot { STRAY_NUMERAL_REGEX.matches(it.word.textUthmani) }
@@ -64,7 +66,7 @@ fun WordByWordFlowRow(
     }
 
     // Strictly isolate Quranic Word-by-Word flow as Right-to-Left regardless of app chrome language.
-    val arabicFont = remember(scriptType) { arabicScriptFont(scriptType) }
+    val arabicFont = remember(scriptType, arabicFontFamily) { arabicScriptFont(scriptType, arabicFontFamily) }
     val wordMeaningStyle = remember(wbwFontSizeSp, wbwLanguageCode) {
         banglaSafeBodyStyle(wbwFontSizeSp, wbwLanguageCode)
     }
@@ -169,7 +171,7 @@ fun WordByWordFlowRow(
             ) {
                 Text(
                     text = BidiUtils.formatAyahMarker(ayahNumber, useArabicDigits = true),
-                    fontFamily = arabicScriptFont(scriptType),
+                    fontFamily = arabicFont,
                     fontSize = (arabicFontSizeSp * 0.78f).sp,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)

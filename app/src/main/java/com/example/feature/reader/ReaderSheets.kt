@@ -57,6 +57,7 @@ import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.SegmentRoleType
+import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.UserPreferences
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
@@ -71,7 +72,8 @@ fun WordMorphologySheet(
     onPlayWordAudio: (speed: Float) -> Unit,
     onNavigateToOccurrence: (surahId: Int, ayahNumber: Int) -> Unit,
     onTranslateWord: (targetLang: String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    arabicFontFamily: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO
 ) {
     val analysis = inspected.analysis
     var showLangPicker by remember { mutableStateOf(false) }
@@ -144,7 +146,7 @@ fun WordMorphologySheet(
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                         Text(
                             text = primaryWordArabic,
-                            fontFamily = arabicScriptFont(scriptType),
+                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                             fontSize = 44.sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
@@ -350,7 +352,7 @@ fun WordMorphologySheet(
                                     ) {
                                         Text(
                                             text = seg.arabicPrefixOrPart,
-                                            fontFamily = arabicScriptFont(scriptType),
+                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                                             fontSize = 22.sp,
                                             color = fgColor
                                         )
@@ -560,7 +562,7 @@ fun WordMorphologySheet(
                                 ) {
                                     Text(
                                         text = form.textUthmani,
-                                        fontFamily = arabicScriptFont(scriptType),
+                                        fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                                         fontSize = 18.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
@@ -619,7 +621,7 @@ fun WordMorphologySheet(
                                         )
                                         Text(
                                             text = occ.wordArabic,
-                                            fontFamily = arabicScriptFont(scriptType),
+                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                                             fontSize = 18.sp,
                                             color = MaterialTheme.colorScheme.secondary
                                         )
@@ -627,7 +629,7 @@ fun WordMorphologySheet(
                                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                         Text(
                                             text = occ.ayahArabic,
-                                            fontFamily = arabicScriptFont(scriptType),
+                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                                             fontSize = 16.sp,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis,

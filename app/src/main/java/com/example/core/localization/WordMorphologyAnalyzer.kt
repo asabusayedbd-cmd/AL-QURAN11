@@ -168,12 +168,76 @@ object WordMorphologyAnalyzer {
         "الرحيم" to KnownLexiconEntry("Resembling Adjective (Especially Merciful)", "صفة مشبهة (فَعِيل)", "স্থায়ী গুণবাচক বিশেষণ (অসীম দয়ালু)", "Contextual Inflection", "বাক্যগত ই‘রাব", "Singular • Permanent Attribute", "একবচন • স্থায়ী গুণ")
     )
 
+    private val MUQATTAAT_SET = setOf(
+        "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
+    )
+
     fun analyze(
         word: WordEntity,
         translations: List<WordTranslationEntity>
     ): DetailedWordAnalysis {
         val rawArabic = word.textUthmani.trim().replace(WAQF_MARKS_REGEX, "")
         val bareWord = stripDiacriticsAndAlefWasla(rawArabic)
+
+        if (bareWord in MUQATTAAT_SET) {
+            val segment = WordSegmentPart(
+                arabicPrefixOrPart = rawArabic,
+                roleLabel = "Quranic Disconnected Letters (Huruf Muqatta'at)",
+                arabicRoleLabel = "الحروف المقطعة",
+                banglaRoleLabel = "হুরূফে মুকাত্তাআত (বিচ্ছিন্ন অক্ষর)",
+                roleType = SegmentRoleType.STEM
+            )
+            val orderedMeanings = translations
+                .sortedBy {
+                    when (it.languageCode) {
+                        "bn" -> 0
+                        "en" -> 1
+                        "ur" -> 2
+                        "id" -> 3
+                        "tr" -> 4
+                        else -> 5
+                    }
+                }
+                .map { tr ->
+                    val langLabel = when (tr.languageCode.lowercase()) {
+                        "bn" -> "বাংলা (Bangla)"
+                        "en" -> "English"
+                        "ur" -> "اردو (Urdu)"
+                        "id" -> "Bahasa Indonesia"
+                        "tr" -> "Türkçe"
+                        "ar" -> "العربية"
+                        else -> tr.languageCode.uppercase()
+                    }
+                    langLabel to tr.meaningText
+                }
+            return DetailedWordAnalysis(
+                partOfSpeechEn = "Quranic Disconnected Letters (Huruf Muqatta'at)",
+                partOfSpeechAr = "الحروف المقطعة",
+                partOfSpeechBn = "হুরূফে মুকাত্তাআত (বিচ্ছিন্ন অক্ষর)",
+                grammaticalCaseOrMood = "Invariable / Letters of the Quran (مبني لا إعراب له)",
+                grammaticalCaseBn = "অপরিবর্তনীয় / ই‘রাববিহীন পবিত্র অক্ষর",
+                numberAndGender = "Quranic Initial Letters",
+                numberAndGenderBn = "কুরআনের সূচনার বিচ্ছিন্ন অক্ষর",
+                segments = listOf(segment),
+                spacedRoot = "",
+                stemArabic = rawArabic,
+                explanationEn = "The letters \"$rawArabic\" appear among the Quranic Disconnected Letters (Huruf Muqatta'at) at the opening of several Surahs. Their precise inner meanings are known to Allah alone (علمها عند الله), symbolizing the miraculous linguistic challenge (I'jaz) of the Quran.",
+                explanationBn = "«$rawArabic» পবিত্র কুরআনের বিভিন্ন সূরার শুরুতে অবতীর্ণ হুরূফে মুকাত্তাআত বা বিচ্ছিন্ন অক্ষরসমূহের অন্তর্ভুক্ত। এগুলোর প্রকৃত তাৎপর্য কেবল আল্লাহ তাআলাই সম্যক অবগত (علمها عند الله), এবং এগুলো কুরআনের ভাষার অনুপম অলৌকিকতা (ই‘জাজ) প্রমাণ করে।",
+                explanationAr = "الحروف المقطعة «$rawArabic» في أوائل السور. وعلمها عند الله وحده، وهي تشير إلى إعجاز القرآن وبلاغته.",
+                allMeanings = orderedMeanings,
+                normalizedStem = bareWord,
+                sarfPatternEn = "Quranic Disconnected Letters (Huruf Muqatta'at)",
+                sarfPatternAr = "الحروف المقطعة",
+                sarfPatternBn = "হুরূফে মুকাত্তাআত",
+                sarfNoteEn = "Sacred initial letters opening the Surah. Not derived from a root verb.",
+                sarfNoteBn = "সূরার সূচনাকারী পবিত্র অক্ষর। কোনো ধাতুমূল থেকে সাধিত নয়।",
+                nahwFunctionEn = "Independent Initial Constituent (مبتدأ مقدر أو فاتحة)",
+                nahwFunctionBn = "সূচনাকারী স্বতন্ত্র বাক্যাংশ (ফাতিহা)",
+                definitenessEn = "Proper Letter Entity",
+                definitenessBn = "নির্দিষ্ট অক্ষর সত্তা"
+            )
+        }
+
         val tag = word.grammarTagJson.trim()
         val lower = tag.lowercase()
         val enMeaning = translations.firstOrNull { it.languageCode.equals("en", true) }?.meaningText.orEmpty()

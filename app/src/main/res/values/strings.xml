@@ -295,4 +295,26 @@
     <string name="flashcards_surah_deck">Surah Deck</string>
     <string name="flashcards_essential_deck">Essential</string>
     <string name="flashcards_bookmarks_deck">Bookmarked</string>
+
+    <string name="cd_reader_sidebar">Open reader settings sidebar</string>
+    <string name="sidebar_title">Reader Studio</string>
+    <string name="sidebar_visibility_section">Reading Layers &amp; Visibility</string>
+    <string name="sidebar_show_wbw">Show Word-by-Word</string>
+    <string name="sidebar_show_wbw_desc">Display word breakdown under each verse</string>
+    <string name="sidebar_show_translation">Show Ayah Translation</string>
+    <string name="sidebar_show_translation_desc">Turn off for Word-by-Word &amp; Arabic only</string>
+    <string name="sidebar_show_inline_tafsir">Show Tafsir Under Each Ayah</string>
+    <string name="sidebar_show_inline_tafsir_desc">Display active Tafsir automatically at bottom of each verse</string>
+    <string name="sidebar_fonts_section">Arabic Font Styles (%1$d Fonts)</string>
+    <string name="sidebar_typography_section">Font Size &amp; Typography</string>
+    <string name="sidebar_wbw_lang_section">Word-by-Word Language</string>
+    <string name="sidebar_translations_section">Quran Translations (%1$d active)</string>
+    <string name="sidebar_browse_translations_fmt">All %1$d Translations…</string>
+    <string name="sidebar_tafsir_section">Tafsir Source</string>
+    <string name="sidebar_browse_tafsirs_fmt">All %1$d Tafsirs…</string>
+    <string name="inline_tafsir_read_more">Read more</string>
+    <string name="inline_tafsir_show_less">Show less</string>
+    <string name="inline_tafsir_full_btn">Full Tafsir &amp; Notes</string>
+    <string name="inline_tafsir_fetch_btn">Load Tafsir</string>
+    <string name="inline_tafsir_loading">Loading Tafsir…</string>
 </resources>

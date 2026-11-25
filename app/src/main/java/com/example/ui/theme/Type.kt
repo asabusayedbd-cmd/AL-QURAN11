@@ -10,7 +10,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.QuranScriptType
+
+val AmiriMushafQuranFont = FontFamily(
+    Font(R.font.amiri_quran, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.amiri_quran, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
 
 val AmiriQuranFont = FontFamily(
     Font(R.font.amiri, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
@@ -23,9 +29,44 @@ val IndoPakArabicFont = FontFamily(
     Font(R.font.scheherazade_new, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
+val LateefArabicFont = FontFamily(
+    Font(R.font.lateef, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.lateef, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
 val NotoArabicFont = FontFamily(
     Font(R.font.noto_naskh_arabic, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
     Font(R.font.noto_naskh_arabic, FontWeight.Medium, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val HarmattanArabicFont = FontFamily(
+    Font(R.font.harmattan, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.harmattan, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val MarkaziArabicFont = FontFamily(
+    Font(R.font.markazi_text, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.markazi_text, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val MirzaArabicFont = FontFamily(
+    Font(R.font.mirza, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.mirza, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val ReemKufiArabicFont = FontFamily(
+    Font(R.font.reem_kufi, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.reem_kufi, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val ArefRuqaaArabicFont = FontFamily(
+    Font(R.font.aref_ruqaa, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.aref_ruqaa, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val CairoArabicFont = FontFamily(
+    Font(R.font.cairo, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.cairo, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val BanglaBodyFont = FontFamily(
@@ -47,9 +88,25 @@ val LatinUiFont = FontFamily(
     Font(R.font.plus_jakarta_sans, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
-fun arabicScriptFont(scriptType: QuranScriptType): FontFamily = when (scriptType) {
-    QuranScriptType.UTHMANI -> AmiriQuranFont
-    QuranScriptType.INDOPAK -> IndoPakArabicFont
+fun arabicScriptFont(
+    scriptType: QuranScriptType,
+    fontOption: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO
+): FontFamily = when (fontOption) {
+    ArabicFontFamilyOption.AUTO -> when (scriptType) {
+        QuranScriptType.UTHMANI -> AmiriMushafQuranFont
+        QuranScriptType.INDOPAK -> IndoPakArabicFont
+    }
+    ArabicFontFamilyOption.AMIRI_QURAN -> AmiriMushafQuranFont
+    ArabicFontFamilyOption.AMIRI -> AmiriQuranFont
+    ArabicFontFamilyOption.SCHEHERAZADE -> IndoPakArabicFont
+    ArabicFontFamilyOption.LATEEF -> LateefArabicFont
+    ArabicFontFamilyOption.NOTO_NASKH -> NotoArabicFont
+    ArabicFontFamilyOption.HARMATTAN -> HarmattanArabicFont
+    ArabicFontFamilyOption.MARKAZI -> MarkaziArabicFont
+    ArabicFontFamilyOption.MIRZA -> MirzaArabicFont
+    ArabicFontFamilyOption.REEM_KUFI -> ReemKufiArabicFont
+    ArabicFontFamilyOption.AREF_RUQAA -> ArefRuqaaArabicFont
+    ArabicFontFamilyOption.CAIRO -> CairoArabicFont
 }
 
 fun contentFontForLanguage(languageCode: String): FontFamily = when (languageCode.lowercase()) {

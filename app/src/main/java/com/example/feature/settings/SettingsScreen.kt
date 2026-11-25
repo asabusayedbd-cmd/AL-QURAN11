@@ -103,7 +103,7 @@ private val UI_LANGUAGES = listOf(
     "tr" to "Türkçe"
 )
 
-private val WBW_LANGUAGES = listOf(
+val READER_WBW_LANGUAGES = listOf(
     "en" to "English (WBW)",
     "bn" to "বাংলা (WBW)",
     "ur" to "اردو (WBW)",
@@ -151,7 +151,7 @@ fun SettingsScreen(
         UI_LANGUAGES.firstOrNull { it.first == state.preferences.uiLanguageCode }?.second ?: "English"
     }
     val wbwLangLabel = remember(state.preferences.wbwLanguageCode) {
-        WBW_LANGUAGES.firstOrNull { it.first == state.preferences.wbwLanguageCode }?.second ?: "English (WBW)"
+        READER_WBW_LANGUAGES.firstOrNull { it.first == state.preferences.wbwLanguageCode }?.second ?: "English (WBW)"
     }
     val themeLabel = when (state.preferences.themeMode) {
         NoorThemeMode.SERENE_EMERALD -> stringResource(R.string.theme_serene_emerald)
@@ -755,7 +755,7 @@ private fun LanguagePickerModalSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                WBW_LANGUAGES.forEach { (code, label) ->
+                READER_WBW_LANGUAGES.forEach { (code, label) ->
                     FilterChip(
                         selected = wbwLanguageCode == code,
                         onClick = { onSelectWbwLanguage(code) },
@@ -872,7 +872,7 @@ private fun ThemePickerModalSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TranslationsPickerModalSheet(
+fun TranslationsPickerModalSheet(
     sources: List<TranslationSourceEntity>,
     busySourceId: Int?,
     onToggle: (TranslationSourceEntity, Boolean) -> Unit,
@@ -1007,7 +1007,7 @@ private fun TranslationsPickerModalSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TafsirsPickerModalSheet(
+fun TafsirsPickerModalSheet(
     sources: List<TafsirSourceEntity>,
     activeTafsirSourceId: Int,
     isRefreshing: Boolean,

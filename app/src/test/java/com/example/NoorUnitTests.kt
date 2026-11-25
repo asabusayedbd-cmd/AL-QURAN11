@@ -612,4 +612,27 @@ class NoorUnitTests {
         assertEquals("2:255", BidiUtils.normalizeDigitsToAscii("২:২৫৫"))
         assertEquals("40:3", BidiUtils.normalizeDigitsToAscii("٤٠:٣"))
     }
+
+    // 15. Arabic Font Catalog (11+ fonts) & Reader Sidebar Visibility Defaults
+    @Test
+    fun testArabicFontsAndReaderVisibilityDefaults() {
+        val options = com.example.core.localization.ArabicFontFamilyOption.entries
+        assertTrue("Expected >= 10 Arabic font options (AUTO + >=9 fonts), got ${options.size}", options.size >= 10)
+        assertEquals(options.size, options.map { it.displayName }.distinct().size)
+
+        val resolvedFonts = options.filter { it != com.example.core.localization.ArabicFontFamilyOption.AUTO }
+            .map { opt ->
+                com.example.ui.theme.arabicScriptFont(
+                    com.example.core.localization.QuranScriptType.UTHMANI,
+                    opt
+                )
+            }
+        assertEquals(resolvedFonts.size, resolvedFonts.distinct().size)
+
+        val defaults = com.example.core.localization.UserPreferences()
+        assertTrue(defaults.showWordByWord)
+        assertTrue(defaults.showTranslation)
+        assertFalse(defaults.showInlineTafsir)
+        assertEquals(com.example.core.localization.ArabicFontFamilyOption.AUTO, defaults.arabicFontFamily)
+    }
 }

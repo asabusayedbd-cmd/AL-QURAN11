@@ -15,6 +15,7 @@ import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.ReadingProgressEntity
 import com.example.core.database.SurahEntity
 import com.example.core.database.TafsirSourceEntity
+import com.example.core.database.TranslationSourceEntity
 import com.example.core.database.UserBookmarkEntity
 import com.example.core.database.UserNoteEntity
 import com.example.core.database.WordEntity
@@ -22,9 +23,11 @@ import com.example.core.database.WordFormStatProjection
 import com.example.core.database.WordOccurrenceProjection
 import com.example.core.database.WordTranslationEntity
 import com.example.core.ibadah.StreakCalculator
+import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.DetailedWordAnalysis
 import com.example.core.localization.LineTranslator
+import com.example.core.localization.NoorThemeMode
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderCardStyle
@@ -36,6 +39,9 @@ import com.example.ui.components.WordDisplayItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -56,7 +62,8 @@ data class AyahDisplayBundle(
     val words: List<WordDisplayItem>,
     val translations: List<AyahTranslationEntity>,
     val isBookmarked: Boolean,
-    val hasNote: Boolean
+    val hasNote: Boolean,
+    val inlineTafsir: AyahTafsirEntity? = null
 )
 
 data class WordInspectorState(
@@ -102,7 +109,11 @@ data class ReaderUiState(
     val preferences: UserPreferences = UserPreferences(),
     val playbackState: AudioPlaybackState = AudioPlaybackState(),
     val reciters: List<AudioReciterEntity> = emptyList(),
+    val translationSources: List<TranslationSourceEntity> = emptyList(),
+    val busyTranslationSourceId: Int? = null,
     val tafsirSources: List<TafsirSourceEntity> = emptyList(),
+    val isRefreshingTafsirs: Boolean = false,
+    val isLoadingInlineTafsirs: Boolean = false,
     val selectedTafsirAyah: AyahEntity? = null,
     val selectedAyahTafsirs: List<AyahTafsirEntity> = emptyList(),
     val selectedAyahNoteText: String = "",
@@ -134,6 +145,9 @@ class ReaderViewModel(
     private val _isDownloadingSurah = MutableStateFlow(false)
     private val _downloadError = MutableStateFlow<String?>(null)
     private val _inspectedWord = MutableStateFlow<WordInspectorState?>(null)
+    private val _busyTranslationSourceId = MutableStateFlow<Int?>(null)
+    private val _isRefreshingTafsirs = MutableStateFlow(false)
+    private val _isLoadingInlineTafsirs = MutableStateFlow(false)
     private val _lineTranslationState = MutableStateFlow(LineTranslationUiState())
     val lineTranslationState: StateFlow<LineTranslationUiState> = _lineTranslationState
     private var downloadJob: Job? = null
@@ -162,6 +176,47 @@ class ReaderViewModel(
                 }
                 if (enabledSources.any { it.id != 20 }) {
                     syncRepository.ensureTranslationsForSurah(sid, enabledSources, lineTranslator)
+                }
+            }
+        }
+
+        // Automatically fetch missing Tafsir entries for the active Surah whenever Inline Tafsir is enabled
+        viewModelScope.launch(Dispatchers.IO) {
+            combine(
+                _surahId,
+                preferencesRepository.preferencesFlow.map { it.showInlineTafsir to it.activeTafsirSourceId }.distinctUntilChanged(),
+                quranDao.observeTafsirSources()
+            ) { sid, (showInline, tafsirId), sources ->
+                Triple(sid, showInline to tafsirId, sources)
+            }.collectLatest { (sid, inlinePair, sources) ->
+                val (showInline, tafsirId) = inlinePair
+                if (!showInline || explicitlyDeletedSurahId == sid) {
+                    _isLoadingInlineTafsirs.value = false
+                    return@collectLatest
+                }
+                val source = sources.firstOrNull { it.id == tafsirId }
+                    ?: TafsirSourceEntity(tafsirId, "en", "English", "Tafsir", false, true, 0)
+                val ayahs = quranDao.getAyahsBySurah(sid)
+                if (ayahs.isEmpty()) return@collectLatest
+                _isLoadingInlineTafsirs.value = true
+                try {
+                    for (chunk in ayahs.chunked(4)) {
+                        coroutineScope {
+                            chunk.map { ayah ->
+                                async {
+                                    syncRepository.fetchAyahTafsirIfMissing(
+                                        ayahId = ayah.id,
+                                        verseKey = ayah.verseKey,
+                                        tafsirId = source.id,
+                                        languageCode = source.languageCode,
+                                        tafsirName = source.tafsirName
+                                    )
+                                }
+                            }.awaitAll()
+                        }
+                    }
+                } finally {
+                    _isLoadingInlineTafsirs.value = false
                 }
             }
         }
@@ -261,12 +316,31 @@ class ReaderViewModel(
         if (ayah == null) flowOf(null) else userLibraryDao.observeNoteForVerse(ayah.verseKey)
     }
 
+    private val inlineTafsirsForSurahFlow = combine(
+        _surahId,
+        preferencesRepository.preferencesFlow.map { it.showInlineTafsir to it.activeTafsirSourceId }.distinctUntilChanged()
+    ) { sid, (showInline, tafsirId) ->
+        Triple(sid, showInline, tafsirId)
+    }.flatMapLatest { (sid, showInline, tafsirId) ->
+        if (!showInline) flowOf(emptyList())
+        else quranDao.observeTafsirsForSurahBySource(sid, tafsirId)
+    }
+
     private val catalogFlow = combine(
         quranDao.observeAllSurahs(),
         quranDao.observeReciters(),
-        quranDao.observeTafsirSources()
-    ) { surahs, reciters, tafsirs ->
-        Triple(surahs, reciters, tafsirs)
+        quranDao.observeTafsirSources(),
+        quranDao.observeTranslationSources()
+    ) { surahs, reciters, tafsirs, translationSources ->
+        listOf(surahs, reciters, tafsirs, translationSources)
+    }
+
+    private val sidebarFlagsFlow = combine(
+        _busyTranslationSourceId,
+        _isRefreshingTafsirs,
+        _isLoadingInlineTafsirs
+    ) { busyTrId, refreshingTaf, loadingInlineTaf ->
+        Triple(busyTrId, refreshingTaf, loadingInlineTaf)
     }
 
     private val overlayFlow = combine(
@@ -294,15 +368,33 @@ class ReaderViewModel(
     val uiState: StateFlow<ReaderUiState> = combine(
         surahAndBundlesFlow,
         catalogFlow,
-        overlayFlow
-    ) { core, catalog, overlay ->
-        val (surah, bundles, prefs) = core
-        val (allSurahs, reciters, tafsirSources) = catalog
+        overlayFlow,
+        inlineTafsirsForSurahFlow,
+        sidebarFlagsFlow
+    ) { core, catalog, overlay, inlineTafsirs, sidebarFlags ->
+        val (surah, baseBundles, prefs) = core
+        @Suppress("UNCHECKED_CAST")
+        val allSurahs = catalog[0] as List<SurahEntity>
+        @Suppress("UNCHECKED_CAST")
+        val reciters = catalog[1] as List<AudioReciterEntity>
+        @Suppress("UNCHECKED_CAST")
+        val tafsirSources = catalog[2] as List<TafsirSourceEntity>
+        @Suppress("UNCHECKED_CAST")
+        val translationSources = catalog[3] as List<TranslationSourceEntity>
+
         val (selectedTriple, flags) = overlay
         val (selectedAyah, selectedTafsirs, selectedNote) = selectedTriple
         val (tafsirStatus, downloadStatus, inspected) = flags
         val (fetchingTafsir, tafErr) = tafsirStatus
         val (downloadingSurah, dlErr) = downloadStatus
+        val (busyTrId, refreshingTaf, loadingInlineTaf) = sidebarFlags
+
+        val bundles = if (prefs.showInlineTafsir && inlineTafsirs.isNotEmpty()) {
+            val inlineByAyah = inlineTafsirs.associateBy { it.ayahId }
+            baseBundles.map { b -> b.copy(inlineTafsir = inlineByAyah[b.ayah.id]) }
+        } else {
+            baseBundles
+        }
 
         val localizedName = surah?.let {
             BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
@@ -319,7 +411,11 @@ class ReaderViewModel(
             preferences = prefs,
             playbackState = AudioPlaybackState(),
             reciters = reciters,
+            translationSources = translationSources,
+            busyTranslationSourceId = busyTrId,
             tafsirSources = tafsirSources,
+            isRefreshingTafsirs = refreshingTaf,
+            isLoadingInlineTafsirs = loadingInlineTaf,
             selectedTafsirAyah = selectedAyah,
             selectedAyahTafsirs = selectedTafsirs,
             selectedAyahNoteText = selectedNote?.noteText.orEmpty(),
@@ -877,6 +973,69 @@ class ReaderViewModel(
 
     fun setScriptType(script: QuranScriptType) = viewModelScope.launch {
         preferencesRepository.setScriptType(script)
+    }
+
+    fun setArabicFontFamily(option: ArabicFontFamilyOption) = viewModelScope.launch {
+        preferencesRepository.setArabicFontFamily(option)
+    }
+
+    fun setShowWordByWord(show: Boolean) = viewModelScope.launch {
+        preferencesRepository.setShowWordByWord(show)
+    }
+
+    fun setShowTranslation(show: Boolean) = viewModelScope.launch {
+        preferencesRepository.setShowTranslation(show)
+    }
+
+    fun setShowInlineTafsir(show: Boolean) = viewModelScope.launch {
+        preferencesRepository.setShowInlineTafsir(show)
+    }
+
+    fun setWbwLanguage(languageCode: String) = viewModelScope.launch {
+        preferencesRepository.setWbwLanguage(languageCode)
+    }
+
+    fun setThemeMode(mode: NoorThemeMode) = viewModelScope.launch {
+        preferencesRepository.setThemeMode(mode)
+    }
+
+    fun toggleTranslationSource(source: TranslationSourceEntity, enabled: Boolean) {
+        viewModelScope.launch {
+            quranDao.setTranslationEnabled(source.id, enabled)
+            if (enabled && source.id != 20) {
+                val sid = _surahId.value
+                val countForSurah = quranDao.countTranslationsForSurahBySource(sid, source.id)
+                if (countForSurah == 0) {
+                    _busyTranslationSourceId.value = source.id
+                    syncRepository.ensureTranslationsForSurah(sid, listOf(source), lineTranslator)
+                    _busyTranslationSourceId.value = null
+                }
+            }
+        }
+    }
+
+    fun selectActiveTafsirSource(source: TafsirSourceEntity) = viewModelScope.launch {
+        preferencesRepository.setActiveTafsirSourceId(source.id)
+    }
+
+    fun syncRemoteTafsirCatalog() = viewModelScope.launch {
+        _isRefreshingTafsirs.value = true
+        syncRepository.refreshRemoteTafsirCatalog()
+        _isRefreshingTafsirs.value = false
+    }
+
+    fun fetchInlineTafsirForAyah(ayah: AyahEntity) = viewModelScope.launch(Dispatchers.IO) {
+        val state = uiState.value
+        val activeId = state.preferences.activeTafsirSourceId
+        val src = state.tafsirSources.firstOrNull { it.id == activeId }
+            ?: TafsirSourceEntity(activeId, "en", "English", "Tafsir", false, true, 0)
+        syncRepository.fetchAyahTafsirIfMissing(
+            ayahId = ayah.id,
+            verseKey = ayah.verseKey,
+            tafsirId = src.id,
+            languageCode = src.languageCode,
+            tafsirName = src.tafsirName
+        )
     }
 
     fun setReaderCardStyle(style: ReaderCardStyle) = viewModelScope.launch {

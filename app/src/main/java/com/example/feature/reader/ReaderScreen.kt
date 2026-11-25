@@ -101,11 +101,19 @@ import com.example.core.database.AyahEntity
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Translate
+import androidx.activity.compose.BackHandler
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.ReaderViewMode
+import com.example.feature.settings.TafsirsPickerModalSheet
+import com.example.feature.settings.TajweedGuideSheet
+import com.example.feature.settings.TranslationsPickerModalSheet
 import com.example.feature.tafsir.TafsirSheet
 import com.example.ui.components.AudioHifzBar
 import com.example.ui.components.LanguageTranslationPickerSheet
@@ -119,6 +127,25 @@ import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+
+private val INLINE_TAFSIR_TAG_REGEX = Regex("<[^>]+>")
+private val INLINE_TAFSIR_NEWLINES_REGEX = Regex("\n{2,}")
+
+private fun formatInlineTafsirText(raw: String): String = raw
+    .replace(INLINE_TAFSIR_TAG_REGEX, "\n")
+    .replace("&quot;", "\"")
+    .replace("&#39;", "'")
+    .replace("&rsquo;", "’")
+    .replace("&lsquo;", "‘")
+    .replace("&ldquo;", "“")
+    .replace("&rdquo;", "”")
+    .replace("&mdash;", "—")
+    .replace("&ndash;", "–")
+    .replace("&nbsp;", " ")
+    .replace("&amp;", "&")
+    .replace(INLINE_TAFSIR_NEWLINES_REGEX, "\n\n")
+    .trim()
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -141,7 +168,12 @@ fun ReaderScreen(
     val listState = rememberLazyListState()
     val tajweedPalette = LocalTajweedPalette.current
 
-    var showDisplaySheet by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val coroutineScope = rememberCoroutineScope()
+
+    var showTranslationsSheet by remember { mutableStateOf(false) }
+    var showTafsirsSheet by remember { mutableStateOf(false) }
+    var showTajweedGuide by remember { mutableStateOf(false) }
     var showRecitationSettings by remember { mutableStateOf(false) }
     var showQariPickerFromReader by remember { mutableStateOf(false) }
     var showSurahSwitcher by remember { mutableStateOf(false) }
@@ -153,6 +185,10 @@ fun ReaderScreen(
     var lastScrolledSurahId by rememberSaveable { mutableIntStateOf(surahId) }
     var selectedMushafAyah by remember { mutableStateOf<AyahEntity?>(null) }
     var lastObservedPlaybackSurahId by remember { mutableIntStateOf(playbackCursor.surahId) }
+
+    BackHandler(enabled = drawerState.isOpen) {
+        coroutineScope.launch { drawerState.close() }
+    }
 
     if (showBatchLangPicker) {
         LanguageTranslationPickerSheet(
@@ -293,6 +329,47 @@ fun ReaderScreen(
 
     val showChrome = state.preferences.readerViewMode == ReaderViewMode.WORD_BY_WORD || mushafChromeVisible
 
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = showChrome,
+        drawerContent = {
+            ReaderSidebarDrawerContent(
+                surahTitle = state.localizedSurahName,
+                preferences = state.preferences,
+                translationSources = state.translationSources,
+                busyTranslationSourceId = state.busyTranslationSourceId,
+                tafsirSources = state.tafsirSources,
+                onClose = { coroutineScope.launch { drawerState.close() } },
+                onToggleShowWordByWord = viewModel::setShowWordByWord,
+                onToggleShowTranslation = viewModel::setShowTranslation,
+                onToggleShowInlineTafsir = viewModel::setShowInlineTafsir,
+                onToggleTajweed = viewModel::setTajweedEnabled,
+                onToggleTransliteration = viewModel::setShowTransliteration,
+                onArabicSizeChange = viewModel::setArabicFontSize,
+                onWbwSizeChange = viewModel::setWbwFontSize,
+                onTranslationSizeChange = viewModel::setTranslationFontSize,
+                onSelectArabicFont = viewModel::setArabicFontFamily,
+                onSelectScript = viewModel::setScriptType,
+                onSelectCardStyle = viewModel::setReaderCardStyle,
+                onSelectTheme = viewModel::setThemeMode,
+                onSelectWbwLanguage = viewModel::setWbwLanguage,
+                onToggleTranslationSource = viewModel::toggleTranslationSource,
+                onOpenAllTranslations = {
+                    coroutineScope.launch { drawerState.close() }
+                    showTranslationsSheet = true
+                },
+                onSelectActiveTafsirSource = viewModel::selectActiveTafsirSource,
+                onOpenAllTafsirs = {
+                    coroutineScope.launch { drawerState.close() }
+                    showTafsirsSheet = true
+                },
+                onOpenTajweedGuide = {
+                    coroutineScope.launch { drawerState.close() }
+                    showTajweedGuide = true
+                }
+            )
+        }
+    ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
         topBar = {
@@ -394,12 +471,12 @@ fun ReaderScreen(
                             )
                         }
                         IconButton(
-                            onClick = { showDisplaySheet = true },
+                            onClick = { coroutineScope.launch { drawerState.open() } },
                             modifier = Modifier.testTag("reader_display_settings_button")
                         ) {
                             Icon(
                                 Icons.Default.Tune,
-                                contentDescription = stringResource(R.string.cd_settings)
+                                contentDescription = stringResource(R.string.cd_reader_sidebar)
                             )
                         }
                     }
@@ -662,7 +739,7 @@ fun ReaderScreen(
                                 ) {
                                     Text(
                                         text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
-                                        fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                        fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                         fontSize = 26.sp,
                                         textAlign = TextAlign.Center,
                                         color = MaterialTheme.colorScheme.primary,
@@ -780,7 +857,7 @@ fun ReaderScreen(
                                             ) {
                                                 Text(
                                                     text = state.surah?.nameArabic ?: "",
-                                                    fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                                    fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                                     fontSize = 18.sp,
                                                     color = MaterialTheme.colorScheme.primary
                                                 )
@@ -808,7 +885,7 @@ fun ReaderScreen(
                                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                             Text(
                                                 text = pageAnnotatedText,
-                                                fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                                fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                                 fontSize = state.preferences.arabicFontSizeSp.sp,
                                                 lineHeight = (state.preferences.arabicFontSizeSp * 1.95f).sp,
                                                 textAlign = TextAlign.Start,
@@ -993,7 +1070,7 @@ fun ReaderScreen(
                                         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                                             Text(
                                                 text = formattedArabic,
-                                                fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                                fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                                 fontSize = state.preferences.arabicFontSizeSp.sp,
                                                 lineHeight = (state.preferences.arabicFontSizeSp * 1.7f).sp,
                                                 textAlign = TextAlign.Start,
@@ -1001,8 +1078,8 @@ fun ReaderScreen(
                                             )
                                         }
 
-                                        // Word-by-Word RTL FlowRow
-                                        if (bundle.words.isNotEmpty()) {
+                                        // Word-by-Word RTL FlowRow (independently toggleable in Reader Sidebar)
+                                        if (state.preferences.showWordByWord && bundle.words.isNotEmpty()) {
                                             WordByWordFlowRow(
                                                 words = bundle.words,
                                                 scriptType = state.preferences.scriptType,
@@ -1014,73 +1091,206 @@ fun ReaderScreen(
                                                 ayahNumber = bundle.ayah.ayahNumber,
                                                 onWordClick = { wItem ->
                                                     viewModel.inspectWord(wItem, bundle.ayah.verseKey)
-                                                }
+                                                },
+                                                arabicFontFamily = state.preferences.arabicFontFamily
                                             )
                                         }
 
-                                        HorizontalDivider(thickness = 0.6.dp)
+                                        val lineTr = lineState.ayahLines[bundle.ayah.id]
+                                        val hasVisibleTranslation = state.preferences.showTranslation &&
+                                            (bundle.translations.isNotEmpty() || lineTr != null)
 
-                                        // Multi-translation Stack
-                                        bundle.translations.forEach { tr ->
-                                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                Text(
-                                                    text = tr.translatedText,
-                                                    style = banglaSafeBodyStyle(
-                                                        state.preferences.translationFontSizeSp,
-                                                        tr.languageCode
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = tr.translatorName,
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.secondary,
-                                                    fontWeight = FontWeight.Medium
-                                                )
+                                        if (hasVisibleTranslation || state.preferences.showInlineTafsir) {
+                                            HorizontalDivider(thickness = 0.6.dp)
+                                        }
+
+                                        // Multi-translation Stack (hidden cleanly when reading Arabic + WBW only)
+                                        if (state.preferences.showTranslation) {
+                                            bundle.translations.forEach { tr ->
+                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                    Text(
+                                                        text = tr.translatedText,
+                                                        style = banglaSafeBodyStyle(
+                                                            state.preferences.translationFontSizeSp,
+                                                            tr.languageCode
+                                                        ),
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = tr.translatorName,
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.secondary,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                }
+                                            }
+
+                                            // Dynamic Line Translation (Instant বাংলা or Any Selected Language)
+                                            if (lineTr != null) {
+                                                Surface(
+                                                    shape = MaterialTheme.shapes.small,
+                                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.Top
+                                                    ) {
+                                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                            Text(
+                                                                text = LineTranslator.languageLabel(lineTr.first),
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                            Text(
+                                                                text = lineTr.second,
+                                                                style = banglaSafeBodyStyle(
+                                                                    state.preferences.translationFontSizeSp,
+                                                                    lineTr.first
+                                                                ),
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                        }
+                                                        IconButton(
+                                                            onClick = { viewModel.clearAyahLineTranslation(bundle.ayah.id) },
+                                                            modifier = Modifier.size(24.dp)
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.Close,
+                                                                contentDescription = stringResource(R.string.action_clear),
+                                                                modifier = Modifier.size(16.dp),
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
 
-                                        // Dynamic Line Translation (Instant বাংলা or Any Selected Language)
-                                        val lineTr = lineState.ayahLines[bundle.ayah.id]
-                                        if (lineTr != null) {
+                                        // Inline Tafsir directly at the bottom of each Ayah card (toggled from Reader Sidebar)
+                                        if (state.preferences.showInlineTafsir) {
+                                            val activeTafsirMeta = state.tafsirSources.firstOrNull {
+                                                it.id == state.preferences.activeTafsirSourceId
+                                            }
+                                            val inlineTafsir = bundle.inlineTafsir
                                             Surface(
-                                                shape = MaterialTheme.shapes.small,
-                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                                modifier = Modifier.fillMaxWidth()
+                                                shape = MaterialTheme.shapes.medium,
+                                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                                                border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .testTag("inline_tafsir_card_${bundle.ayah.verseKey}")
                                             ) {
-                                                Row(
+                                                Column(
                                                     modifier = Modifier
                                                         .fillMaxWidth()
-                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.Top
+                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                                 ) {
-                                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                        Text(
-                                                            text = LineTranslator.languageLabel(lineTr.first),
-                                                            style = MaterialTheme.typography.labelSmall,
-                                                            color = MaterialTheme.colorScheme.primary,
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                        Text(
-                                                            text = lineTr.second,
-                                                            style = banglaSafeBodyStyle(
-                                                                state.preferences.translationFontSizeSp,
-                                                                lineTr.first
-                                                            ),
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                    }
-                                                    IconButton(
-                                                        onClick = { viewModel.clearAyahLineTranslation(bundle.ayah.id) },
-                                                        modifier = Modifier.size(24.dp)
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                                        verticalAlignment = Alignment.CenterVertically
                                                     ) {
-                                                        Icon(
-                                                            Icons.Default.Close,
-                                                            contentDescription = stringResource(R.string.action_clear),
-                                                            modifier = Modifier.size(16.dp),
-                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                            modifier = Modifier.weight(1f)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                                                contentDescription = null,
+                                                                tint = MaterialTheme.colorScheme.primary,
+                                                                modifier = Modifier.size(15.dp)
+                                                            )
+                                                            Text(
+                                                                text = inlineTafsir?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
+                                                                    ?: activeTafsirMeta?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
+                                                                    ?: stringResource(R.string.tafsir_title),
+                                                                style = MaterialTheme.typography.labelMedium,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = MaterialTheme.colorScheme.primary,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                        TextButton(
+                                                            onClick = { viewModel.openTafsir(bundle.ayah) },
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                            modifier = Modifier.testTag("inline_tafsir_open_${bundle.ayah.verseKey}")
+                                                        ) {
+                                                            Text(
+                                                                text = stringResource(R.string.inline_tafsir_full_btn),
+                                                                style = MaterialTheme.typography.labelSmall
+                                                            )
+                                                        }
+                                                    }
+
+                                                    if (inlineTafsir != null) {
+                                                        val cleanTafsirBody = remember(inlineTafsir.tafsirHtmlOrMarkdown) {
+                                                            formatInlineTafsirText(inlineTafsir.tafsirHtmlOrMarkdown)
+                                                        }
+                                                        var isTafsirExpanded by remember(bundle.ayah.id, inlineTafsir.sourceId) {
+                                                            mutableStateOf(false)
+                                                        }
+                                                        val isRtlTafsir = inlineTafsir.languageCode.lowercase() in setOf("ar", "ur", "fa", "ps")
+                                                        CompositionLocalProvider(
+                                                            LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr
+                                                        ) {
+                                                            Text(
+                                                                text = cleanTafsirBody,
+                                                                style = banglaSafeBodyStyle(
+                                                                    (state.preferences.translationFontSizeSp - 1f).coerceAtLeast(12f),
+                                                                    inlineTafsir.languageCode
+                                                                ),
+                                                                color = MaterialTheme.colorScheme.onSurface,
+                                                                maxLines = if (isTafsirExpanded) Int.MAX_VALUE else 5,
+                                                                overflow = TextOverflow.Ellipsis,
+                                                                textAlign = TextAlign.Start,
+                                                                modifier = Modifier.fillMaxWidth()
+                                                            )
+                                                        }
+                                                        if (cleanTafsirBody.length > 260) {
+                                                            TextButton(
+                                                                onClick = { isTafsirExpanded = !isTafsirExpanded },
+                                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                                                modifier = Modifier.testTag("inline_tafsir_expand_${bundle.ayah.verseKey}")
+                                                            ) {
+                                                                Text(
+                                                                    text = if (isTafsirExpanded) {
+                                                                        stringResource(R.string.inline_tafsir_show_less)
+                                                                    } else {
+                                                                        stringResource(R.string.inline_tafsir_read_more)
+                                                                    },
+                                                                    style = MaterialTheme.typography.labelMedium
+                                                                )
+                                                            }
+                                                        }
+                                                    } else if (state.isLoadingInlineTafsirs) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                        ) {
+                                                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                                            Text(
+                                                                text = stringResource(R.string.inline_tafsir_loading),
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    } else {
+                                                        FilledTonalButton(
+                                                            onClick = { viewModel.fetchInlineTafsirForAyah(bundle.ayah) },
+                                                            modifier = Modifier.testTag("inline_tafsir_fetch_${bundle.ayah.verseKey}")
+                                                        ) {
+                                                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                                            Spacer(modifier = Modifier.width(6.dp))
+                                                            Text(stringResource(R.string.inline_tafsir_fetch_btn))
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1141,6 +1351,7 @@ fun ReaderScreen(
             }
         }
     }
+    } // end ModalNavigationDrawer
 
     // Mushaf Ayah Quick Action Bottom Sheet
     selectedMushafAyah?.let { mushafAyah ->
@@ -1180,19 +1391,47 @@ fun ReaderScreen(
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     Text(
                         text = previewArabic,
-                        fontFamily = arabicScriptFont(state.preferences.scriptType),
+                        fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                         fontSize = 24.sp,
                         lineHeight = 40.sp,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                firstTranslation?.let { tr ->
-                    Text(
-                        text = tr.translatedText,
-                        style = banglaSafeBodyStyle(15f, tr.languageCode),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                if (state.preferences.showTranslation) {
+                    firstTranslation?.let { tr ->
+                        Text(
+                            text = tr.translatedText,
+                            style = banglaSafeBodyStyle(15f, tr.languageCode),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                if (state.preferences.showInlineTafsir && bundle?.inlineTafsir != null) {
+                    val cleanMushafTafsir = remember(bundle.inlineTafsir.tafsirHtmlOrMarkdown) {
+                        formatInlineTafsirText(bundle.inlineTafsir.tafsirHtmlOrMarkdown)
+                    }
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = bundle.inlineTafsir.tafsirName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = cleanMushafTafsir,
+                                style = banglaSafeBodyStyle(14f, bundle.inlineTafsir.languageCode),
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
 
                 val mushafLineTr = lineState.ayahLines[mushafAyah.id]
@@ -1379,7 +1618,7 @@ fun ReaderScreen(
                                 )
                                 Text(
                                     text = itemSurah.nameArabic,
-                                    fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                    fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                     fontSize = 20.sp,
                                     color = MaterialTheme.colorScheme.primary
                                 )
@@ -1391,18 +1630,31 @@ fun ReaderScreen(
         }
     }
 
-    if (showDisplaySheet) {
-        ReaderDisplaySettingsSheet(
-            preferences = state.preferences,
-            onSelectScript = viewModel::setScriptType,
-            onSelectCardStyle = viewModel::setReaderCardStyle,
-            onToggleTajweed = viewModel::setTajweedEnabled,
-            onToggleTransliteration = viewModel::setShowTransliteration,
-            onArabicSizeChange = viewModel::setArabicFontSize,
-            onWbwSizeChange = viewModel::setWbwFontSize,
-            onTranslationSizeChange = viewModel::setTranslationFontSize,
-            onDismiss = { showDisplaySheet = false }
+    if (showTranslationsSheet) {
+        TranslationsPickerModalSheet(
+            sources = state.translationSources,
+            busySourceId = state.busyTranslationSourceId,
+            onToggle = viewModel::toggleTranslationSource,
+            onDismiss = { showTranslationsSheet = false }
         )
+    }
+
+    if (showTafsirsSheet) {
+        TafsirsPickerModalSheet(
+            sources = state.tafsirSources,
+            activeTafsirSourceId = state.preferences.activeTafsirSourceId,
+            isRefreshing = state.isRefreshingTafsirs,
+            onSelect = { src ->
+                viewModel.selectActiveTafsirSource(src)
+                showTafsirsSheet = false
+            },
+            onSyncCatalog = viewModel::syncRemoteTafsirCatalog,
+            onDismiss = { showTafsirsSheet = false }
+        )
+    }
+
+    if (showTajweedGuide) {
+        TajweedGuideSheet(onDismiss = { showTajweedGuide = false })
     }
 
     if (showRecitationSettings) {
@@ -1462,7 +1714,8 @@ fun ReaderScreen(
                 }
             },
             onTranslateWord = viewModel::translateInspectedWord,
-            onDismiss = viewModel::dismissWordInspector
+            onDismiss = viewModel::dismissWordInspector,
+            arabicFontFamily = state.preferences.arabicFontFamily
         )
     }
 
