@@ -93,6 +93,9 @@ interface QuranDao {
     @Query("SELECT COUNT(*) FROM words WHERE rootArabic = :rootArabic AND rootArabic != ''")
     suspend fun countWordsByRoot(rootArabic: String): Int
 
+    @Query("SELECT COUNT(*) FROM words WHERE textUthmani = :wordArabic")
+    suspend fun countWordsByArabic(wordArabic: String): Int
+
     @Query("SELECT * FROM words WHERE rootArabic = :rootArabic AND rootArabic != '' ORDER BY ayahId ASC, position ASC LIMIT 30")
     suspend fun getWordsByRoot(rootArabic: String): List<WordEntity>
 
@@ -108,6 +111,19 @@ interface QuranDao {
         """
     )
     suspend fun getRootOccurrences(rootArabic: String): List<WordOccurrenceProjection>
+
+    @Query(
+        """
+        SELECT a.verseKey AS verseKey, a.surahId AS surahId, a.ayahNumber AS ayahNumber,
+               a.textUthmani AS ayahArabic, w.textUthmani AS wordArabic, w.transliteration AS transliteration
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE w.textUthmani = :wordArabic
+        ORDER BY a.surahId ASC, a.ayahNumber ASC, w.position ASC
+        LIMIT 25
+        """
+    )
+    suspend fun getWordOccurrencesByArabic(wordArabic: String): List<WordOccurrenceProjection>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWords(words: List<WordEntity>)
@@ -261,6 +277,9 @@ interface QuranDao {
     @Query("SELECT COUNT(*) FROM ayahs WHERE surahId = :surahId")
     suspend fun countAyahsInSurah(surahId: Int): Int
 
+    @Query("SELECT surahId, COUNT(*) AS cnt FROM ayahs GROUP BY surahId")
+    suspend fun getAyahCountsBySurah(): List<SurahAyahCountProjection>
+
     @Query("SELECT COUNT(*) FROM ayahs")
     suspend fun countAllAyahs(): Int
 
@@ -273,6 +292,11 @@ interface QuranDao {
     @Query("SELECT COUNT(*) FROM ayah_tafsirs WHERE sourceId = :sourceId")
     suspend fun countTafsirsForSource(sourceId: Int): Int
 }
+
+data class SurahAyahCountProjection(
+    val surahId: Int,
+    val cnt: Int
+)
 
 data class WordOccurrenceProjection(
     val verseKey: String,

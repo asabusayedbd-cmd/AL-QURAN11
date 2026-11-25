@@ -194,7 +194,9 @@ fun NoorAppRoot(
                                             DuaViewModel(
                                                 context = context,
                                                 database = appContainer.database,
-                                                okHttpClient = appContainer.okHttpClient
+                                                okHttpClient = appContainer.okHttpClient,
+                                                seeder = appContainer.seeder,
+                                                lineTranslator = appContainer.lineTranslator
                                             )
                                         }
                                     }
@@ -307,7 +309,8 @@ fun NoorAppRoot(
                                                 preferencesRepository = appContainer.preferencesRepository,
                                                 syncRepository = appContainer.quranSyncRepository,
                                                 audioController = appContainer.audioController,
-                                                seeder = appContainer.seeder
+                                                seeder = appContainer.seeder,
+                                                lineTranslator = appContainer.lineTranslator
                                             )
                                         }
                                     }

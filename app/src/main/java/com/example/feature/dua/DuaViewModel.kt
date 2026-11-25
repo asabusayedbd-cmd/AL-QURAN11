@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.database.DuaEntity
 import com.example.core.database.NoorDatabase
+import com.example.core.database.QuranDatabaseSeeder
+import com.example.core.localization.LineTranslator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,10 +36,26 @@ data class DuaAudioUiState(
     val statusMessage: String? = null
 )
 
+data class TranslatedDuaFields(
+    val title: String,
+    val translation: String,
+    val virtueOrContext: String
+)
+
+data class DuaTranslationUiState(
+    val activeLanguage: String? = null,
+    val translatedById: Map<Int, Pair<String, TranslatedDuaFields>> = emptyMap(),
+    val translatingIds: Set<Int> = emptySet(),
+    val isBatchTranslating: Boolean = false,
+    val errorMessage: String? = null
+)
+
 class DuaViewModel(
     context: Context,
     private val database: NoorDatabase,
-    private val okHttpClient: OkHttpClient
+    private val okHttpClient: OkHttpClient,
+    private val seeder: QuranDatabaseSeeder? = null,
+    private val lineTranslator: LineTranslator? = null
 ) : ViewModel() {
     private val appContext = context.applicationContext
     private val duaDao = database.duaDao()
@@ -46,6 +64,8 @@ class DuaViewModel(
     private val _selectedCategory = MutableStateFlow<String?>(null)
     private val _searchQuery = MutableStateFlow("")
     private val _audioState = MutableStateFlow(DuaAudioUiState())
+    private val _translationState = MutableStateFlow(DuaTranslationUiState())
+    private var batchTranslateJob: kotlinx.coroutines.Job? = null
 
     private var mediaPlayer: MediaPlayer? = null
     private var tts: TextToSpeech? = null
@@ -73,6 +93,7 @@ class DuaViewModel(
     val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val audioState: StateFlow<DuaAudioUiState> = _audioState.asStateFlow()
+    val translationState: StateFlow<DuaTranslationUiState> = _translationState.asStateFlow()
 
     val duas: StateFlow<List<DuaEntity>> = combine(
         duaDao.observeAllDuas(),
@@ -102,6 +123,103 @@ class DuaViewModel(
 
     init {
         refreshDownloadedAudioIds()
+        viewModelScope.launch {
+            seeder?.ensureDuasSeededNow()
+        }
+    }
+
+    fun translateDua(dua: DuaEntity, targetLang: String) {
+        val translator = lineTranslator ?: return
+        _translationState.update {
+            it.copy(
+                translatingIds = it.translatingIds + dua.id,
+                errorMessage = null
+            )
+        }
+        viewModelScope.launch {
+            val res = translator.translateLinesJoined(
+                listOf(dua.title, dua.translation, dua.virtueOrContext),
+                targetLang
+            )
+            _translationState.update { state ->
+                if (res.isSuccess) {
+                    val parts = res.getOrThrow()
+                    val entry = TranslatedDuaFields(
+                        title = parts.getOrNull(0).orEmpty().ifBlank { dua.title },
+                        translation = parts.getOrNull(1).orEmpty().ifBlank { dua.translation },
+                        virtueOrContext = parts.getOrNull(2).orEmpty().ifBlank { dua.virtueOrContext }
+                    )
+                    state.copy(
+                        translatedById = state.translatedById + (dua.id to (targetLang to entry)),
+                        translatingIds = state.translatingIds - dua.id
+                    )
+                } else {
+                    state.copy(
+                        translatingIds = state.translatingIds - dua.id,
+                        errorMessage = res.exceptionOrNull()?.localizedMessage
+                    )
+                }
+            }
+        }
+    }
+
+    fun translateVisibleDuas(targetLang: String) {
+        val translator = lineTranslator ?: return
+        val visible = duas.value
+        if (visible.isEmpty()) return
+        batchTranslateJob?.cancel()
+        _translationState.update {
+            it.copy(
+                activeLanguage = targetLang,
+                isBatchTranslating = true,
+                errorMessage = null
+            )
+        }
+        batchTranslateJob = viewModelScope.launch {
+            try {
+                for (chunk in visible.chunked(5)) {
+                    val inputs = chunk.flatMap { listOf(it.title, it.translation, it.virtueOrContext) }
+                    val res = translator.translateLinesJoined(inputs, targetLang)
+                    if (res.isSuccess) {
+                        val parts = res.getOrThrow()
+                        val updates = chunk.mapIndexed { idx, dua ->
+                            val base = idx * 3
+                            dua.id to (targetLang to TranslatedDuaFields(
+                                title = parts.getOrNull(base).orEmpty().ifBlank { dua.title },
+                                translation = parts.getOrNull(base + 1).orEmpty().ifBlank { dua.translation },
+                                virtueOrContext = parts.getOrNull(base + 2).orEmpty().ifBlank { dua.virtueOrContext }
+                            ))
+                        }.toMap()
+                        _translationState.update { state ->
+                            state.copy(translatedById = state.translatedById + updates)
+                        }
+                    } else {
+                        _translationState.update {
+                            it.copy(
+                                isBatchTranslating = false,
+                                errorMessage = res.exceptionOrNull()?.localizedMessage
+                            )
+                        }
+                        return@launch
+                    }
+                }
+                _translationState.update { it.copy(isBatchTranslating = false) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _translationState.update { it.copy(isBatchTranslating = false) }
+                throw e
+            }
+        }
+    }
+
+    fun clearDuaTranslation(duaId: Int) {
+        _translationState.update { it.copy(translatedById = it.translatedById - duaId) }
+    }
+
+    fun clearAllDuaTranslations() {
+        batchTranslateJob?.cancel()
+        _translationState.update {
+            DuaTranslationUiState()
+        }
     }
 
     private fun duaAudioFile(duaId: Int): File = File(audioDir, "dua_${duaId}.mp3")

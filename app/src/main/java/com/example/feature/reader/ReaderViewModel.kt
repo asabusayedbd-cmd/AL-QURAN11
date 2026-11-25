@@ -22,6 +22,7 @@ import com.example.core.database.WordOccurrenceProjection
 import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.DetailedWordAnalysis
+import com.example.core.localization.LineTranslator
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderViewMode
@@ -42,6 +43,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AyahDisplayBundle(
@@ -59,7 +61,12 @@ data class WordInspectorState(
     val surahName: String,
     val rootOccurrencesCount: Int,
     val rootOccurrences: List<WordOccurrenceProjection>,
-    val analysis: DetailedWordAnalysis
+    val analysis: DetailedWordAnalysis,
+    val translatedTargetLang: String? = null,
+    val translatedMeaning: String? = null,
+    val translatedExplanation: String? = null,
+    val isTranslatingWord: Boolean = false,
+    val wordTranslationError: String? = null
 )
 
 data class ActivePlaybackCursor(
@@ -67,6 +74,16 @@ data class ActivePlaybackCursor(
     val ayahNumber: Int = 0,
     val isVisible: Boolean = false,
     val isPlaying: Boolean = false
+)
+
+data class LineTranslationUiState(
+    val ayahLines: Map<Int, Pair<String, String>> = emptyMap(), // ayahId -> (langCode, text)
+    val translatingAyahIds: Set<Int> = emptySet(),
+    val activeBatchLanguage: String? = null,
+    val isBatchTranslating: Boolean = false,
+    val translatedTafsir: Pair<String, String>? = null, // (langCode, text)
+    val isTranslatingTafsir: Boolean = false,
+    val errorMessage: String? = null
 )
 
 data class ReaderUiState(
@@ -96,7 +113,8 @@ class ReaderViewModel(
     private val preferencesRepository: PreferencesRepository,
     private val syncRepository: QuranSyncRepository,
     private val audioController: QuranAudioController,
-    private val seeder: QuranDatabaseSeeder? = null
+    private val seeder: QuranDatabaseSeeder? = null,
+    private val lineTranslator: LineTranslator? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -109,8 +127,11 @@ class ReaderViewModel(
     private val _isDownloadingSurah = MutableStateFlow(false)
     private val _downloadError = MutableStateFlow<String?>(null)
     private val _inspectedWord = MutableStateFlow<WordInspectorState?>(null)
+    private val _lineTranslationState = MutableStateFlow(LineTranslationUiState())
+    val lineTranslationState: StateFlow<LineTranslationUiState> = _lineTranslationState
     private var downloadJob: kotlinx.coroutines.Job? = null
     private var assetLoadJob: kotlinx.coroutines.Job? = null
+    private var batchTranslateJob: kotlinx.coroutines.Job? = null
 
     val playbackState: StateFlow<AudioPlaybackState> = audioController.state
     val playbackCursor: StateFlow<ActivePlaybackCursor> = audioController.state
@@ -271,6 +292,10 @@ class ReaderViewModel(
 
     fun loadSurah(surahId: Int) {
         val targetId = surahId.coerceIn(1, 114)
+        if (_surahId.value != targetId) {
+            batchTranslateJob?.cancel()
+            _lineTranslationState.value = LineTranslationUiState()
+        }
         _surahId.value = targetId
         _downloadError.value = null
         ensureLocalSurahLoaded(targetId)
@@ -389,15 +414,16 @@ class ReaderViewModel(
         viewModelScope.launch {
             val allTranslations = quranDao.getWordTranslations(item.word.id)
             val analysis = WordMorphologyAnalyzer.analyze(item.word, allTranslations)
-            val occurrences = if (item.word.rootArabic.isNotBlank()) {
+            val hasRoot = item.word.rootArabic.isNotBlank()
+            val occurrences = if (hasRoot) {
                 quranDao.getRootOccurrences(item.word.rootArabic)
             } else {
-                emptyList()
+                quranDao.getWordOccurrencesByArabic(item.word.textUthmani)
             }
-            val totalOccurrencesCount = if (item.word.rootArabic.isNotBlank()) {
+            val totalOccurrencesCount = if (hasRoot) {
                 quranDao.countWordsByRoot(item.word.rootArabic).coerceAtLeast(occurrences.size)
             } else {
-                1
+                quranDao.countWordsByArabic(item.word.textUthmani).coerceAtLeast(occurrences.size).coerceAtLeast(1)
             }
             _inspectedWord.value = WordInspectorState(
                 word = item.word,
@@ -410,6 +436,80 @@ class ReaderViewModel(
             )
             if (preferencesRepository.preferencesFlow.first().autoPlayWordOnInspect) {
                 playInspectedWord(uiState.value.preferences.audioPlaybackSpeed)
+            }
+        }
+    }
+
+    fun translateInspectedWord(targetLang: String) {
+        val current = _inspectedWord.value ?: return
+        val translator = lineTranslator ?: return
+        val wordId = current.word.id
+        _inspectedWord.update {
+            if (it?.word?.id == wordId) {
+                it.copy(isTranslatingWord = true, wordTranslationError = null)
+            } else it
+        }
+        viewModelScope.launch {
+            val srcMeaning = current.localizedMeaning.ifBlank { current.word.transliteration }
+            val srcExplanation = current.analysis.localizedExplanation(targetLang)
+            val existingByLang = current.analysis.allMeanings.firstOrNull { (label, _) ->
+                when (targetLang.lowercase()) {
+                    "bn" -> label.contains("Bangla", ignoreCase = true) || label.contains("বাংলা")
+                    "en" -> label.contains("English", ignoreCase = true)
+                    "ur" -> label.contains("Urdu", ignoreCase = true) || label.contains("اردو")
+                    "id" -> label.contains("Indonesian", ignoreCase = true)
+                    "tr" -> label.contains("Turkish", ignoreCase = true) || label.contains("Türkçe")
+                    else -> false
+                }
+            }?.second
+
+            val needExplainTranslation = !targetLang.equals("en", true) &&
+                !targetLang.equals("bn", true) &&
+                !targetLang.equals("ar", true)
+
+            if (existingByLang != null && !needExplainTranslation) {
+                _inspectedWord.update {
+                    if (it?.word?.id == wordId) {
+                        it.copy(
+                            translatedTargetLang = targetLang,
+                            translatedMeaning = existingByLang,
+                            translatedExplanation = srcExplanation,
+                            isTranslatingWord = false,
+                            wordTranslationError = null
+                        )
+                    } else it
+                }
+                return@launch
+            }
+
+            val result = translator.translateLinesJoined(listOf(srcMeaning, srcExplanation), targetLang)
+            result.onSuccess { parts ->
+                val trMeaning = existingByLang ?: parts.getOrNull(0).orEmpty().ifBlank { srcMeaning }
+                val trExplain = if (needExplainTranslation) {
+                    parts.getOrNull(1).orEmpty().ifBlank { srcExplanation }
+                } else {
+                    srcExplanation
+                }
+                _inspectedWord.update {
+                    if (it?.word?.id == wordId) {
+                        it.copy(
+                            translatedTargetLang = targetLang,
+                            translatedMeaning = trMeaning,
+                            translatedExplanation = trExplain,
+                            isTranslatingWord = false,
+                            wordTranslationError = null
+                        )
+                    } else it
+                }
+            }.onFailure { err ->
+                _inspectedWord.update {
+                    if (it?.word?.id == wordId) {
+                        it.copy(
+                            isTranslatingWord = false,
+                            wordTranslationError = err.localizedMessage ?: "Translation failed"
+                        )
+                    } else it
+                }
             }
         }
     }
@@ -456,16 +556,19 @@ class ReaderViewModel(
 
     fun openTafsir(ayah: AyahEntity) {
         _tafsirError.value = null
+        _lineTranslationState.update { it.copy(translatedTafsir = null, isTranslatingTafsir = false) }
         _selectedTafsirAyah.value = ayah
     }
 
     fun closeTafsir() {
         _selectedTafsirAyah.value = null
         _tafsirError.value = null
+        _lineTranslationState.update { it.copy(translatedTafsir = null, isTranslatingTafsir = false) }
     }
 
     fun selectTafsirSource(source: TafsirSourceEntity) {
         val ayah = _selectedTafsirAyah.value ?: return
+        _lineTranslationState.update { it.copy(translatedTafsir = null, isTranslatingTafsir = false) }
         viewModelScope.launch {
             preferencesRepository.setActiveTafsirSourceId(source.id)
             _isFetchingTafsir.value = true
@@ -482,6 +585,165 @@ class ReaderViewModel(
             }
             _isFetchingTafsir.value = false
         }
+    }
+
+    fun translateAyahLine(bundle: AyahDisplayBundle, targetLang: String) {
+        val translator = lineTranslator ?: return
+        val ayahId = bundle.ayah.id
+        val existingLocal = bundle.translations.firstOrNull {
+            it.languageCode.equals(targetLang, ignoreCase = true)
+        }?.translatedText
+        if (!existingLocal.isNullOrBlank()) {
+            _lineTranslationState.update {
+                it.copy(
+                    ayahLines = it.ayahLines + (ayahId to (targetLang to existingLocal)),
+                    errorMessage = null
+                )
+            }
+            return
+        }
+
+        val sourceText = bundle.translations.firstOrNull {
+            !it.languageCode.equals(targetLang, ignoreCase = true)
+        }?.translatedText
+            ?: bundle.translations.firstOrNull()?.translatedText
+            ?: bundle.ayah.textUthmani
+
+        _lineTranslationState.update {
+            it.copy(
+                translatingAyahIds = it.translatingAyahIds + ayahId,
+                errorMessage = null
+            )
+        }
+        viewModelScope.launch {
+            val res = translator.translateLine(sourceText, targetLang)
+            _lineTranslationState.update { state ->
+                val updatedMap = if (res.isSuccess) {
+                    state.ayahLines + (ayahId to (targetLang to res.getOrThrow()))
+                } else {
+                    state.ayahLines
+                }
+                state.copy(
+                    ayahLines = updatedMap,
+                    translatingAyahIds = state.translatingAyahIds - ayahId,
+                    errorMessage = res.exceptionOrNull()?.localizedMessage
+                )
+            }
+        }
+    }
+
+    fun translateSurahLines(targetLang: String) {
+        val translator = lineTranslator ?: return
+        val ayahs = uiState.value.ayahs
+        if (ayahs.isEmpty()) return
+
+        batchTranslateJob?.cancel()
+        _lineTranslationState.update {
+            it.copy(
+                activeBatchLanguage = targetLang,
+                isBatchTranslating = true,
+                errorMessage = null
+            )
+        }
+        batchTranslateJob = viewModelScope.launch {
+            try {
+                for (chunk in ayahs.chunked(12)) {
+                    val alreadyLocal = mutableMapOf<Int, String>()
+                    val toTranslate = mutableListOf<Pair<Int, String>>()
+
+                    for (bundle in chunk) {
+                        val existing = bundle.translations.firstOrNull {
+                            it.languageCode.equals(targetLang, ignoreCase = true)
+                        }?.translatedText
+                        if (!existing.isNullOrBlank()) {
+                            alreadyLocal[bundle.ayah.id] = existing
+                        } else {
+                            val src = bundle.translations.firstOrNull {
+                                !it.languageCode.equals(targetLang, ignoreCase = true)
+                            }?.translatedText
+                                ?: bundle.translations.firstOrNull()?.translatedText
+                                ?: bundle.ayah.textUthmani
+                            toTranslate.add(bundle.ayah.id to src)
+                        }
+                    }
+
+                    if (alreadyLocal.isNotEmpty()) {
+                        _lineTranslationState.update { state ->
+                            val additions = alreadyLocal.mapValues { (_, text) -> targetLang to text }
+                            state.copy(ayahLines = state.ayahLines + additions)
+                        }
+                    }
+
+                    if (toTranslate.isNotEmpty()) {
+                        val res = translator.translateLinesJoined(toTranslate.map { it.second }, targetLang)
+                        if (res.isSuccess) {
+                            val translatedList = res.getOrThrow()
+                            val mapped = toTranslate.mapIndexed { idx, (ayahId, _) ->
+                                ayahId to (targetLang to translatedList.getOrElse(idx) { "" })
+                            }.toMap()
+                            _lineTranslationState.update { state ->
+                                state.copy(ayahLines = state.ayahLines + mapped)
+                            }
+                        } else {
+                            _lineTranslationState.update {
+                                it.copy(
+                                    isBatchTranslating = false,
+                                    errorMessage = res.exceptionOrNull()?.localizedMessage ?: "Translation failed"
+                                )
+                            }
+                            return@launch
+                        }
+                    }
+                }
+                _lineTranslationState.update { it.copy(isBatchTranslating = false) }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _lineTranslationState.update { it.copy(isBatchTranslating = false) }
+                throw e
+            }
+        }
+    }
+
+    fun clearAyahLineTranslation(ayahId: Int) {
+        _lineTranslationState.update { it.copy(ayahLines = it.ayahLines - ayahId) }
+    }
+
+    fun clearAllLineTranslations() {
+        batchTranslateJob?.cancel()
+        _lineTranslationState.update {
+            it.copy(
+                ayahLines = emptyMap(),
+                translatingAyahIds = emptySet(),
+                activeBatchLanguage = null,
+                isBatchTranslating = false,
+                errorMessage = null
+            )
+        }
+    }
+
+    fun translateActiveTafsir(cleanBody: String, targetLang: String) {
+        val translator = lineTranslator ?: return
+        if (cleanBody.isBlank()) return
+        _lineTranslationState.update { it.copy(isTranslatingTafsir = true, errorMessage = null) }
+        viewModelScope.launch {
+            val res = translator.translateLine(cleanBody, targetLang)
+            _lineTranslationState.update { state ->
+                if (res.isSuccess) {
+                    state.copy(
+                        translatedTafsir = targetLang to res.getOrThrow(),
+                        isTranslatingTafsir = false
+                    )
+                } else {
+                    state.copy(
+                        isTranslatingTafsir = false,
+                        errorMessage = res.exceptionOrNull()?.localizedMessage
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearTranslatedTafsir() {
+        _lineTranslationState.update { it.copy(translatedTafsir = null, isTranslatingTafsir = false) }
     }
 
     fun saveNoteForSelectedAyah(noteText: String) {

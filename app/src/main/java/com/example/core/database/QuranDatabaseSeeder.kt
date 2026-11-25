@@ -9,12 +9,12 @@ import androidx.room.withTransaction
 import com.example.core.localization.BidiUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import org.json.JSONArray
-import org.json.JSONObject
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -30,6 +30,7 @@ class QuranDatabaseSeeder(
     private val userLibraryDao = database.userLibraryDao()
     private val duaDao = database.duaDao()
     private val seedMutex = Mutex()
+    private val duaSeedMutex = Mutex()
     private val surahMutexes = ConcurrentHashMap<Int, Mutex>()
     private val seedPrefs by lazy {
         context.getSharedPreferences("noor_seed_state", Context.MODE_PRIVATE)
@@ -42,13 +43,26 @@ class QuranDatabaseSeeder(
         private const val KEY_SEED_VERSION = "seed_version"
         private const val CURRENT_SEED_VERSION = 5
         private const val EXPECTED_TOTAL_AYAHS = 6236
-        private val PRIORITY_SURAH_IDS = listOf(1, 2, 3, 103, 108, 112, 113, 114)
+        // Keep cold Stage 1 tiny (17 Ayahs total) so Home & first frame render immediately
+        private val PRIORITY_SURAH_IDS = listOf(1, 112, 113, 114)
     }
 
     private fun getSurahMutex(surahId: Int): Mutex =
         surahMutexes.computeIfAbsent(surahId) { Mutex() }
 
-    suspend fun seedIfNeeded() {
+    suspend fun ensureDuasSeededNow(interChunkDelayMs: Long = 0L) {
+        withContext(Dispatchers.IO) {
+            duaSeedMutex.withLock {
+                if (duaDao.countDuas() >= DuaSeederData.EXPECTED_MIN_DUA_COUNT) return@withLock
+                seedDuasInChunks(interChunkDelayMs)
+            }
+        }
+    }
+
+    suspend fun seedIfNeeded(
+        deferBulkDelayMs: Long = 0L,
+        interSurahYieldMs: Long = 0L
+    ) {
         if (isFullySeeded) return
         withContext(Dispatchers.IO) {
             seedMutex.withLock {
@@ -69,7 +83,7 @@ class QuranDatabaseSeeder(
                         return@withLock
                     }
 
-                    // Stage 1: Seed 114 Surah catalog, translation/tafsir/Qari catalogs, & user defaults (<30ms)
+                    // Stage 1: Seed 114 Surah catalog, translation/tafsir/Qari catalogs, & tiny priority Surahs (<40ms)
                     val surahEntities = readSurahCatalogFromAssets(
                         markAllDownloaded = savedVersion < CURRENT_SEED_VERSION
                     )
@@ -98,14 +112,20 @@ class QuranDatabaseSeeder(
                         ensureDefaultUserLibraryState()
                     }
 
-                    val starterRoot = readStarterCatalogIfNeeded(savedVersion)
-                    if (starterRoot != null) {
-                        val rawTrSources = parseTranslationSources(starterRoot.getJSONArray("translationSources"))
-                        val rawTafSources = parseTafsirSources(starterRoot.getJSONArray("tafsirSources"))
-                        val reciters = parseReciters(starterRoot.getJSONArray("reciters"))
+                    val needsCatalogUpgrade = savedVersion < CURRENT_SEED_VERSION ||
+                        quranDao.countReciters() < 75 ||
+                        quranDao.countTafsirSources() < 15 ||
+                        quranDao.countTranslationSources() < 35
 
+                    val catalogs = if (needsCatalogUpgrade) {
+                        readStarterCatalogsStreaming()
+                    } else {
+                        null
+                    }
+
+                    if (catalogs != null) {
                         val existingTrMap = quranDao.getAllTranslationSources().associateBy { it.id }
-                        val mergedTr = rawTrSources.map { src ->
+                        val mergedTr = catalogs.translationSources.map { src ->
                             val prev = existingTrMap[src.id]
                             when {
                                 prev != null && savedVersion >= CURRENT_SEED_VERSION ->
@@ -120,7 +140,7 @@ class QuranDatabaseSeeder(
                             }
                         }
                         val existingTafMap = quranDao.getAllTafsirSources().associateBy { it.id }
-                        val mergedTaf = rawTafSources.map { src ->
+                        val mergedTaf = catalogs.tafsirSources.map { src ->
                             val prev = existingTafMap[src.id]
                             if (prev != null) src.copy(isDownloaded = prev.isDownloaded, isEnabled = prev.isEnabled) else src
                         }
@@ -128,33 +148,55 @@ class QuranDatabaseSeeder(
                         database.withTransaction {
                             quranDao.insertTranslationSources(mergedTr)
                             quranDao.insertTafsirSources(mergedTaf)
-                            quranDao.insertReciters(reciters)
+                            quranDao.insertReciters(catalogs.reciters)
                         }
+                    }
 
-                        // Priority Surahs load immediately so Home & Juz Amma work right away
-                        val expectedBySurah = surahEntities.associate { it.id to it.ayahCount }
-                        for (sid in PRIORITY_SURAH_IDS) {
-                            ensureSurahLoadedFromAssets(sid, expectedBySurah[sid], forceReplaceIfPartial = true)
-                        }
+                    // Priority Surahs load immediately so Home & Al-Fatihah / Quls work right away
+                    val expectedBySurah = surahEntities.associate { it.id to it.ayahCount }
+                    for (sid in PRIORITY_SURAH_IDS) {
+                        ensureSurahLoadedFromAssets(sid, expectedBySurah[sid], forceReplaceIfPartial = true)
+                    }
 
-                        // Overlay rich starter Bangla/Urdu WBW, morphology roots, & Tafsirs using canonical IDs
-                        applyStarterEnrichmentOverlay(starterRoot, rawTrSources, rawTafSources, reciters)
+                    // Defer heavy background seeding until initial UI frame + animations settle
+                    if (deferBulkDelayMs > 0L) {
+                        delay(deferBulkDelayMs)
                     }
 
                     if (!hasAllDuas) {
-                        seedDuasInChunks()
+                        ensureDuasSeededNow(interChunkDelayMs = interSurahYieldMs)
                     }
 
-                    // Stage 2: Progressively stream & insert remaining Surahs 1..114 from compressed assets
-                    val expectedBySurah = surahEntities.associate { it.id to it.ayahCount }
+                    // Stage 2: Single-query count check + gentle background streaming for remaining Surahs
+                    val existingCountsBySurah = quranDao.getAyahCountsBySurah().associate { it.surahId to it.cnt }
                     for (surah in surahEntities) {
                         if (savedVersion >= CURRENT_SEED_VERSION && !surah.isDownloaded) continue
+                        val existingCount = existingCountsBySurah[surah.id] ?: 0
+                        if (existingCount >= surah.ayahCount) {
+                            if (!surah.isDownloaded) {
+                                quranDao.markSurahDownloaded(surah.id, true)
+                            }
+                            continue
+                        }
                         ensureSurahLoadedFromAssets(
                             surahId = surah.id,
                             expectedAyahCount = expectedBySurah[surah.id],
                             forceReplaceIfPartial = true
                         )
-                        yield()
+                        if (interSurahYieldMs > 0L) {
+                            delay(interSurahYieldMs)
+                        } else {
+                            yield()
+                        }
+                    }
+
+                    // Overlay rich starter Bangla/Urdu WBW, morphology roots, & Tafsirs using canonical IDs
+                    if (catalogs != null) {
+                        applyStarterEnrichmentOverlayStreaming(
+                            rawTranslationSources = catalogs.translationSources,
+                            rawTafsirSources = catalogs.tafsirSources,
+                            reciters = catalogs.reciters
+                        )
                     }
 
                     // Persist seed completion version only after full dataset validation
@@ -178,7 +220,7 @@ class QuranDatabaseSeeder(
     }
 
     /**
-     * Loads a single Surah cleanly from bundled `assets/quran_full/sXXX.json.gz` using a
+     * Loads a single Surah cleanly from bundled `assets/quran_full/sXXX.qgz` using a
      * streaming JsonReader so memory footprint remains tiny and UI screens never block on full DB seeding.
      */
     suspend fun ensureSurahLoadedFromAssets(
@@ -201,7 +243,7 @@ class QuranDatabaseSeeder(
                 val targetCount = expectedAyahCount ?: surah?.ayahCount ?: 0
                 val existingCount = quranDao.countAyahsInSurah(sid)
                 if (targetCount > 0 && existingCount >= targetCount) {
-                    if (surah?.isDownloaded == false) {
+                    if (surah?.isDownloaded != true) {
                         quranDao.markSurahDownloaded(sid, true)
                     }
                     return@withLock true
@@ -211,6 +253,7 @@ class QuranDatabaseSeeder(
                 val parsed = parseCompressedSurah(assetPath, sid)
                 if (parsed.ayahs.isEmpty()) return@withLock false
 
+                val alreadyMarkedDownloaded = surah?.isDownloaded == true
                 database.withTransaction {
                     if (forceReplaceIfPartial && existingCount in 1 until parsed.ayahs.size) {
                         quranDao.deleteAyahsBySurah(sid)
@@ -220,7 +263,9 @@ class QuranDatabaseSeeder(
                     if (parsed.wordTranslations.isNotEmpty()) quranDao.insertWordTranslations(parsed.wordTranslations)
                     if (parsed.ayahTranslations.isNotEmpty()) quranDao.insertAyahTranslations(parsed.ayahTranslations)
                     if (parsed.audioSegments.isNotEmpty()) quranDao.insertAudioSegments(parsed.audioSegments)
-                    quranDao.markSurahDownloaded(sid, true)
+                    if (!alreadyMarkedDownloaded) {
+                        quranDao.markSurahDownloaded(sid, true)
+                    }
                 }
                 true
             } catch (e: CancellationException) {
@@ -259,15 +304,121 @@ class QuranDatabaseSeeder(
         return surahEntities
     }
 
-    private suspend fun readStarterCatalogIfNeeded(savedVersion: Int): JSONObject? {
-        val needsCatalogUpgrade = savedVersion < CURRENT_SEED_VERSION ||
-            quranDao.countReciters() < 75 ||
-            quranDao.countTafsirSources() < 15 ||
-            quranDao.countTranslationSources() < 35
-        if (!needsCatalogUpgrade) return null
-        val starterJson = context.assets.open("quran_starter/quran_starter.json")
-            .bufferedReader().use { it.readText() }
-        return JSONObject(starterJson)
+    private class StarterCatalogs(
+        val translationSources: List<TranslationSourceEntity>,
+        val tafsirSources: List<TafsirSourceEntity>,
+        val reciters: List<AudioReciterEntity>
+    )
+
+    private fun readStarterCatalogsStreaming(): StarterCatalogs {
+        val trSources = ArrayList<TranslationSourceEntity>(48)
+        val tafSources = ArrayList<TafsirSourceEntity>(24)
+        val reciters = ArrayList<AudioReciterEntity>(96)
+
+        JsonReader(InputStreamReader(context.assets.open("quran_starter/quran_starter.json"), Charsets.UTF_8)).use { reader ->
+            reader.beginObject()
+            while (reader.hasNext()) {
+                when (reader.nextName()) {
+                    "translationSources" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            trSources.add(readTranslationSource(reader))
+                        }
+                        reader.endArray()
+                    }
+                    "tafsirSources" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            tafSources.add(readTafsirSource(reader))
+                        }
+                        reader.endArray()
+                    }
+                    "reciters" -> {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            reciters.add(readReciter(reader))
+                        }
+                        reader.endArray()
+                    }
+                    else -> reader.skipValue()
+                }
+            }
+            reader.endObject()
+        }
+        return StarterCatalogs(trSources, tafSources, reciters)
+    }
+
+    private fun readTranslationSource(reader: JsonReader): TranslationSourceEntity {
+        var id = 0
+        var languageCode = ""
+        var languageName = ""
+        var translatorName = ""
+        var isDownloaded = false
+        var isEnabled = false
+        var fileSizeKb = 0
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = reader.nextInt()
+                "languageCode" -> languageCode = reader.nextStringOrEmpty()
+                "languageName" -> languageName = reader.nextStringOrEmpty()
+                "translatorName" -> translatorName = reader.nextStringOrEmpty()
+                "isDownloaded" -> isDownloaded = reader.nextBoolean()
+                "isEnabled" -> isEnabled = reader.nextBoolean()
+                "fileSizeKb" -> fileSizeKb = reader.nextInt()
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+        return TranslationSourceEntity(id, languageCode, languageName, translatorName, isDownloaded, isEnabled, fileSizeKb)
+    }
+
+    private fun readTafsirSource(reader: JsonReader): TafsirSourceEntity {
+        var id = 0
+        var languageCode = ""
+        var languageName = ""
+        var tafsirName = ""
+        var isDownloaded = false
+        var isEnabled = false
+        var fileSizeKb = 0
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = reader.nextInt()
+                "languageCode" -> languageCode = reader.nextStringOrEmpty()
+                "languageName" -> languageName = reader.nextStringOrEmpty()
+                "tafsirName" -> tafsirName = reader.nextStringOrEmpty()
+                "isDownloaded" -> isDownloaded = reader.nextBoolean()
+                "isEnabled" -> isEnabled = reader.nextBoolean()
+                "fileSizeKb" -> fileSizeKb = reader.nextInt()
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+        return TafsirSourceEntity(id, languageCode, languageName, tafsirName, isDownloaded, isEnabled, fileSizeKb)
+    }
+
+    private fun readReciter(reader: JsonReader): AudioReciterEntity {
+        var id = 0
+        var name = ""
+        var localizedName = ""
+        var style = ""
+        var baseUrl = ""
+        var isDownloaded = false
+        reader.beginObject()
+        while (reader.hasNext()) {
+            when (reader.nextName()) {
+                "id" -> id = reader.nextInt()
+                "name" -> name = reader.nextStringOrEmpty()
+                "localizedName" -> localizedName = reader.nextStringOrEmpty()
+                "style" -> style = reader.nextStringOrEmpty()
+                "baseUrl" -> baseUrl = reader.nextStringOrEmpty()
+                "isDownloaded" -> isDownloaded = reader.nextBoolean()
+                else -> reader.skipValue()
+            }
+        }
+        reader.endObject()
+        return AudioReciterEntity(id, name, localizedName, style, baseUrl, isDownloaded)
     }
 
     private class ParsedSurahData(
@@ -444,6 +595,16 @@ class QuranDatabaseSeeder(
         val enMeaning: String
     )
 
+    private data class OverlayWord(
+        val position: Int,
+        val rootArabic: String,
+        val lemmaArabic: String,
+        val grammarTag: String,
+        val startMs: Long,
+        val endMs: Long,
+        val meanings: Map<String, String>
+    )
+
     private fun JsonReader.nextStringOrEmpty(): String {
         return if (peek() == JsonToken.NULL) {
             nextNull()
@@ -453,13 +614,11 @@ class QuranDatabaseSeeder(
         }
     }
 
-    private suspend fun applyStarterEnrichmentOverlay(
-        starterRoot: JSONObject,
+    private suspend fun applyStarterEnrichmentOverlayStreaming(
         rawTranslationSources: List<TranslationSourceEntity>,
         rawTafsirSources: List<TafsirSourceEntity>,
         reciters: List<AudioReciterEntity>
     ) {
-        val ayahObjects = starterRoot.optJSONArray("ayahs") ?: return
         val translatorNamesById = rawTranslationSources.associate { it.id to (it.languageCode to it.translatorName) }
         val tafsirNamesById = rawTafsirSources.associate { it.id to (it.languageCode to it.tafsirName) }
         val extraTimestampReciters = reciters.filter { it.id in setOf(1, 9) }
@@ -470,110 +629,177 @@ class QuranDatabaseSeeder(
         val extraAyahTafsirs = ArrayList<AyahTafsirEntity>(64)
         val extraAudioSegments = ArrayList<AudioSegmentEntity>(64)
 
-        for (i in 0 until ayahObjects.length()) {
-            val obj = ayahObjects.getJSONObject(i)
-            val verseKey = obj.getString("verseKey")
-            val canonicalAyah = quranDao.getAyahByKey(verseKey) ?: continue
-            val canonicalWordsByPos = quranDao.getWordsForAyah(canonicalAyah.id).associateBy { it.position }
+        JsonReader(InputStreamReader(context.assets.open("quran_starter/quran_starter.json"), Charsets.UTF_8)).use { reader ->
+            reader.beginObject()
+            while (reader.hasNext()) {
+                if (reader.nextName() != "ayahs") {
+                    reader.skipValue()
+                    continue
+                }
+                reader.beginArray()
+                while (reader.hasNext()) {
+                    var verseKey = ""
+                    val overlayWords = ArrayList<OverlayWord>(16)
+                    val overlayTranslations = HashMap<Int, String>(4)
+                    val overlayTafsirs = HashMap<Int, String>(4)
 
-            val surahPadded = canonicalAyah.surahId.toString().padStart(3, '0')
-            val ayahPadded = canonicalAyah.ayahNumber.toString().padStart(3, '0')
-
-            val wordsArray = obj.optJSONArray("words")
-            val segJsonBuilder = StringBuilder("[")
-            if (wordsArray != null) {
-                for (w in 0 until wordsArray.length()) {
-                    val wObj = wordsArray.getJSONObject(w)
-                    val pos = wObj.getInt("position")
-                    val canonicalWord = canonicalWordsByPos[pos]
-                    if (canonicalWord != null) {
-                        val rootAr = wObj.optString("rootArabic")
-                        val lemmaAr = wObj.optString("lemmaArabic")
-                        val grammar = wObj.optString("grammarTag")
-                        if (rootAr.isNotBlank() || lemmaAr.isNotBlank() || grammar.isNotBlank()) {
-                            updatedWords.add(
-                                canonicalWord.copy(
-                                    rootArabic = rootAr.ifBlank { canonicalWord.rootArabic },
-                                    lemmaArabic = lemmaAr.ifBlank { canonicalWord.lemmaArabic },
-                                    grammarTagJson = grammar.ifBlank { canonicalWord.grammarTagJson }
-                                )
-                            )
+                    reader.beginObject()
+                    while (reader.hasNext()) {
+                        when (reader.nextName()) {
+                            "verseKey" -> verseKey = reader.nextStringOrEmpty()
+                            "words" -> {
+                                reader.beginArray()
+                                while (reader.hasNext()) {
+                                    var pos = 0
+                                    var rootAr = ""
+                                    var lemmaAr = ""
+                                    var grammar = ""
+                                    var startMs = 0L
+                                    var endMs = 1000L
+                                    val meanings = HashMap<String, String>(4)
+                                    reader.beginObject()
+                                    while (reader.hasNext()) {
+                                        when (reader.nextName()) {
+                                            "position" -> pos = reader.nextInt()
+                                            "rootArabic" -> rootAr = reader.nextStringOrEmpty()
+                                            "lemmaArabic" -> lemmaAr = reader.nextStringOrEmpty()
+                                            "grammarTag" -> grammar = reader.nextStringOrEmpty()
+                                            "startMs" -> startMs = reader.nextLong()
+                                            "endMs" -> endMs = reader.nextLong()
+                                            "meanings" -> {
+                                                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                                                    reader.beginObject()
+                                                    while (reader.hasNext()) {
+                                                        val lang = reader.nextName()
+                                                        meanings[lang] = reader.nextStringOrEmpty()
+                                                    }
+                                                    reader.endObject()
+                                                } else {
+                                                    reader.skipValue()
+                                                }
+                                            }
+                                            else -> reader.skipValue()
+                                        }
+                                    }
+                                    reader.endObject()
+                                    if (pos > 0) {
+                                        overlayWords.add(OverlayWord(pos, rootAr, lemmaAr, grammar, startMs, endMs, meanings))
+                                    }
+                                }
+                                reader.endArray()
+                            }
+                            "translations" -> {
+                                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                                    reader.beginObject()
+                                    while (reader.hasNext()) {
+                                        val sId = reader.nextName().toIntOrNull()
+                                        val text = reader.nextStringOrEmpty()
+                                        if (sId != null && text.isNotBlank()) overlayTranslations[sId] = text
+                                    }
+                                    reader.endObject()
+                                } else {
+                                    reader.skipValue()
+                                }
+                            }
+                            "tafsirs" -> {
+                                if (reader.peek() == JsonToken.BEGIN_OBJECT) {
+                                    reader.beginObject()
+                                    while (reader.hasNext()) {
+                                        val sId = reader.nextName().toIntOrNull()
+                                        val text = reader.nextStringOrEmpty()
+                                        if (sId != null && text.isNotBlank()) overlayTafsirs[sId] = text
+                                    }
+                                    reader.endObject()
+                                } else {
+                                    reader.skipValue()
+                                }
+                            }
+                            else -> reader.skipValue()
                         }
+                    }
+                    reader.endObject()
 
-                        val meanings = wObj.optJSONObject("meanings")
-                        if (meanings != null) {
-                            val keys = meanings.keys()
-                            while (keys.hasNext()) {
-                                val lang = keys.next()
-                                extraWordTranslations.add(
-                                    WordTranslationEntity(
-                                        wordId = canonicalWord.id,
-                                        languageCode = lang,
-                                        meaningText = meanings.getString(lang)
+                    if (verseKey.isBlank()) continue
+                    val canonicalAyah = quranDao.getAyahByKey(verseKey) ?: continue
+                    val canonicalWordsByPos = quranDao.getWordsForAyah(canonicalAyah.id).associateBy { it.position }
+                    val surahPadded = canonicalAyah.surahId.toString().padStart(3, '0')
+                    val ayahPadded = canonicalAyah.ayahNumber.toString().padStart(3, '0')
+
+                    val segJsonBuilder = StringBuilder("[")
+                    overlayWords.forEachIndexed { idx, wObj ->
+                        val canonicalWord = canonicalWordsByPos[wObj.position]
+                        if (canonicalWord != null) {
+                            if (wObj.rootArabic.isNotBlank() || wObj.lemmaArabic.isNotBlank() || wObj.grammarTag.isNotBlank()) {
+                                updatedWords.add(
+                                    canonicalWord.copy(
+                                        rootArabic = wObj.rootArabic.ifBlank { canonicalWord.rootArabic },
+                                        lemmaArabic = wObj.lemmaArabic.ifBlank { canonicalWord.lemmaArabic },
+                                        grammarTagJson = wObj.grammarTag.ifBlank { canonicalWord.grammarTagJson }
                                     )
                                 )
                             }
+                            wObj.meanings.forEach { (lang, text) ->
+                                if (text.isNotBlank()) {
+                                    extraWordTranslations.add(
+                                        WordTranslationEntity(
+                                            wordId = canonicalWord.id,
+                                            languageCode = lang,
+                                            meaningText = text
+                                        )
+                                    )
+                                }
+                            }
                         }
+                        if (idx > 0) segJsonBuilder.append(',')
+                        segJsonBuilder.append("{\"position\":").append(wObj.position)
+                            .append(",\"startMs\":").append(wObj.startMs)
+                            .append(",\"endMs\":").append(wObj.endMs)
+                            .append('}')
                     }
-                    if (w > 0) segJsonBuilder.append(',')
-                    segJsonBuilder.append("{\"position\":").append(pos)
-                        .append(",\"startMs\":").append(wObj.optLong("startMs", 0L))
-                        .append(",\"endMs\":").append(wObj.optLong("endMs", 1000L))
-                        .append('}')
-                }
-            }
-            segJsonBuilder.append(']')
-            val segJson = segJsonBuilder.toString()
+                    segJsonBuilder.append(']')
+                    val segJson = segJsonBuilder.toString()
 
-            for (reciter in extraTimestampReciters) {
-                extraAudioSegments.add(
-                    AudioSegmentEntity(
-                        reciterId = reciter.id,
-                        ayahId = canonicalAyah.id,
-                        audioUrl = "${reciter.baseUrl}${surahPadded}${ayahPadded}.mp3",
-                        localFilePath = null,
-                        wordTimestampSegmentsJson = segJson
-                    )
-                )
-            }
-
-            val translationsObj = obj.optJSONObject("translations")
-            if (translationsObj != null) {
-                val keys = translationsObj.keys()
-                while (keys.hasNext()) {
-                    val sourceIdStr = keys.next()
-                    val sourceId = sourceIdStr.toIntOrNull() ?: continue
-                    val (langCode, translatorName) = translatorNamesById[sourceId] ?: ("en" to "Quran Translation")
-                    extraAyahTranslations.add(
-                        AyahTranslationEntity(
-                            sourceId = sourceId,
-                            ayahId = canonicalAyah.id,
-                            languageCode = langCode,
-                            translatorName = translatorName,
-                            translatedText = translationsObj.getString(sourceIdStr)
+                    for (reciter in extraTimestampReciters) {
+                        extraAudioSegments.add(
+                            AudioSegmentEntity(
+                                reciterId = reciter.id,
+                                ayahId = canonicalAyah.id,
+                                audioUrl = "${reciter.baseUrl}${surahPadded}${ayahPadded}.mp3",
+                                localFilePath = null,
+                                wordTimestampSegmentsJson = segJson
+                            )
                         )
-                    )
-                }
-            }
+                    }
 
-            val tafsirsObj = obj.optJSONObject("tafsirs")
-            if (tafsirsObj != null) {
-                val keys = tafsirsObj.keys()
-                while (keys.hasNext()) {
-                    val sourceIdStr = keys.next()
-                    val sourceId = sourceIdStr.toIntOrNull() ?: continue
-                    val (langCode, tafsirName) = tafsirNamesById[sourceId] ?: ("en" to "Tafsir")
-                    extraAyahTafsirs.add(
-                        AyahTafsirEntity(
-                            sourceId = sourceId,
-                            ayahId = canonicalAyah.id,
-                            languageCode = langCode,
-                            tafsirName = tafsirName,
-                            tafsirHtmlOrMarkdown = tafsirsObj.getString(sourceIdStr)
+                    overlayTranslations.forEach { (sourceId, text) ->
+                        val (langCode, translatorName) = translatorNamesById[sourceId] ?: ("en" to "Quran Translation")
+                        extraAyahTranslations.add(
+                            AyahTranslationEntity(
+                                sourceId = sourceId,
+                                ayahId = canonicalAyah.id,
+                                languageCode = langCode,
+                                translatorName = translatorName,
+                                translatedText = text
+                            )
                         )
-                    )
+                    }
+
+                    overlayTafsirs.forEach { (sourceId, text) ->
+                        val (langCode, tafsirName) = tafsirNamesById[sourceId] ?: ("en" to "Tafsir")
+                        extraAyahTafsirs.add(
+                            AyahTafsirEntity(
+                                sourceId = sourceId,
+                                ayahId = canonicalAyah.id,
+                                languageCode = langCode,
+                                tafsirName = tafsirName,
+                                tafsirHtmlOrMarkdown = text
+                            )
+                        )
+                    }
                 }
+                reader.endArray()
             }
+            reader.endObject()
         }
 
         database.withTransaction {
@@ -585,7 +811,7 @@ class QuranDatabaseSeeder(
         }
     }
 
-    private suspend fun seedDuasInChunks() {
+    private suspend fun seedDuasInChunks(interChunkDelayMs: Long = 0L) {
         val bookmarkedIds = duaDao.getBookmarkedDuaIds().toHashSet()
         DuaSeederData.readInChunks(context, chunkSize = 35).forEach { chunk ->
             val merged = if (bookmarkedIds.isEmpty()) {
@@ -598,7 +824,11 @@ class QuranDatabaseSeeder(
             database.withTransaction {
                 duaDao.insertDuas(merged)
             }
-            yield()
+            if (interChunkDelayMs > 0L) {
+                delay(interChunkDelayMs)
+            } else {
+                yield()
+            }
         }
     }
 
@@ -637,50 +867,6 @@ class QuranDatabaseSeeder(
                     tasbeehCount = 33,
                     updatedAtEpochMs = now
                 )
-            )
-        }
-    }
-
-    private fun parseTranslationSources(array: JSONArray): List<TranslationSourceEntity> {
-        return (0 until array.length()).map { idx ->
-            val obj = array.getJSONObject(idx)
-            TranslationSourceEntity(
-                id = obj.getInt("id"),
-                languageCode = obj.getString("languageCode"),
-                languageName = obj.getString("languageName"),
-                translatorName = obj.getString("translatorName"),
-                isDownloaded = obj.getBoolean("isDownloaded"),
-                isEnabled = obj.getBoolean("isEnabled"),
-                fileSizeKb = obj.getInt("fileSizeKb")
-            )
-        }
-    }
-
-    private fun parseTafsirSources(array: JSONArray): List<TafsirSourceEntity> {
-        return (0 until array.length()).map { idx ->
-            val obj = array.getJSONObject(idx)
-            TafsirSourceEntity(
-                id = obj.getInt("id"),
-                languageCode = obj.getString("languageCode"),
-                languageName = obj.getString("languageName"),
-                tafsirName = obj.getString("tafsirName"),
-                isDownloaded = obj.getBoolean("isDownloaded"),
-                isEnabled = obj.getBoolean("isEnabled"),
-                fileSizeKb = obj.getInt("fileSizeKb")
-            )
-        }
-    }
-
-    private fun parseReciters(array: JSONArray): List<AudioReciterEntity> {
-        return (0 until array.length()).map { idx ->
-            val obj = array.getJSONObject(idx)
-            AudioReciterEntity(
-                id = obj.getInt("id"),
-                name = obj.getString("name"),
-                localizedName = obj.getString("localizedName"),
-                style = obj.getString("style"),
-                baseUrl = obj.getString("baseUrl"),
-                isDownloaded = obj.getBoolean("isDownloaded")
             )
         }
     }

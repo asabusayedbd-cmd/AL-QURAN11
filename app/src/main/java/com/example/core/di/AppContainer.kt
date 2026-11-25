@@ -6,6 +6,7 @@ import com.example.R
 import com.example.core.audio.QuranAudioController
 import com.example.core.database.NoorDatabase
 import com.example.core.database.QuranDatabaseSeeder
+import com.example.core.localization.LineTranslator
 import com.example.core.localization.PreferencesRepository
 import com.example.core.network.QuranComApiService
 import com.example.core.network.QuranSyncRepository
@@ -44,6 +45,10 @@ class AppContainer(context: Context) {
             .build()
     }
 
+    val lineTranslator: LineTranslator by lazy {
+        LineTranslator(appContext, okHttpClient)
+    }
+
     val apiService: QuranComApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.quran.com/api/v4/")
@@ -67,10 +72,10 @@ class AppContainer(context: Context) {
             runCatching { preferencesRepository.preferencesFlow.first() }
         }
         warmScope.launch {
-            seeder.seedIfNeeded()
+            seeder.seedIfNeeded(deferBulkDelayMs = 1100L, interSurahYieldMs = 15L)
         }
         warmScope.launch {
-            kotlinx.coroutines.delay(350L)
+            kotlinx.coroutines.delay(1800L)
             val fontResIds = intArrayOf(
                 R.font.plus_jakarta_sans,
                 R.font.amiri,
