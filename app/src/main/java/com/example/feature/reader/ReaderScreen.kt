@@ -97,11 +97,16 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.core.database.AyahEntity
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Translate
 import com.example.core.localization.BidiUtils
+import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderViewMode
 import com.example.feature.tafsir.TafsirSheet
 import com.example.ui.components.AudioHifzBar
+import com.example.ui.components.LanguageTranslationPickerSheet
 import com.example.ui.components.QariPickerModalSheet
 import com.example.ui.components.RecitationSettingsModalSheet
 import com.example.ui.components.ShareCardGenerator
@@ -129,6 +134,7 @@ fun ReaderScreen(
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playbackCursor by viewModel.playbackCursor.collectAsStateWithLifecycle()
+    val lineState by viewModel.lineTranslationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val listState = rememberLazyListState()
     val tajweedPalette = LocalTajweedPalette.current
@@ -137,12 +143,35 @@ fun ReaderScreen(
     var showRecitationSettings by remember { mutableStateOf(false) }
     var showQariPickerFromReader by remember { mutableStateOf(false) }
     var showSurahSwitcher by remember { mutableStateOf(false) }
+    var showBatchLangPicker by remember { mutableStateOf(false) }
+    var lineTranslateAyah by remember { mutableStateOf<AyahDisplayBundle?>(null) }
     var mushafChromeVisible by rememberSaveable { mutableStateOf(true) }
     var pendingTargetAyah by rememberSaveable { mutableIntStateOf(targetAyah) }
     var pendingTargetPage by rememberSaveable { mutableIntStateOf(targetPage) }
     var lastScrolledSurahId by rememberSaveable { mutableIntStateOf(surahId) }
     var selectedMushafAyah by remember { mutableStateOf<AyahEntity?>(null) }
     var lastObservedPlaybackSurahId by remember { mutableIntStateOf(playbackCursor.surahId) }
+
+    if (showBatchLangPicker) {
+        LanguageTranslationPickerSheet(
+            selectedLanguageCode = lineState.activeBatchLanguage,
+            onSelectLanguage = { opt ->
+                viewModel.translateSurahLines(opt.code)
+            },
+            onDismiss = { showBatchLangPicker = false }
+        )
+    }
+
+    lineTranslateAyah?.let { bundle ->
+        LanguageTranslationPickerSheet(
+            selectedLanguageCode = lineState.ayahLines[bundle.ayah.id]?.first,
+            onSelectLanguage = { opt ->
+                viewModel.translateAyahLine(bundle, opt.code)
+                lineTranslateAyah = null
+            },
+            onDismiss = { lineTranslateAyah = null }
+        )
+    }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -423,6 +452,73 @@ fun ReaderScreen(
                     }
                 }
 
+                // Surah-level Translation Action Bar (Instant বাংলা + Any Language)
+                AnimatedVisibility(visible = showChrome && state.ayahs.isNotEmpty()) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Translate,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Text(
+                                    text = if (lineState.activeBatchLanguage != null) {
+                                        stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(lineState.activeBatchLanguage!!))
+                                    } else {
+                                        stringResource(R.string.translate_line_action)
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (lineState.isBatchTranslating) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                }
+                                if (lineState.ayahLines.isNotEmpty()) {
+                                    TextButton(
+                                        onClick = viewModel::clearAllLineTranslations,
+                                        modifier = Modifier.height(32.dp).testTag("clear_all_line_translations_button")
+                                    ) {
+                                        Text(stringResource(R.string.action_clear), style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                FilledTonalButton(
+                                    onClick = { viewModel.translateSurahLines("bn") },
+                                    modifier = Modifier.height(32.dp).testTag("surah_translate_bn_button")
+                                ) {
+                                    Text(stringResource(R.string.translate_all_bangla), style = MaterialTheme.typography.labelSmall)
+                                }
+                                OutlinedButton(
+                                    onClick = { showBatchLangPicker = true },
+                                    modifier = Modifier.height(32.dp).testTag("surah_translate_any_button")
+                                ) {
+                                    Text(stringResource(R.string.translate_any_language), style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Non-blocking partial Surah / downloading progress banner
                 if (state.ayahs.isNotEmpty() && (state.isDownloadingSurah || state.isSurahIncomplete || state.downloadError != null)) {
                     Surface(
@@ -446,9 +542,9 @@ fun ReaderScreen(
                             ) {
                                 val expected = state.surah?.ayahCount ?: state.ayahs.size
                                 val bannerText = when {
-                                    state.isDownloadingSurah -> "Loading complete Surah (${state.ayahs.size}/$expected Ayahs)…"
-                                    state.downloadError != null -> "Cached ${state.ayahs.size}/$expected Ayahs • Offline or sync error"
-                                    else -> "Showing ${state.ayahs.size} of $expected Ayahs"
+                                    state.isDownloadingSurah -> stringResource(R.string.reader_loading_surah_fmt, state.ayahs.size, expected)
+                                    state.downloadError != null -> stringResource(R.string.reader_cached_err_fmt, state.ayahs.size, expected)
+                                    else -> stringResource(R.string.reader_showing_partial_fmt, state.ayahs.size, expected)
                                 }
                                 Text(
                                     text = bannerText,
@@ -460,7 +556,7 @@ fun ReaderScreen(
                                         onClick = { viewModel.downloadCurrentSurah() },
                                         modifier = Modifier.testTag("sync_full_surah_banner_button")
                                     ) {
-                                        Text(if (state.downloadError != null) "Retry" else "Download Full")
+                                        Text(if (state.downloadError != null) stringResource(R.string.action_retry) else stringResource(R.string.reader_download_full))
                                     }
                                 }
                             }
@@ -484,7 +580,7 @@ fun ReaderScreen(
                         )
                         state.surah?.let { s ->
                             Text(
-                                text = "${s.nameArabic} • ${s.ayahCount} Ayahs",
+                                text = stringResource(R.string.reader_ayahs_count_fmt, s.nameArabic, s.ayahCount),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -494,7 +590,7 @@ fun ReaderScreen(
                             CircularProgressIndicator(modifier = Modifier.size(36.dp))
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                text = "Loading Quranic text, Word-by-Word meanings & translations for offline study…",
+                                text = stringResource(R.string.reader_empty_loading_msg),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -504,11 +600,11 @@ fun ReaderScreen(
                                 onClick = { viewModel.cancelDownload() },
                                 modifier = Modifier.testTag("cancel_surah_download_button")
                             ) {
-                                Text("Cancel")
+                                Text(stringResource(R.string.action_cancel))
                             }
                         } else {
                             Text(
-                                text = "This Surah can be restored offline or downloaded with extra translations from Quran.com.",
+                                text = stringResource(R.string.reader_empty_prompt_msg),
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -826,13 +922,28 @@ fun ReaderScreen(
                                                         contentDescription = stringResource(R.string.cd_share_ayah)
                                                     )
                                                 }
+                                                val isTranslatingThisAyah = bundle.ayah.id in lineState.translatingAyahIds
+                                                IconButton(
+                                                    onClick = { lineTranslateAyah = bundle },
+                                                    modifier = Modifier.testTag("translate_ayah_${bundle.ayah.verseKey}")
+                                                ) {
+                                                    if (isTranslatingThisAyah) {
+                                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                                    } else {
+                                                        Icon(
+                                                            Icons.Default.Translate,
+                                                            contentDescription = stringResource(R.string.translate_line_action),
+                                                            tint = if (bundle.ayah.id in lineState.ayahLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
                                                 IconButton(
                                                     onClick = {
                                                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                                         val firstTr = bundle.translations.firstOrNull()?.translatedText.orEmpty()
                                                         val clip = "${bundle.ayah.textUthmani}\n$firstTr\n[${state.localizedSurahName} ${bundle.ayah.verseKey}]"
                                                         clipboard.setPrimaryClip(ClipData.newPlainText("Quran Ayah", clip))
-                                                        Toast.makeText(context, "Ayah copied", Toast.LENGTH_SHORT).show()
+                                                        Toast.makeText(context, context.getString(R.string.ayah_copied_toast), Toast.LENGTH_SHORT).show()
                                                     },
                                                     modifier = Modifier.testTag("copy_ayah_${bundle.ayah.verseKey}")
                                                 ) {
@@ -917,6 +1028,52 @@ fun ReaderScreen(
                                                 )
                                             }
                                         }
+
+                                        // Dynamic Line Translation (Instant বাংলা or Any Selected Language)
+                                        val lineTr = lineState.ayahLines[bundle.ayah.id]
+                                        if (lineTr != null) {
+                                            Surface(
+                                                shape = MaterialTheme.shapes.small,
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.Top
+                                                ) {
+                                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                        Text(
+                                                            text = LineTranslator.languageLabel(lineTr.first),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.primary,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                        Text(
+                                                            text = lineTr.second,
+                                                            style = banglaSafeBodyStyle(
+                                                                state.preferences.translationFontSizeSp,
+                                                                lineTr.first
+                                                            ),
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = { viewModel.clearAyahLineTranslation(bundle.ayah.id) },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Close,
+                                                            contentDescription = stringResource(R.string.action_clear),
+                                                            modifier = Modifier.size(16.dp),
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -942,7 +1099,7 @@ fun ReaderScreen(
                                     ) {
                                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Prev Surah")
+                                        Text(stringResource(R.string.reader_prev_surah))
                                     }
                                 }
                                 if (activeSurahId < 114) {
@@ -955,7 +1112,7 @@ fun ReaderScreen(
                                             .weight(1f)
                                             .testTag("reader_next_surah_button")
                                     ) {
-                                        Text("Next Surah")
+                                        Text(stringResource(R.string.reader_next_surah))
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                                     }
@@ -999,7 +1156,7 @@ fun ReaderScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Text(
-                        text = "Page ${mushafAyah.pageNumber} • Juz ${mushafAyah.juzNumber}",
+                        text = stringResource(R.string.reader_page_juz_fmt, mushafAyah.pageNumber, mushafAyah.juzNumber),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1023,6 +1180,29 @@ fun ReaderScreen(
                     )
                 }
 
+                val mushafLineTr = lineState.ayahLines[mushafAyah.id]
+                if (mushafLineTr != null) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = LineTranslator.languageLabel(mushafLineTr.first),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = mushafLineTr.second,
+                                style = banglaSafeBodyStyle(15f, mushafLineTr.first),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
                 HorizontalDivider()
 
                 FlowRow(
@@ -1039,7 +1219,7 @@ fun ReaderScreen(
                     ) {
                         Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Play")
+                        Text(stringResource(R.string.action_play))
                     }
 
                     OutlinedButton(
@@ -1052,7 +1232,7 @@ fun ReaderScreen(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(if (bundle?.isBookmarked == true) "Bookmarked" else "Bookmark")
+                        Text(if (bundle?.isBookmarked == true) stringResource(R.string.action_bookmarked) else stringResource(R.string.action_bookmark))
                     }
 
                     FilledTonalButton(
@@ -1064,7 +1244,21 @@ fun ReaderScreen(
                     ) {
                         Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Tafsir & Note")
+                        Text(stringResource(R.string.reader_tafsir_note_action))
+                    }
+
+                    if (bundle != null) {
+                        FilledTonalButton(
+                            onClick = {
+                                lineTranslateAyah = bundle
+                                selectedMushafAyah = null
+                            },
+                            modifier = Modifier.testTag("mushaf_action_translate")
+                        ) {
+                            Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.translate_line_action))
+                        }
                     }
 
                     OutlinedButton(
@@ -1075,7 +1269,7 @@ fun ReaderScreen(
                         },
                         modifier = Modifier.testTag("mushaf_action_wbw")
                     ) {
-                        Text("Word-by-Word")
+                        Text(stringResource(R.string.mode_word_by_word))
                     }
 
                     OutlinedButton(
@@ -1084,13 +1278,13 @@ fun ReaderScreen(
                             val trText = firstTranslation?.translatedText.orEmpty()
                             val clip = "${mushafAyah.textUthmani}\n$trText\n[${state.localizedSurahName} ${mushafAyah.verseKey}]"
                             clipboard.setPrimaryClip(ClipData.newPlainText("Quran Ayah", clip))
-                            Toast.makeText(context, "Ayah copied", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.getString(R.string.ayah_copied_toast), Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.testTag("mushaf_action_copy")
                     ) {
                         Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Copy")
+                        Text(stringResource(R.string.action_copy))
                     }
 
                     OutlinedButton(
@@ -1108,7 +1302,7 @@ fun ReaderScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Share")
+                        Text(stringResource(R.string.action_share))
                     }
                 }
 
@@ -1126,7 +1320,7 @@ fun ReaderScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = "Jump to Surah (114 Surahs)",
+                    text = stringResource(R.string.reader_jump_to_surah),
                     style = MaterialTheme.typography.titleLarge
                 )
                 LazyColumn(
@@ -1240,6 +1434,7 @@ fun ReaderScreen(
             inspected = inspected,
             scriptType = state.preferences.scriptType,
             wbwLanguageCode = state.preferences.wbwLanguageCode,
+            uiLanguageCode = state.preferences.uiLanguageCode,
             onPlayWordAudio = { speed -> viewModel.playInspectedWord(speed) },
             onNavigateToOccurrence = { targetS, targetA ->
                 pendingTargetAyah = targetA
@@ -1247,6 +1442,7 @@ fun ReaderScreen(
                     viewModel.loadSurah(targetS)
                 }
             },
+            onTranslateWord = viewModel::translateInspectedWord,
             onDismiss = viewModel::dismissWordInspector
         )
     }
@@ -1264,7 +1460,12 @@ fun ReaderScreen(
             isFetchingOnlineTafsir = state.isFetchingTafsir,
             tafsirError = state.tafsirError,
             translationFontSizeSp = state.preferences.translationFontSizeSp,
+            uiLanguageCode = state.preferences.uiLanguageCode,
+            translatedTafsir = lineState.translatedTafsir,
+            isTranslatingTafsir = lineState.isTranslatingTafsir,
             onSelectTafsirSource = viewModel::selectTafsirSource,
+            onTranslateTafsir = viewModel::translateActiveTafsir,
+            onClearTranslatedTafsir = viewModel::clearTranslatedTafsir,
             onSaveNote = viewModel::saveNoteForSelectedAyah,
             onShareAsCard = {
                 val tr = bundle?.translations?.firstOrNull()

@@ -63,6 +63,35 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.database.DuaEntity
 import com.example.ui.components.ShareCardGenerator
 
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.example.R
+import com.example.core.localization.LineTranslator
+import com.example.ui.components.LanguageTranslationPickerSheet
+import com.example.ui.theme.banglaSafeBodyStyle
+
+@Composable
+private fun getDuaCategoryLabel(category: String): String = when (category) {
+    "All" -> stringResource(R.string.dua_cat_all)
+    "Bookmarked" -> stringResource(R.string.dua_cat_bookmarked)
+    "Morning & Evening" -> stringResource(R.string.dua_cat_morning_evening)
+    "Sleeping & Waking" -> stringResource(R.string.dua_cat_sleeping_waking)
+    "Ruqyah & Shifa" -> stringResource(R.string.dua_cat_ruqyah_shifa)
+    "Salah & Worship" -> stringResource(R.string.dua_cat_salah_worship)
+    "Anxiety & Hardship" -> stringResource(R.string.dua_cat_anxiety_hardship)
+    "Forgiveness & Tawbah" -> stringResource(R.string.dua_cat_forgiveness_tawbah)
+    "Daily Life & Travel" -> stringResource(R.string.dua_cat_daily_travel)
+    "Family & Offspring" -> stringResource(R.string.dua_cat_family_offspring)
+    "Protection & Safety" -> stringResource(R.string.dua_cat_protection_safety)
+    "Provision & Debt" -> stringResource(R.string.dua_cat_provision_debt)
+    "Gratitude & Praise" -> stringResource(R.string.dua_cat_gratitude_praise)
+    "Rabbana Quranic Duas" -> stringResource(R.string.dua_cat_rabbana)
+    else -> category
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DuaScreen(
@@ -75,7 +104,32 @@ fun DuaScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val audioState by viewModel.audioState.collectAsStateWithLifecycle()
+    val translationState by viewModel.translationState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    var showBatchLangPicker by remember { mutableStateOf(false) }
+    var translateTargetDua by remember { mutableStateOf<DuaEntity?>(null) }
+
+    if (showBatchLangPicker) {
+        LanguageTranslationPickerSheet(
+            selectedLanguageCode = translationState.activeLanguage,
+            onSelectLanguage = { opt ->
+                viewModel.translateVisibleDuas(opt.code)
+            },
+            onDismiss = { showBatchLangPicker = false }
+        )
+    }
+
+    translateTargetDua?.let { dua ->
+        LanguageTranslationPickerSheet(
+            selectedLanguageCode = translationState.translatedById[dua.id]?.first,
+            onSelectLanguage = { opt ->
+                viewModel.translateDua(dua, opt.code)
+                translateTargetDua = null
+            },
+            onDismiss = { translateTargetDua = null }
+        )
+    }
 
     LaunchedEffect(audioState.statusMessage) {
         val msg = audioState.statusMessage
@@ -91,9 +145,9 @@ fun DuaScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Al-Hisn • Authentic Duas & Ruqyah", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.dua_header_title), fontWeight = FontWeight.Bold)
                         Text(
-                            "${duas.size} Duas & Adhkar (Sahih Hadith & Quran)",
+                            stringResource(R.string.dua_header_subtitle_fmt, duas.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -105,7 +159,7 @@ fun DuaScreen(
                             onClick = onBack,
                             modifier = Modifier.testTag("dua_back_button")
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
                     }
                 },
@@ -127,7 +181,7 @@ fun DuaScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("dua_search_input"),
-                placeholder = { Text("Search by title, topic, or Sahih reference...") },
+                placeholder = { Text(stringResource(R.string.dua_search_hint)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -135,7 +189,7 @@ fun DuaScreen(
                             onClick = { viewModel.setSearchQuery("") },
                             modifier = Modifier.testTag("dua_clear_search_button")
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
                         }
                     }
                 },
@@ -156,9 +210,74 @@ fun DuaScreen(
                         onClick = {
                             viewModel.selectCategory(if (category == "All") null else category)
                         },
-                        label = { Text(category) },
+                        label = { Text(getDuaCategoryLabel(category)) },
                         modifier = Modifier.testTag("dua_category_${category.lowercase().replace(" ", "_")}")
                     )
+                }
+            }
+
+            // Quick Batch Translation Toolbar
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Translate,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = if (translationState.activeLanguage != null) {
+                                stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(translationState.activeLanguage!!))
+                            } else {
+                                stringResource(R.string.translate_line_action)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (translationState.isBatchTranslating) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        }
+                        if (translationState.translatedById.isNotEmpty()) {
+                            TextButton(
+                                onClick = viewModel::clearAllDuaTranslations,
+                                modifier = Modifier.height(32.dp).testTag("dua_clear_all_translations_button")
+                            ) {
+                                Text(stringResource(R.string.action_clear), style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = { viewModel.translateVisibleDuas("bn") },
+                            modifier = Modifier.height(32.dp).testTag("dua_translate_bn_button")
+                        ) {
+                            Text(stringResource(R.string.translate_all_bangla), style = MaterialTheme.typography.labelSmall)
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { showBatchLangPicker = true },
+                            modifier = Modifier.height(32.dp).testTag("dua_translate_any_button")
+                        ) {
+                            Text(stringResource(R.string.translate_any_language), style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
                 }
             }
 
@@ -172,7 +291,7 @@ fun DuaScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "No Duas found matching your search.",
+                        stringResource(R.string.dua_empty),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -188,20 +307,27 @@ fun DuaScreen(
                         val isDownloaded = dua.id in audioState.downloadedIds
                         val isDownloading = dua.id in audioState.downloadingIds
                         val isPlaying = audioState.activePlayingId == dua.id || audioState.isTtsSpeakingId == dua.id
+                        val isTranslating = dua.id in translationState.translatingIds
+                        val translated = translationState.translatedById[dua.id]
                         DuaCard(
                             dua = dua,
                             isDownloaded = isDownloaded,
                             isDownloading = isDownloading,
                             isPlaying = isPlaying,
+                            isTranslating = isTranslating,
+                            translated = translated,
                             onPlayOrDownload = { viewModel.togglePlayDuaAudio(dua) },
                             onDeleteAudio = { viewModel.deleteDuaAudio(dua.id) },
                             onBookmarkToggle = { viewModel.toggleBookmark(dua.id, dua.isBookmarked) },
+                            onTranslateDua = { translateTargetDua = dua },
                             onShareCard = {
+                                val effectiveTitle = translated?.second?.title ?: dua.title
+                                val effectiveTr = translated?.second?.translation ?: dua.translation
                                 ShareCardGenerator.shareDuaAsImageCard(
                                     context = context,
-                                    title = dua.title,
+                                    title = effectiveTitle,
                                     arabicText = dua.arabicText,
-                                    translationText = dua.translation,
+                                    translationText = effectiveTr,
                                     reference = dua.reference
                                 )
                             }
@@ -219,12 +345,19 @@ private fun DuaCard(
     isDownloaded: Boolean,
     isDownloading: Boolean,
     isPlaying: Boolean,
+    isTranslating: Boolean,
+    translated: Pair<String, TranslatedDuaFields>?,
     onPlayOrDownload: () -> Unit,
     onDeleteAudio: () -> Unit,
     onBookmarkToggle: () -> Unit,
+    onTranslateDua: () -> Unit,
     onShareCard: () -> Unit
 ) {
     val hasDownloadableRecitation = dua.audioUrl.isNotBlank()
+    val effectiveTitle = translated?.second?.title ?: dua.title
+    val effectiveTranslation = translated?.second?.translation ?: dua.translation
+    val effectiveVirtue = translated?.second?.virtueOrContext ?: dua.virtueOrContext
+    val targetLang = translated?.first ?: "en"
 
     Card(
         modifier = Modifier
@@ -249,7 +382,7 @@ private fun DuaCard(
                     color = MaterialTheme.colorScheme.primaryContainer
                 ) {
                     Text(
-                        text = dua.category,
+                        text = getDuaCategoryLabel(dua.category),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -257,14 +390,28 @@ private fun DuaCard(
                     )
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onTranslateDua,
+                        modifier = Modifier.testTag("dua_translate_${dua.id}")
+                    ) {
+                        if (isTranslating) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Default.Translate,
+                                contentDescription = stringResource(R.string.translate_line_action),
+                                tint = if (translated != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                     IconButton(
                         onClick = onShareCard,
                         modifier = Modifier.testTag("dua_share_${dua.id}")
                     ) {
                         Icon(
                             Icons.Default.Share,
-                            contentDescription = "Share Flashcard",
+                            contentDescription = stringResource(R.string.action_share),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -274,16 +421,31 @@ private fun DuaCard(
                     ) {
                         Icon(
                             imageVector = if (dua.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Bookmark",
+                            contentDescription = stringResource(R.string.action_bookmark),
                             tint = if (dua.isBookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
 
+            if (translated != null) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(targetLang)),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
             Text(
-                text = dua.title,
-                style = MaterialTheme.typography.titleMedium,
+                text = effectiveTitle,
+                style = if (translated != null) banglaSafeBodyStyle(18f, targetLang) else MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -310,20 +472,20 @@ private fun DuaCard(
             }
 
             Text(
-                text = "\"${dua.translation}\"",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "\"${effectiveTranslation}\"",
+                style = if (translated != null) banglaSafeBodyStyle(15f, targetLang) else MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            if (dua.virtueOrContext.isNotBlank()) {
+            if (effectiveVirtue.isNotBlank()) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                 ) {
                     Text(
-                        text = "Virtue / Context: ${dua.virtueOrContext}",
+                        text = stringResource(R.string.dua_virtue_fmt, effectiveVirtue),
                         modifier = Modifier.padding(10.dp),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = if (translated != null) banglaSafeBodyStyle(13f, targetLang) else MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
@@ -350,27 +512,27 @@ private fun DuaCard(
                                     strokeWidth = 2.dp
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Downloading...")
+                                Text(stringResource(R.string.dua_downloading))
                             }
                             isPlaying -> {
                                 Icon(Icons.Default.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Stop")
+                                Text(stringResource(R.string.dua_stop))
                             }
                             hasDownloadableRecitation && isDownloaded -> {
                                 Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Play Offline")
+                                Text(stringResource(R.string.dua_play_offline))
                             }
                             hasDownloadableRecitation -> {
                                 Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Download Audio")
+                                Text(stringResource(R.string.dua_download_audio))
                             }
                             else -> {
                                 Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Listen Arabic")
+                                Text(stringResource(R.string.dua_listen_arabic))
                             }
                         }
                     }
@@ -390,7 +552,7 @@ private fun DuaCard(
                 }
 
                 Text(
-                    text = "Ref: ${dua.reference}",
+                    text = stringResource(R.string.dua_ref_fmt, dua.reference),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary,

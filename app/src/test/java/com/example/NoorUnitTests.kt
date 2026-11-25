@@ -11,6 +11,7 @@ import com.example.core.database.WordTranslationEntity
 import com.example.core.ibadah.PrayerTimeCalculator
 import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.BidiUtils
+import com.example.core.localization.LineTranslator
 import com.example.core.localization.SegmentRoleType
 import com.example.core.localization.WordMorphologyAnalyzer
 import com.example.ui.components.TajweedTextFormatter
@@ -326,5 +327,82 @@ class NoorUnitTests {
         val standard = PrayerTimeCalculator.calculateDailyTimes(23.8103, 90.4125, calendar = cal, hanafiAsr = false)
         val hanafi = PrayerTimeCalculator.calculateDailyTimes(23.8103, 90.4125, calendar = cal, hanafiAsr = true)
         assertFalse("Expected Hanafi Asr (${hanafi.asr}) to differ from Standard (${standard.asr})", hanafi.asr == standard.asr)
+    }
+
+    // 8. Word Morphology on untagged Quranic words and full Bangla localization
+    @Test
+    fun testWordMorphologyUntaggedWordsAndBanglaLocalization() {
+        val untaggedAlameen = WordEntity(
+            id = 201L,
+            ayahId = 2,
+            position = 2,
+            textUthmani = "ٱلْعَـٰلَمِينَ",
+            textIndopak = "الْعٰلَمِیْنَ",
+            transliteration = "al-'alameen",
+            rootArabic = "", // Empty in raw .qgz bundles
+            lemmaArabic = "",
+            grammarTagJson = "",
+            audioUrl = ""
+        )
+        val translations = listOf(
+            WordTranslationEntity(201L, "en", "the worlds"),
+            WordTranslationEntity(201L, "bn", "সৃষ্টিজগতের")
+        )
+        val analysis = WordMorphologyAnalyzer.analyze(untaggedAlameen, translations)
+        // Verify prefix segmentation decomposes definite article "الـ"
+        assertTrue(
+            "Expected prefix segmentation for ٱلْعَـٰلَمِينَ",
+            analysis.segments.any { it.roleType == SegmentRoleType.PREFIX && (it.arabicPrefixOrPart == "الـ" || it.arabicPrefixOrPart == "ٱلْـ") }
+        )
+        assertTrue(analysis.segments.any { it.roleType == SegmentRoleType.STEM })
+        // Verify Bangla localization
+        val bnPos = analysis.localizedPos("bn")
+        assertTrue("Expected Bangla POS label, got: $bnPos", bnPos.contains("বিশেষ্য") || bnPos.isNotBlank())
+        val bnExplanation = analysis.localizedExplanation("bn")
+        assertTrue("Expected non-empty Bangla explanation", bnExplanation.isNotBlank())
+        assertTrue("Bangla meaning should be prioritized first", analysis.allMeanings.first().first.contains("বাংলা"))
+
+        // Untagged preposition + pronoun e.g. "بِهِمْ"
+        val bihim = WordEntity(
+            id = 202L,
+            ayahId = 15,
+            position = 1,
+            textUthmani = "بِهِمْ",
+            textIndopak = "بِهِمْ",
+            transliteration = "bihim",
+            rootArabic = "",
+            lemmaArabic = "",
+            grammarTagJson = "",
+            audioUrl = ""
+        )
+        val bihimAnalysis = WordMorphologyAnalyzer.analyze(bihim, listOf(WordTranslationEntity(202L, "bn", "তাদের সাথে")))
+        assertTrue(
+            "Expected preposition prefix 'بِـ' in bihim",
+            bihimAnalysis.segments.any { it.roleType == SegmentRoleType.PREFIX && it.arabicPrefixOrPart == "بِـ" }
+        )
+    }
+
+    // 9. LineTranslator: Bangla priority, 32+ languages, and Google Translate JSON parser
+    @Test
+    fun testLineTranslatorJsonParsingAndLanguages() {
+        // Verify Bangla is prioritized as the first language option
+        assertEquals("bn", LineTranslator.SUPPORTED_LANGUAGES.first().code)
+        assertTrue("Expected >= 32 supported languages", LineTranslator.SUPPORTED_LANGUAGES.size >= 32)
+        assertEquals("বাংলা (Bangla (Bangladesh))", LineTranslator.languageLabel("bn"))
+
+        // Verify JSON response parsing with multi-line delimiter
+        val mockJson = """
+            [[["সমস্ত প্রশংসা আল্লাহর জন্য।\n§§§\nপরম করুণাময়, অতি দয়ালু।","All praise is due to Allah.\n§§§\nEntirely Merciful, Especially Merciful.",null,null,10]],null,"en"]
+        """.trimIndent()
+        val parsed = LineTranslator.parseGoogleTranslateJson(mockJson)
+        assertTrue(parsed != null)
+        assertTrue(parsed!!.contains("সমস্ত প্রশংসা আল্লাহর জন্য।"))
+        assertTrue(parsed.contains("§§§"))
+        assertTrue(parsed.contains("পরম করুণাময়, অতি দয়ালু।"))
+
+        // Test empty/invalid JSON graceful fallback
+        assertNull(LineTranslator.parseGoogleTranslateJson(""))
+        assertNull(LineTranslator.parseGoogleTranslateJson("[]"))
+        assertNull(LineTranslator.parseGoogleTranslateJson("invalid json text"))
     }
 }

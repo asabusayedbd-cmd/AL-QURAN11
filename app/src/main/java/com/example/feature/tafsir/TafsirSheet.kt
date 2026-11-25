@@ -54,6 +54,10 @@ import com.example.core.database.AyahTranslationEntity
 import com.example.core.database.TafsirSourceEntity
 import com.example.ui.theme.banglaSafeBodyStyle
 
+import androidx.compose.material.icons.filled.Translate
+import com.example.core.localization.LineTranslator
+import com.example.ui.components.LanguageTranslationPickerSheet
+
 private val TAFSIR_TAG_REGEX = Regex("<[^>]+>")
 private val TAFSIR_NEWLINES_REGEX = Regex("\n{2,}")
 
@@ -70,13 +74,41 @@ fun TafsirSheet(
     isFetchingOnlineTafsir: Boolean,
     tafsirError: String? = null,
     translationFontSizeSp: Float,
+    uiLanguageCode: String = "en",
+    translatedTafsir: Pair<String, String>? = null,
+    isTranslatingTafsir: Boolean = false,
     onSelectTafsirSource: (TafsirSourceEntity) -> Unit,
+    onTranslateTafsir: (cleanBody: String, targetLang: String) -> Unit = { _, _ -> },
+    onClearTranslatedTafsir: () -> Unit = {},
     onSaveNote: (String) -> Unit,
     onShareAsCard: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var noteDraft by remember(ayah.verseKey, existingNoteText) { mutableStateOf(existingNoteText) }
     var langFilter by remember { mutableStateOf("ALL") }
+    var showLangPicker by remember { mutableStateOf(false) }
+
+    if (showLangPicker) {
+        LanguageTranslationPickerSheet(
+            selectedLanguageCode = translatedTafsir?.first,
+            onSelectLanguage = { opt ->
+                val active = loadedTafsirs.firstOrNull { it.sourceId == selectedTafsirSourceId }
+                if (active != null) {
+                    val clean = active.tafsirHtmlOrMarkdown
+                        .replace(TAFSIR_TAG_REGEX, "\n")
+                        .replace("&quot;", "\"")
+                        .replace("&#39;", "'")
+                        .replace("&rsquo;", "’")
+                        .replace("&nbsp;", " ")
+                        .replace("&amp;", "&")
+                        .replace(TAFSIR_NEWLINES_REGEX, "\n\n")
+                        .trim()
+                    onTranslateTafsir(clean, opt.code)
+                }
+            },
+            onDismiss = { showLangPicker = false }
+        )
+    }
 
     val availableLangs = remember(tafsirSources) {
         listOf("ALL") + tafsirSources.map { it.languageCode.uppercase() }.distinct()
@@ -118,7 +150,7 @@ fun TafsirSheet(
                         style = MaterialTheme.typography.titleLarge
                     )
                     Text(
-                        text = "$surahName • ${ayah.verseKey} • ${tafsirSources.size} Tafsir Sources",
+                        text = stringResource(R.string.tafsir_sources_count_fmt, surahName, ayah.verseKey, tafsirSources.size),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -142,7 +174,7 @@ fun TafsirSheet(
                         onClick = { langFilter = lang },
                         label = {
                             val label = when (lang) {
-                                "ALL" -> "All (${tafsirSources.size})"
+                                "ALL" -> stringResource(R.string.tafsir_all_fmt, tafsirSources.size)
                                 "BN" -> "বাংলা"
                                 "EN" -> "English"
                                 "AR" -> "العربية"
@@ -183,15 +215,9 @@ fun TafsirSheet(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Loading Tafsir from Quran.com…", style = MaterialTheme.typography.bodyMedium)
+                            Text(stringResource(R.string.tafsir_loading_msg), style = MaterialTheme.typography.bodyMedium)
                         }
                     } else if (activeTafsir != null) {
-                        Text(
-                            text = "${activeTafsir.tafsirName} (${activeTafsir.languageCode.uppercase()})",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                         val cleanBody = remember(activeTafsir.tafsirHtmlOrMarkdown) {
                             activeTafsir.tafsirHtmlOrMarkdown
                                 .replace(TAFSIR_TAG_REGEX, "\n")
@@ -203,16 +229,92 @@ fun TafsirSheet(
                                 .replace(TAFSIR_NEWLINES_REGEX, "\n\n")
                                 .trim()
                         }
-                        val isRtlTafsir = activeTafsir.languageCode.lowercase() in setOf("ar", "ur")
-                        CompositionLocalProvider(
-                            LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = cleanBody,
-                                style = banglaSafeBodyStyle(translationFontSizeSp, activeTafsir.languageCode),
-                                textAlign = TextAlign.Start,
-                                modifier = Modifier.fillMaxWidth()
+                                text = "${activeTafsir.tafsirName} (${activeTafsir.languageCode.uppercase()})",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.weight(1f)
                             )
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                if (translatedTafsir != null) {
+                                    OutlinedButton(
+                                        onClick = onClearTranslatedTafsir,
+                                        modifier = Modifier.testTag("tafsir_clear_tr_button")
+                                    ) {
+                                        Text(stringResource(R.string.translate_original))
+                                    }
+                                }
+                                FilledTonalButton(
+                                    onClick = { onTranslateTafsir(cleanBody, "bn") },
+                                    modifier = Modifier.testTag("tafsir_translate_bn_button")
+                                ) {
+                                    Text(stringResource(R.string.translate_all_bangla))
+                                }
+                                OutlinedButton(
+                                    onClick = { showLangPicker = true },
+                                    modifier = Modifier.testTag("tafsir_translate_picker_button")
+                                ) {
+                                    Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(stringResource(R.string.translate_any_language))
+                                }
+                            }
+                        }
+
+                        if (isTranslatingTafsir) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.translate_translating), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+
+                        if (translatedTafsir != null) {
+                            val (trLang, trText) = translatedTafsir
+                            val isRtlTr = trLang.lowercase() in setOf("ar", "ur", "fa", "ps")
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(
+                                        text = stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(trLang)),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    CompositionLocalProvider(
+                                        LocalLayoutDirection provides if (isRtlTr) LayoutDirection.Rtl else LayoutDirection.Ltr
+                                    ) {
+                                        Text(
+                                            text = trText,
+                                            style = banglaSafeBodyStyle(translationFontSizeSp, trLang),
+                                            textAlign = TextAlign.Start,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            val isRtlTafsir = activeTafsir.languageCode.lowercase() in setOf("ar", "ur")
+                            CompositionLocalProvider(
+                                LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr
+                            ) {
+                                Text(
+                                    text = cleanBody,
+                                    style = banglaSafeBodyStyle(translationFontSizeSp, activeTafsir.languageCode),
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         }
                     } else {
                         if (!tafsirError.isNullOrBlank()) {
@@ -223,7 +325,7 @@ fun TafsirSheet(
                             )
                         }
                         Text(
-                            text = "This Tafsir entry is not yet cached locally for ${ayah.verseKey}. Tap below to download it for offline reading.",
+                            text = stringResource(R.string.tafsir_not_cached_fmt, ayah.verseKey),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -231,7 +333,12 @@ fun TafsirSheet(
                             FilledTonalButton(onClick = { onSelectTafsirSource(activeSource) }) {
                                 Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (!tafsirError.isNullOrBlank()) "Retry ${activeSource.tafsirName}" else "Fetch ${activeSource.tafsirName}")
+                                val label = if (!tafsirError.isNullOrBlank()) {
+                                    stringResource(R.string.tafsir_retry_fmt, activeSource.tafsirName)
+                                } else {
+                                    stringResource(R.string.tafsir_fetch_fmt, activeSource.tafsirName)
+                                }
+                                Text(label)
                             }
                         }
                     }

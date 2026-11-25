@@ -189,7 +189,7 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Customize reciter, translations, reading appearance, and offline library",
+                        text = stringResource(R.string.settings_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -243,12 +243,16 @@ fun SettingsScreen(
                         }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Offline-First • 100% On-Device",
+                                text = stringResource(R.string.settings_offline_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = "$downloadedSurahsCount / 114 Surahs ready offline • Audio cache ${"%.1f".format(Locale.US, cacheMb)} MB",
+                                text = stringResource(
+                                    R.string.settings_offline_subtitle_fmt,
+                                    downloadedSurahsCount,
+                                    "%.1f".format(Locale.US, cacheMb)
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -259,10 +263,10 @@ fun SettingsScreen(
 
             // Section 1: Audio & Recitation (Qari in dedicated sheet)
             item(key = "group_audio") {
-                SettingsGroupCard(title = "Recitation & Audio") {
+                SettingsGroupCard(title = stringResource(R.string.settings_group_audio)) {
                     SettingsActionRow(
                         icon = Icons.Default.RecordVoiceOver,
-                        title = "Qari / Reciter (${state.reciters.size})",
+                        title = stringResource(R.string.settings_qari_title_fmt, state.reciters.size),
                         subtitle = activeReciter?.let { "${it.name} • ${it.style}" } ?: "Mishary Rashid Alafasy",
                         onClick = { showQariPicker = true },
                         testTag = "settings_choose_qari_button"
@@ -270,7 +274,7 @@ fun SettingsScreen(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                     SettingsActionRow(
                         icon = Icons.Default.Tune,
-                        title = "Playback, Hifz Loop & Sleep Timer",
+                        title = stringResource(R.string.settings_playback_hifz_title),
                         subtitle = "${if (state.preferences.audioWordByWordMode) "Word-by-Word" else "Full Ayah"} • ${state.preferences.audioPlaybackSpeed}x • Repeat ${if (state.preferences.audioRepeatPerAyah == 0) "∞" else "${state.preferences.audioRepeatPerAyah}x"}",
                         onClick = { showAudioSettingsSheet = true },
                         testTag = "settings_audio_controls_button"
@@ -280,18 +284,18 @@ fun SettingsScreen(
 
             // Section 2: Translations & Tafsir (Dedicated searchable modal sheets)
             item(key = "group_content") {
-                SettingsGroupCard(title = "Quran Translations & Tafsir") {
+                SettingsGroupCard(title = stringResource(R.string.settings_group_content)) {
                     SettingsActionRow(
                         icon = Icons.Default.Translate,
-                        title = "Quran Translations (${state.translationSources.size})",
-                        subtitle = "$enabledTranslationsCount active • Select & download languages",
+                        title = stringResource(R.string.settings_translations_title_fmt, state.translationSources.size),
+                        subtitle = stringResource(R.string.settings_translations_sub_fmt, enabledTranslationsCount),
                         onClick = { showTranslationsSheet = true },
                         testTag = "settings_translations_button"
                     )
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                     SettingsActionRow(
                         icon = Icons.AutoMirrored.Filled.MenuBook,
-                        title = "Tafsir Library (${state.tafsirSources.size})",
+                        title = stringResource(R.string.settings_tafsir_library_fmt, state.tafsirSources.size),
                         subtitle = activeTafsir?.tafsirName ?: "Select default Tafsir source",
                         onClick = { showTafsirsSheet = true },
                         testTag = "settings_tafsir_button"
@@ -301,7 +305,7 @@ fun SettingsScreen(
 
             // Section 3: Appearance & Languages
             item(key = "group_appearance") {
-                SettingsGroupCard(title = "Appearance & Languages") {
+                SettingsGroupCard(title = stringResource(R.string.settings_group_appearance)) {
                     SettingsActionRow(
                         icon = Icons.Default.Palette,
                         title = stringResource(R.string.theme_title),
@@ -312,7 +316,7 @@ fun SettingsScreen(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
                     SettingsActionRow(
                         icon = Icons.Default.Language,
-                        title = "App & Word-by-Word Languages",
+                        title = stringResource(R.string.settings_app_wbw_langs),
                         subtitle = "$uiLangLabel • WBW: $wbwLangLabel",
                         onClick = { showLanguageSheet = true },
                         testTag = "settings_language_button"
@@ -322,11 +326,11 @@ fun SettingsScreen(
 
             // Section 4: Offline Downloads Manager
             item(key = "group_downloads") {
-                SettingsGroupCard(title = "Storage & Downloads") {
+                SettingsGroupCard(title = stringResource(R.string.settings_group_storage)) {
                     SettingsActionRow(
                         icon = Icons.Default.CloudDownload,
                         title = stringResource(R.string.download_manager_title),
-                        subtitle = "$downloadedSurahsCount / 114 Surahs offline • Manage audio, translations & tafsirs",
+                        subtitle = stringResource(R.string.settings_dl_sub_fmt, downloadedSurahsCount),
                         onClick = { showDownloadManagerSheet = true },
                         testTag = "open_download_manager_button"
                     )
@@ -344,7 +348,7 @@ fun SettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Tajweed & Backup",
+                            text = stringResource(R.string.settings_group_tools),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -354,7 +358,7 @@ fun SettingsScreen(
                                 .fillMaxWidth()
                                 .testTag("settings_tajweed_guide_button")
                         ) {
-                            Text("Open Tajweed Rules & Makhraj Guide")
+                            Text(stringResource(R.string.settings_tajweed_button))
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -366,7 +370,7 @@ fun SettingsScreen(
                                     .weight(1f)
                                     .testTag("settings_export_backup_button")
                             ) {
-                                Text("Export JSON")
+                                Text(stringResource(R.string.settings_export_json))
                             }
                             OutlinedButton(
                                 onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
@@ -374,7 +378,7 @@ fun SettingsScreen(
                                     .weight(1f)
                                     .testTag("settings_import_backup_button")
                             ) {
-                                Text("Restore JSON")
+                                Text(stringResource(R.string.settings_restore_json))
                             }
                         }
                     }

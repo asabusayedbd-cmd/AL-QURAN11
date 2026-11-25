@@ -241,7 +241,7 @@ fun HomeScreen(
                                     shape = MaterialTheme.shapes.small
                                 ) {
                                     Text(
-                                        text = "114 Surahs",
+                                        text = stringResource(R.string.home_114_surahs),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFFF3CF82),
@@ -717,11 +717,11 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Quranic Knowledge Quiz", style = MaterialTheme.typography.titleMedium)
-                            Text("Test your knowledge of Surahs, Juz, and Quranic facts offline.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.home_quiz_title), style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(R.string.home_quiz_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         FilledTonalButton(onClick = { showQuizSheet = true }) {
-                            Text("Play Quiz")
+                            Text(stringResource(R.string.home_quiz_button))
                         }
                     }
                 }
@@ -748,11 +748,11 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Authentic Duas & Ruqyah", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("150+ Topic-based Duas with Sahih Hadith references & flashcard sharing.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.home_dua_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.home_dua_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         FilledTonalButton(onClick = onOpenDua) {
-                            Text("Explore Duas")
+                            Text(stringResource(R.string.home_dua_button))
                         }
                     }
                 }
@@ -932,9 +932,26 @@ fun HomeScreen(
 }
 
 @Composable
+private fun localizedPrayerName(name: String): String {
+    return when (name.lowercase().trim()) {
+        "fajr" -> stringResource(R.string.prayer_fajr)
+        "dhuhr" -> stringResource(R.string.prayer_dhuhr)
+        "asr" -> stringResource(R.string.prayer_asr)
+        "maghrib" -> stringResource(R.string.prayer_maghrib)
+        "isha" -> stringResource(R.string.prayer_isha)
+        "imsak", "imsak (sahri end)" -> stringResource(R.string.prayer_imsak)
+        "sunrise" -> stringResource(R.string.prayer_sunrise)
+        "sunset" -> stringResource(R.string.prayer_sunset)
+        "tahajjud", "tahajjud (last third)" -> stringResource(R.string.prayer_tahajjud)
+        "midnight" -> stringResource(R.string.prayer_midnight)
+        else -> name
+    }
+}
+
+@Composable
 private fun PrayerCell(name: String, time: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text = localizedPrayerName(name), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(2.dp))
         Text(text = time, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
     }
@@ -988,7 +1005,7 @@ private fun QiblaCompassSheet(
         ) {
             Text(stringResource(R.string.qibla_compass_title), style = MaterialTheme.typography.titleLarge)
             Text(
-                text = "$locationName • Bearing ${qiblaBearingDeg.roundToInt()}° from North",
+                text = stringResource(R.string.qibla_bearing_fmt, locationName, qiblaBearingDeg.roundToInt()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1001,7 +1018,7 @@ private fun QiblaCompassSheet(
             ) {
                 Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("Change City")
+                Text(stringResource(R.string.change_city))
             }
 
             Box(
@@ -1032,7 +1049,7 @@ private fun QiblaCompassSheet(
             }
 
             Button(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.action_close))
             }
             Spacer(modifier = Modifier.height(10.dp))
         }
@@ -1082,7 +1099,7 @@ private fun PrayerScheduleSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Prayer Schedule & Timings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.prayer_schedule_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     Text(locationName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 FilledTonalButton(
@@ -1094,7 +1111,7 @@ private fun PrayerScheduleSheet(
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Change City")
+                    Text(stringResource(R.string.change_city))
                 }
             }
 
@@ -1103,17 +1120,17 @@ private fun PrayerScheduleSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Asr Madhab:", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.asr_madhab_label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 FilterChip(
                     selected = !hanafiAsr,
                     onClick = { onToggleHanafiAsr(false) },
-                    label = { Text("Standard (Shafi'i)") },
+                    label = { Text(stringResource(R.string.madhab_standard)) },
                     modifier = Modifier.testTag("madhab_standard_chip")
                 )
                 FilterChip(
                     selected = hanafiAsr,
                     onClick = { onToggleHanafiAsr(true) },
-                    label = { Text("Hanafi") },
+                    label = { Text(stringResource(R.string.madhab_hanafi)) },
                     modifier = Modifier.testTag("madhab_hanafi_chip")
                 )
             }
@@ -1132,8 +1149,8 @@ private fun PrayerScheduleSheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Next Prayer", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                        Text(prayerTimes.nextPrayerName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(stringResource(R.string.next_prayer_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Text(localizedPrayerName(prayerTimes.nextPrayerName), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(prayerTimes.nextPrayerTime, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onPrimaryContainer)
@@ -1177,7 +1194,7 @@ private fun PrayerScheduleSheet(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = row.name,
+                                text = localizedPrayerName(row.name),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = if (row.isFard) FontWeight.SemiBold else FontWeight.Normal
                             )

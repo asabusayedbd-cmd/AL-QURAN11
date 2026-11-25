@@ -82,7 +82,7 @@ fun LibraryScreen(
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
-                    text = { Text("Notes (${state.notes.size})") },
+                    text = { Text(stringResource(R.string.library_notes_tab_fmt, state.notes.size)) },
                     modifier = Modifier.testTag("library_tab_notes")
                 )
                 Tab(
@@ -109,7 +109,7 @@ fun LibraryScreen(
                                     FilterChip(
                                         selected = selectedCollectionId == null,
                                         onClick = { selectedCollectionId = null },
-                                        label = { Text("All (${state.bookmarks.size})") }
+                                        label = { Text(stringResource(R.string.library_all_fmt, state.bookmarks.size)) }
                                     )
                                 }
                                 items(state.collections, key = { it.id }) { col ->
@@ -126,7 +126,7 @@ fun LibraryScreen(
                                     ) {
                                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Folder")
+                                        Text(stringResource(R.string.library_folder))
                                     }
                                 }
                             }
@@ -142,7 +142,7 @@ fun LibraryScreen(
                             item {
                                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        text = "No bookmarks saved in this collection yet. Tap the bookmark icon beside any Ayah while reading.",
+                                        text = stringResource(R.string.library_empty_bookmarks),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(18.dp)
@@ -181,7 +181,7 @@ fun LibraryScreen(
                                             )
                                         }
                                         IconButton(onClick = { viewModel.deleteBookmark(bm.id) }) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Delete bookmark")
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                                         }
                                     }
                                 }
@@ -200,7 +200,7 @@ fun LibraryScreen(
                             item {
                                 OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                                     Text(
-                                        text = "No personal reflections yet. Open Tafsir on any Ayah to record your study notes.",
+                                        text = stringResource(R.string.library_empty_notes),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.padding(18.dp)
@@ -233,7 +233,7 @@ fun LibraryScreen(
                                             )
                                         }
                                         IconButton(onClick = { viewModel.deleteNote(note.id) }) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Delete note")
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                                         }
                                     }
                                 }
@@ -259,7 +259,12 @@ fun LibraryScreen(
                                         style = MaterialTheme.typography.titleLarge
                                     )
                                     Text(
-                                        text = "${state.khatamEstimate.completedAyahs} / ${state.khatamEstimate.totalAyahsInQuran} Ayahs (${(state.khatamEstimate.completionPercentage * 100).roundToInt()}%)",
+                                        text = stringResource(
+                                            R.string.library_khatam_progress_fmt,
+                                            state.khatamEstimate.completedAyahs,
+                                            state.khatamEstimate.totalAyahsInQuran,
+                                            (state.khatamEstimate.completionPercentage * 100).roundToInt()
+                                        ),
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     LinearProgressIndicator(
@@ -267,7 +272,11 @@ fun LibraryScreen(
                                         modifier = Modifier.fillMaxWidth().height(8.dp)
                                     )
                                     Text(
-                                        text = "Pace for ${state.progress.khatamTargetDays}-day Khatam: ~${state.khatamEstimate.requiredAyahsPerDay} Ayahs/day",
+                                        text = stringResource(
+                                            R.string.library_khatam_pace_fmt,
+                                            state.progress.khatamTargetDays,
+                                            state.khatamEstimate.requiredAyahsPerDay
+                                        ),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
@@ -282,7 +291,7 @@ fun LibraryScreen(
                                     }
 
                                     Text(
-                                        text = "Daily Ayah Goal: ${state.progress.dailyAyahGoal}",
+                                        text = stringResource(R.string.library_daily_goal_fmt, state.progress.dailyAyahGoal),
                                         style = MaterialTheme.typography.labelLarge
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -307,12 +316,20 @@ fun LibraryScreen(
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Text(
-                                        text = "Suggested 5-Prayer Routine",
+                                        text = stringResource(R.string.library_routine_title),
                                         style = MaterialTheme.typography.titleMedium,
                                         color = MaterialTheme.colorScheme.primary
                                     )
                                     Text(
-                                        text = "Read ~$perSalah Ayahs after each Fard prayer (${perSalah + remainder} after Fajr) to complete ${state.khatamEstimate.requiredAyahsPerDay} Ayahs/day — currently on a ${state.currentStreakDays}-day streak (${state.todayAyahsRead}/${state.progress.dailyAyahGoal} today).",
+                                        text = stringResource(
+                                            R.string.library_routine_desc_fmt,
+                                            perSalah,
+                                            perSalah + remainder,
+                                            state.khatamEstimate.requiredAyahsPerDay,
+                                            state.currentStreakDays,
+                                            state.todayAyahsRead,
+                                            state.progress.dailyAyahGoal
+                                        ),
                                         style = banglaSafeBodyStyle(14f, state.preferences.uiLanguageCode),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -326,13 +343,13 @@ fun LibraryScreen(
                                     modifier = Modifier.padding(18.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text("Quranic Vocabulary Flashcards", style = MaterialTheme.typography.titleMedium)
-                                    Text("Practice high-frequency Quranic roots and vocabulary offline.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(stringResource(R.string.library_vocab_title), style = MaterialTheme.typography.titleMedium)
+                                    Text(stringResource(R.string.library_vocab_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     FilledTonalButton(
                                         onClick = { showFlashcards = true },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text("Open Vocabulary Flashcards")
+                                        Text(stringResource(R.string.library_vocab_button))
                                     }
                                 }
                             }
@@ -349,12 +366,12 @@ fun LibraryScreen(
     if (showNewFolderDialog) {
         AlertDialog(
             onDismissRequest = { showNewFolderDialog = false },
-            title = { Text("New Bookmark Collection") },
+            title = { Text(stringResource(R.string.library_new_folder_title)) },
             text = {
                 OutlinedTextField(
                     value = newFolderName,
                     onValueChange = { newFolderName = it },
-                    label = { Text("Collection Name") },
+                    label = { Text(stringResource(R.string.library_folder_name_hint)) },
                     singleLine = true
                 )
             },
@@ -366,12 +383,12 @@ fun LibraryScreen(
                         showNewFolderDialog = false
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.action_save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showNewFolderDialog = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

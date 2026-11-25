@@ -51,10 +51,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.core.database.SurahEntity
 import com.example.core.localization.BidiUtils
 
@@ -92,18 +94,18 @@ fun DownloadManagerSheet(
             ) {
                 Column {
                     Text(
-                        text = "Offline Content & Downloads",
+                        text = stringResource(R.string.dm_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Download or delete any Surah, Audio, Translation, or Tafsir",
+                        text = stringResource(R.string.dm_subtitle),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_close))
                 }
             }
 
@@ -120,13 +122,18 @@ fun DownloadManagerSheet(
                     ) {
                         Column {
                             Text(
-                                text = "Downloaded Surahs: $downloadedSurahsCount / 114",
+                                text = stringResource(R.string.dm_downloaded_surahs_fmt, downloadedSurahsCount),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             val audioMb = String.format(java.util.Locale.US, "%.1f MB", state.offlineCacheSizeBytes / (1024.0 * 1024.0))
                             Text(
-                                text = "Audio Cache: $audioMb • $downloadedTrsCount Translations • $downloadedTafsirsCount Tafsirs",
+                                text = stringResource(
+                                    R.string.dm_cache_summary_fmt,
+                                    audioMb,
+                                    downloadedTrsCount,
+                                    downloadedTafsirsCount
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -156,7 +163,7 @@ fun DownloadManagerSheet(
                                     onClick = { viewModel.cancelBatchDownload() },
                                     modifier = Modifier.height(24.dp)
                                 ) {
-                                    Text("Cancel", fontSize = 12.sp)
+                                    Text(stringResource(R.string.action_cancel), fontSize = 12.sp)
                                 }
                             }
                             LinearProgressIndicator(
@@ -182,7 +189,7 @@ fun DownloadManagerSheet(
                         ) {
                             Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Download All (114)", fontSize = 12.sp, maxLines = 1)
+                            Text(stringResource(R.string.dm_download_all_114), fontSize = 12.sp, maxLines = 1)
                         }
 
                         OutlinedButton(
@@ -197,7 +204,7 @@ fun DownloadManagerSheet(
                         ) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Delete All", fontSize = 12.sp, maxLines = 1)
+                            Text(stringResource(R.string.dm_delete_all), fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }

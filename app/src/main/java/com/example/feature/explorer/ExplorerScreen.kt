@@ -159,7 +159,7 @@ fun ExplorerScreen(
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
-                            text = "114 Surahs • 30 Juz • 604 Pages",
+                            text = stringResource(R.string.explorer_stats_badge),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -174,7 +174,7 @@ fun ExplorerScreen(
                     trailingIcon = {
                         if (state.searchQuery.isNotEmpty()) {
                             IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear))
                             }
                         }
                     },
@@ -188,7 +188,11 @@ fun ExplorerScreen(
 
                 if (state.searchQuery.isNotBlank()) {
                     Text(
-                        text = "${state.matchedSurahs.size} Surahs • ${state.searchResults.size} Ayah matches",
+                        text = stringResource(
+                            R.string.explorer_search_matches_fmt,
+                            state.matchedSurahs.size,
+                            state.searchResults.size
+                        ),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -334,7 +338,11 @@ fun ExplorerScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Text(
-                                            text = "${surah.revelationPlace.replaceFirstChar { it.uppercase() }} • ${BidiUtils.formatNumber(surah.ayahCount, state.preferences.uiLanguageCode)} Ayahs",
+                                            text = stringResource(
+                                                R.string.explorer_surah_row_meta_fmt,
+                                                surah.revelationPlace.replaceFirstChar { it.uppercase() },
+                                                BidiUtils.formatNumber(surah.ayahCount, state.preferences.uiLanguageCode)
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -367,7 +375,7 @@ fun ExplorerScreen(
                                             ) {
                                                 Icon(
                                                     Icons.Default.DeleteOutline,
-                                                    contentDescription = "Delete Surah",
+                                                    contentDescription = stringResource(R.string.action_delete),
                                                     tint = MaterialTheme.colorScheme.error.copy(alpha = 0.75f),
                                                     modifier = Modifier.size(18.dp)
                                                 )
@@ -412,7 +420,10 @@ fun ExplorerScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = "Juz ${BidiUtils.formatNumber(juzItem.juz, state.preferences.uiLanguageCode)}",
+                                            text = stringResource(
+                                                R.string.explorer_juz_fmt,
+                                                BidiUtils.formatNumber(juzItem.juz, state.preferences.uiLanguageCode)
+                                            ),
                                             style = MaterialTheme.typography.titleMedium
                                         )
                                         Text(
@@ -451,7 +462,7 @@ fun ExplorerScreen(
                                             }
                                         onOpenPage(resolvedSurah, page)
                                     },
-                                    label = { Text("P. $page") },
+                                    label = { Text(stringResource(R.string.explorer_page_chip_fmt, page)) },
                                     modifier = Modifier.testTag("mushaf_page_$page")
                                 )
                             }
