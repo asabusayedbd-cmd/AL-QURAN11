@@ -268,6 +268,18 @@
     <string name="word_sarf_prefix">সরফ (রূপতত্ত্ব)</string>
     <string name="word_nahw_prefix">নাহু (বাক্যতত্ত্ব)</string>
     <string name="word_other_forms_title">কুরআনে একই মূলের অন্যান্য রূপ</string>
+    <string name="word_tab_meaning">অর্থ</string>
+    <string name="word_tab_sarf">শব্দতত্ত্ব</string>
+    <string name="word_tab_nahw">ব্যাকরণ</string>
+    <string name="word_tab_occurrences">পুনরাবৃত্তি</string>
+    <string name="word_root_derived_banner">মূল রূপ / সাধিত রূপ</string>
+    <string name="word_root_fmt">মূল: %1$s</string>
+    <string name="word_derived_fmt">সাধিত: %1$s</string>
+    <string name="word_grammar_guide_tip">এখন অর্থ, শব্দতত্ত্ব ও ব্যাকরণ বিশ্লেষণ দিয়ে প্রতিটি শব্দ আরও ভালোভাবে বুঝুন।</string>
+    <string name="word_classical_lexicon_title">প্রামাণ্য আভিধানিক অর্থ ও তাফসীরীয় ব্যাখ্যা</string>
+    <string name="word_classical_sarf_title">বিশুদ্ধ শাস্ত্রীয় সরফ (শব্দতত্ত্ব ও গঠন)</string>
+    <string name="word_classical_irab_title">বিশুদ্ধ শাস্ত্রীয় ই‘রাব (ব্যাকরণগত কারক ও অবস্থান)</string>
+    <string name="word_bab_wazn_title">বাব ও ওযন গঠন (الوزن والباب)</string>
 
     <string name="location_picker_subtitle">বাংলাদেশের ৬৪ জেলা, উপজেলা ও বিশ্বব্যাপী শহর</string>
     <string name="gps_button">জিপিএস</string>

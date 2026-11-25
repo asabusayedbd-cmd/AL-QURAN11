@@ -33,6 +33,8 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -76,6 +78,7 @@ fun WordMorphologySheet(
     arabicFontFamily: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO
 ) {
     val analysis = inspected.analysis
+    var selectedTab by remember { mutableStateOf(0) }
     var showLangPicker by remember { mutableStateOf(false) }
 
     if (showLangPicker) {
@@ -207,167 +210,447 @@ fun WordMorphologySheet(
                 }
             }
 
-            // Word Explanation & Context Card (with Instant বাংলা + Any Language translation)
+            // Root vs Derived Form Banner & Grammar Guide Tip
             Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)),
-                modifier = Modifier.fillMaxWidth()
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("word_root_derived_banner")
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.word_explanation_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                    )
-                    FlowRow(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FilledTonalButton(
-                            onClick = { onTranslateWord("bn") },
-                            modifier = Modifier.testTag("translate_word_bn_button")
-                        ) {
-                            Text(stringResource(R.string.translate_all_bangla))
-                        }
-                        androidx.compose.material3.OutlinedButton(
-                            onClick = { showLangPicker = true },
-                            modifier = Modifier.testTag("translate_word_picker_button")
-                        ) {
-                            Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.translate_any_language))
-                        }
-                    }
-
-                    if (inspected.isTranslatingWord) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(stringResource(R.string.translate_translating), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-
-                    if (inspected.wordTranslationError != null) {
                         Text(
-                            text = inspected.wordTranslationError,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            text = stringResource(R.string.word_root_derived_banner),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
                         )
-                    }
-
-                    // Display active translated meaning & explanation if user triggered translation
-                    if (inspected.translatedTargetLang != null && (!inspected.translatedMeaning.isNullOrBlank() || !inspected.translatedExplanation.isNullOrBlank())) {
-                        Surface(
-                            shape = MaterialTheme.shapes.medium,
-                            color = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                        val activeRoot = analysis.rootLetters.ifBlank { analysis.spacedRoot }
+                        if (activeRoot.isNotBlank()) {
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                             ) {
-                                val langLabel = LineTranslator.languageLabel(inspected.translatedTargetLang)
                                 Text(
-                                    text = stringResource(R.string.translate_all_in_lang_fmt, langLabel),
+                                    text = stringResource(R.string.word_root_fmt, activeRoot),
                                     style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.Bold
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                 )
-                                if (!inspected.translatedMeaning.isNullOrBlank()) {
-                                    Text(
-                                        text = inspected.translatedMeaning,
-                                        style = banglaSafeBodyStyle(18f, inspected.translatedTargetLang),
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                }
-                                if (!inspected.translatedExplanation.isNullOrBlank()) {
-                                    Text(
-                                        text = inspected.translatedExplanation,
-                                        style = banglaSafeBodyStyle(15f, inspected.translatedTargetLang),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
                             }
                         }
-                    } else {
-                        // Default localized explanation (Bangla by default when Bengali UI, English or Arabic otherwise)
+                    }
+
+                    val activeRoot = analysis.rootLetters.ifBlank { analysis.spacedRoot }
+                    val activeDerived = analysis.derivedFormArabic.ifBlank { analysis.stemArabic }
+                    val activeDerivedLabel = if (uiLanguageCode.equals("bn", true)) analysis.derivedFormBn.ifBlank { activeDerived } else activeDerived
+
+                    if (activeRoot.isNotBlank()) {
                         Text(
-                            text = analysis.localizedExplanation(uiLanguageCode),
-                            style = banglaSafeBodyStyle(15f, uiLanguageCode),
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                            text = "${stringResource(R.string.word_root_fmt, activeRoot)} • ${stringResource(R.string.word_derived_fmt, activeDerivedLabel)}",
+                            style = banglaSafeBodyStyle(14.5f, uiLanguageCode),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.word_derived_fmt, activeDerivedLabel),
+                            style = banglaSafeBodyStyle(14.5f, uiLanguageCode),
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
+
+                    Text(
+                        text = stringResource(R.string.word_grammar_guide_tip),
+                        style = banglaSafeBodyStyle(12.5f, uiLanguageCode),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            // Morphological Segmentation Strip (Prefixes • Stem • Suffixes)
-            if (analysis.segments.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.GraphicEq,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.word_segments_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
+            // 4 Specialized Inspector Tabs (Meaning, Morphology, Grammar, Occurrences)
+            val tabs = listOf(
+                R.string.word_tab_meaning,
+                R.string.word_tab_sarf,
+                R.string.word_tab_nahw,
+                R.string.word_tab_occurrences
+            )
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                tabs.forEachIndexed { index, titleRes ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                text = stringResource(titleRes),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    )
+                }
+            }
+
+            // Tab 0: Meaning (অর্থ)
+            if (selectedTab == 0) {
+                // Classical Theological Lexicon Definition Card
+                if (analysis.classicalDefinitionAr.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.word_classical_lexicon_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Text(
+                                    text = analysis.classicalDefinitionAr,
+                                    fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                    fontSize = 18.sp,
+                                    lineHeight = 28.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            val localizedDef = if (uiLanguageCode.equals("bn", true)) analysis.classicalDefinitionBn else analysis.classicalDefinitionEn
+                            if (localizedDef.isNotBlank()) {
+                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                                Text(
+                                    text = localizedDef,
+                                    style = banglaSafeBodyStyle(14f, uiLanguageCode),
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
                     }
-                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                }
+
+                // Word Explanation & Context Card (with Instant বাংলা + Any Language translation)
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.45f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.word_explanation_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
                         FlowRow(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            analysis.segments.forEach { seg ->
-                                val bgColor = when (seg.roleType) {
-                                    SegmentRoleType.PREFIX -> MaterialTheme.colorScheme.tertiaryContainer
-                                    SegmentRoleType.STEM -> MaterialTheme.colorScheme.primaryContainer
-                                    SegmentRoleType.SUFFIX -> MaterialTheme.colorScheme.secondaryContainer
-                                }
-                                val fgColor = when (seg.roleType) {
-                                    SegmentRoleType.PREFIX -> MaterialTheme.colorScheme.onTertiaryContainer
-                                    SegmentRoleType.STEM -> MaterialTheme.colorScheme.onPrimaryContainer
-                                    SegmentRoleType.SUFFIX -> MaterialTheme.colorScheme.onSecondaryContainer
-                                }
-                                Surface(
-                                    shape = MaterialTheme.shapes.medium,
-                                    color = bgColor,
-                                    border = BorderStroke(0.75.dp, fgColor.copy(alpha = 0.25f))
+                            FilledTonalButton(
+                                onClick = { onTranslateWord("bn") },
+                                modifier = Modifier.testTag("translate_word_bn_button")
+                            ) {
+                                Text(stringResource(R.string.translate_all_bangla))
+                            }
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { showLangPicker = true },
+                                modifier = Modifier.testTag("translate_word_picker_button")
+                            ) {
+                                Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.translate_any_language))
+                            }
+                        }
+
+                        if (inspected.isTranslatingWord) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(stringResource(R.string.translate_translating), style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+
+                        if (inspected.wordTranslationError != null) {
+                            Text(
+                                text = inspected.wordTranslationError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
+                        // Display active translated meaning & explanation if user triggered translation
+                        if (inspected.translatedTargetLang != null && (!inspected.translatedMeaning.isNullOrBlank() || !inspected.translatedExplanation.isNullOrBlank())) {
+                            Surface(
+                                shape = MaterialTheme.shapes.medium,
+                                color = MaterialTheme.colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
+                                    val langLabel = LineTranslator.languageLabel(inspected.translatedTargetLang)
+                                    Text(
+                                        text = stringResource(R.string.translate_all_in_lang_fmt, langLabel),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    if (!inspected.translatedMeaning.isNullOrBlank()) {
                                         Text(
-                                            text = seg.arabicPrefixOrPart,
-                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
-                                            fontSize = 22.sp,
-                                            color = fgColor
+                                            text = inspected.translatedMeaning,
+                                            style = banglaSafeBodyStyle(18f, inspected.translatedTargetLang),
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                    }
+                                    if (!inspected.translatedExplanation.isNullOrBlank()) {
+                                        Text(
+                                            text = inspected.translatedExplanation,
+                                            style = banglaSafeBodyStyle(15f, inspected.translatedTargetLang),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Default localized explanation (Bangla by default when Bengali UI, English or Arabic otherwise)
+                            Text(
+                                text = analysis.localizedExplanation(uiLanguageCode),
+                                style = banglaSafeBodyStyle(15f, uiLanguageCode),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    }
+                }
+
+                // Meanings Across Languages
+                if (analysis.allMeanings.isNotEmpty()) {
+                    OutlinedCard(
+                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Translate,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(R.string.word_meanings_title),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            HorizontalDivider(thickness = 0.5.dp)
+                            analysis.allMeanings.forEach { (langLabel, meaningText) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.Top
+                                ) {
+                                    Text(
+                                        text = langLabel,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.weight(0.42f)
+                                    )
+                                    Text(
+                                        text = meaningText,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        textAlign = TextAlign.End,
+                                        modifier = Modifier.weight(0.58f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Tab 1: Morphology / Sarf (শব্দতত্ত্ব)
+            if (selectedTab == 1) {
+                // Classical Sarf & Derivation Analysis Card
+                if (analysis.classicalSarfAr.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.word_classical_sarf_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary
+                            )
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Text(
+                                    text = analysis.classicalSarfAr,
+                                    fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                    fontSize = 17.sp,
+                                    lineHeight = 26.sp,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            val localizedSarf = if (uiLanguageCode.equals("bn", true)) analysis.classicalSarfBn else analysis.classicalSarfEn
+                            if (localizedSarf.isNotBlank()) {
+                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
+                                Text(
+                                    text = localizedSarf,
+                                    style = banglaSafeBodyStyle(14f, uiLanguageCode),
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Morphological Pattern & Conjugation (الوزن والباب)
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.word_bab_wazn_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        HorizontalDivider(thickness = 0.5.dp)
+                        MorphologyRow(
+                            label = stringResource(R.string.word_sarf_pattern_label),
+                            value = analysis.localizedSarfPattern(uiLanguageCode)
+                        )
+                        MorphologyRow(
+                            label = "কাণ্ড রূপ (Stem)",
+                            value = analysis.stemArabic
+                        )
+                        val activeRoot = analysis.rootLetters.ifBlank { analysis.spacedRoot }
+                        if (activeRoot.isNotBlank()) {
+                            MorphologyRow(
+                                label = "${stringResource(R.string.word_root_label)} (جذر)",
+                                value = activeRoot
+                            )
+                        }
+                        if (inspected.word.lemmaArabic.isNotBlank()) {
+                            MorphologyRow(
+                                label = "${stringResource(R.string.word_lemma_label)} (قاعدة)",
+                                value = inspected.word.lemmaArabic
+                            )
+                        }
+                        val sarfNote = if (uiLanguageCode.equals("bn", true)) analysis.sarfNoteBn else analysis.sarfNoteEn
+                        if (sarfNote.isNotBlank()) {
+                            Text(
+                                text = "${stringResource(R.string.word_sarf_prefix)}: $sarfNote",
+                                style = banglaSafeBodyStyle(13.5f, uiLanguageCode),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+
+                // Morphological Segmentation Strip (Prefixes • Stem • Suffixes)
+                if (analysis.segments.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.GraphicEq,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(R.string.word_segments_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                analysis.segments.forEach { seg ->
+                                    val bgColor = when (seg.roleType) {
+                                        SegmentRoleType.PREFIX -> MaterialTheme.colorScheme.tertiaryContainer
+                                        SegmentRoleType.STEM -> MaterialTheme.colorScheme.primaryContainer
+                                        SegmentRoleType.SUFFIX -> MaterialTheme.colorScheme.secondaryContainer
+                                    }
+                                    val fgColor = when (seg.roleType) {
+                                        SegmentRoleType.PREFIX -> MaterialTheme.colorScheme.onTertiaryContainer
+                                        SegmentRoleType.STEM -> MaterialTheme.colorScheme.onPrimaryContainer
+                                        SegmentRoleType.SUFFIX -> MaterialTheme.colorScheme.onSecondaryContainer
+                                    }
+                                    Surface(
+                                        shape = MaterialTheme.shapes.medium,
+                                        color = bgColor,
+                                        border = BorderStroke(0.75.dp, fgColor.copy(alpha = 0.25f))
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
                                             Text(
-                                                text = if (uiLanguageCode.equals("bn", true)) seg.banglaRoleLabel else seg.roleLabel,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.SemiBold,
+                                                text = seg.arabicPrefixOrPart,
+                                                fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                                fontSize = 22.sp,
                                                 color = fgColor
                                             )
-                                            Text(
-                                                text = "${seg.arabicRoleLabel} • ${if (uiLanguageCode.equals("bn", true)) seg.banglaRoleLabel else seg.roleLabel}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = fgColor.copy(alpha = 0.85f)
-                                            )
+                                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                                Text(
+                                                    text = if (uiLanguageCode.equals("bn", true)) seg.banglaRoleLabel else seg.roleLabel,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = fgColor
+                                                )
+                                                Text(
+                                                    text = "${seg.arabicRoleLabel} • ${if (uiLanguageCode.equals("bn", true)) seg.banglaRoleLabel else seg.roleLabel}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = fgColor.copy(alpha = 0.85f)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -377,272 +660,242 @@ fun WordMorphologySheet(
                 }
             }
 
-            // Meanings Across Languages
-            if (analysis.allMeanings.isNotEmpty()) {
-                OutlinedCard(
+            // Tab 2: Grammar / Nahw (ব্যাকরণ ও ই‘রাব)
+            if (selectedTab == 2) {
+                // Classical I'rab Analysis Card
+                if (analysis.classicalIrabAr.isNotBlank()) {
+                    Surface(
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.25f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.word_classical_irab_title),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                Text(
+                                    text = analysis.classicalIrabAr,
+                                    fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                    fontSize = 17.sp,
+                                    lineHeight = 26.sp,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
+                            }
+                            val localizedIrab = if (uiLanguageCode.equals("bn", true)) analysis.classicalIrabBn else analysis.classicalIrabEn
+                            if (localizedIrab.isNotBlank()) {
+                                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.2f))
+                                Text(
+                                    text = localizedIrab,
+                                    style = banglaSafeBodyStyle(14f, uiLanguageCode),
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Full Linguistic & Syntax Table
+                Surface(
                     shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         modifier = Modifier.padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Translate,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = stringResource(R.string.word_meanings_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold
+                        Text(
+                            text = stringResource(R.string.word_grammar_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        HorizontalDivider(thickness = 0.5.dp)
+                        MorphologyRow(
+                            label = stringResource(R.string.word_pos_label),
+                            value = analysis.localizedPos(uiLanguageCode)
+                        )
+                        MorphologyRow(
+                            label = stringResource(R.string.word_case_label),
+                            value = analysis.localizedCaseMood(uiLanguageCode)
+                        )
+                        MorphologyRow(
+                            label = stringResource(R.string.word_definiteness_label),
+                            value = analysis.localizedDefiniteness(uiLanguageCode)
+                        )
+                        MorphologyRow(
+                            label = stringResource(R.string.word_number_gender_label),
+                            value = analysis.localizedNumberGender(uiLanguageCode)
+                        )
+                        val nahwNote = analysis.localizedNahwFunction(uiLanguageCode)
+                        if (nahwNote.isNotBlank()) {
+                            MorphologyRow(
+                                label = "বাক্যগত অবস্থান",
+                                value = nahwNote
                             )
                         }
+                        if (inspected.word.grammarTagJson.isNotBlank()) {
+                            MorphologyRow(
+                                label = stringResource(R.string.word_grammar_label),
+                                value = inspected.word.grammarTagJson
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Tab 3: Occurrences / Concordance (পুনরাবৃত্তি)
+            if (selectedTab == 3) {
+                // Occurrence Counts Summary
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "কুরআনে শব্দের সংখ্যা ও পুনরাবৃত্তি",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                         HorizontalDivider(thickness = 0.5.dp)
-                        analysis.allMeanings.forEach { (langLabel, meaningText) ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text(
-                                    text = langLabel,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.weight(0.42f)
-                                )
-                                Text(
-                                    text = meaningText,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium,
-                                    textAlign = TextAlign.End,
-                                    modifier = Modifier.weight(0.58f)
-                                )
+                        MorphologyRow(
+                            label = stringResource(R.string.word_exact_occurrences_label),
+                            value = stringResource(R.string.word_times_fmt, inspected.exactOccurrencesCount)
+                        )
+                        MorphologyRow(
+                            label = stringResource(R.string.word_occurrences_label),
+                            value = stringResource(R.string.word_times_fmt, inspected.rootOccurrencesCount)
+                        )
+                    }
+                }
+
+                // Other Forms in the Quran (Sarf Morphological Family)
+                if (inspected.otherForms.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = stringResource(R.string.word_other_forms_title),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        FlowRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            inspected.otherForms.forEach { form ->
+                                Surface(
+                                    shape = MaterialTheme.shapes.small,
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                    modifier = Modifier
+                                        .testTag("word_form_chip_${form.sampleVerseKey}")
+                                        .clickable {
+                                            onNavigateToOccurrence(form.sampleSurahId, form.sampleAyahNumber)
+                                            onDismiss()
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = form.textUthmani,
+                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                            fontSize = 18.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = "×${form.occurrenceCount}",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // Full Linguistic & Morphology Table
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.word_grammar_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    HorizontalDivider(thickness = 0.5.dp)
-                    MorphologyRow(
-                        label = stringResource(R.string.word_pos_label),
-                        value = analysis.localizedPos(uiLanguageCode)
-                    )
-                    MorphologyRow(
-                        label = stringResource(R.string.word_sarf_pattern_label),
-                        value = analysis.localizedSarfPattern(uiLanguageCode)
-                    )
-                    MorphologyRow(
-                        label = stringResource(R.string.word_case_label),
-                        value = analysis.localizedCaseMood(uiLanguageCode)
-                    )
-                    MorphologyRow(
-                        label = stringResource(R.string.word_definiteness_label),
-                        value = analysis.localizedDefiniteness(uiLanguageCode)
-                    )
-                    MorphologyRow(
-                        label = stringResource(R.string.word_number_gender_label),
-                        value = analysis.localizedNumberGender(uiLanguageCode)
-                    )
-                    if (inspected.word.rootArabic.isNotBlank()) {
-                        MorphologyRow(
-                            label = "${stringResource(R.string.word_root_label)} (جذر)",
-                            value = analysis.spacedRoot
-                        )
+                // Clickable Root Occurrences in Loaded Quran
+                if (inspected.rootOccurrences.isNotEmpty()) {
+                    val concordanceTitle = if (inspected.word.rootArabic.isNotBlank()) {
+                        stringResource(R.string.word_concordance_root_fmt, inspected.word.rootArabic)
+                    } else {
+                        stringResource(R.string.word_concordance_word_fmt, inspected.word.textUthmani)
                     }
-                    if (inspected.word.lemmaArabic.isNotBlank()) {
-                        MorphologyRow(
-                            label = "${stringResource(R.string.word_lemma_label)} (قاعدة)",
-                            value = inspected.word.lemmaArabic
-                        )
-                    }
-                    if (inspected.word.grammarTagJson.isNotBlank()) {
-                        MorphologyRow(
-                            label = stringResource(R.string.word_grammar_label),
-                            value = inspected.word.grammarTagJson
-                        )
-                    }
-                    MorphologyRow(
-                        label = stringResource(R.string.word_exact_occurrences_label),
-                        value = stringResource(R.string.word_times_fmt, inspected.exactOccurrencesCount)
-                    )
-                    MorphologyRow(
-                        label = stringResource(R.string.word_occurrences_label),
-                        value = stringResource(R.string.word_times_fmt, inspected.rootOccurrencesCount)
-                    )
-                }
-            }
-
-            // Sarf (Morphology) & Nahw (Syntax) Insight Card
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.word_sarf_nahw_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
-                    )
-                    HorizontalDivider(thickness = 0.5.dp)
-                    val sarfNote = if (uiLanguageCode.equals("bn", true)) analysis.sarfNoteBn else analysis.sarfNoteEn
-                    val nahwNote = analysis.localizedNahwFunction(uiLanguageCode)
-                    if (sarfNote.isNotBlank()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "${stringResource(R.string.word_sarf_prefix)}: $sarfNote",
-                            style = banglaSafeBodyStyle(13.5f, uiLanguageCode),
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = concordanceTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
                         )
-                    }
-                    if (nahwNote.isNotBlank()) {
-                        Text(
-                            text = "${stringResource(R.string.word_nahw_prefix)}: $nahwNote",
-                            style = banglaSafeBodyStyle(13.5f, uiLanguageCode),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Other Forms in the Quran (Sarf Morphological Family)
-            if (inspected.otherForms.isNotEmpty()) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = stringResource(R.string.word_other_forms_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        inspected.otherForms.forEach { form ->
-                            Surface(
-                                shape = MaterialTheme.shapes.small,
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                        inspected.rootOccurrences.take(8).forEach { occ ->
+                            OutlinedCard(
                                 modifier = Modifier
-                                    .testTag("word_form_chip_${form.sampleVerseKey}")
+                                    .fillMaxWidth()
+                                    .testTag("root_occurrence_${occ.verseKey}")
                                     .clickable {
-                                        onNavigateToOccurrence(form.sampleSurahId, form.sampleAyahNumber)
+                                        onNavigateToOccurrence(occ.surahId, occ.ayahNumber)
                                         onDismiss()
                                     }
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(
-                                        text = form.textUthmani,
-                                        fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
-                                        fontSize = 18.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Text(
-                                        text = "×${form.occurrenceCount}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Clickable Root Occurrences in Loaded Quran
-            if (inspected.rootOccurrences.isNotEmpty()) {
-                val concordanceTitle = if (inspected.word.rootArabic.isNotBlank()) {
-                    stringResource(R.string.word_concordance_root_fmt, inspected.word.rootArabic)
-                } else {
-                    stringResource(R.string.word_concordance_word_fmt, inspected.word.textUthmani)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = concordanceTitle,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    inspected.rootOccurrences.take(8).forEach { occ ->
-                        OutlinedCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("root_occurrence_${occ.verseKey}")
-                                .clickable {
-                                    onNavigateToOccurrence(occ.surahId, occ.ayahNumber)
-                                    onDismiss()
-                                }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column(
-                                    modifier = Modifier.weight(1f),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            text = BidiUtils.wrapVerseKey(occ.verseKey),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = occ.wordArabic,
-                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
-                                            fontSize = 18.sp,
-                                            color = MaterialTheme.colorScheme.secondary
-                                        )
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                text = BidiUtils.wrapVerseKey(occ.verseKey),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Text(
+                                                text = occ.wordArabic,
+                                                fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                                fontSize = 18.sp,
+                                                color = MaterialTheme.colorScheme.secondary
+                                            )
+                                        }
+                                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                            Text(
+                                                text = occ.ayahArabic,
+                                                fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
+                                                fontSize = 16.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
                                     }
-                                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                        Text(
-                                            text = occ.ayahArabic,
-                                            fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
-                                            fontSize = 16.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Open verse ${occ.verseKey}",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Open verse ${occ.verseKey}",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
                             }
                         }
                     }

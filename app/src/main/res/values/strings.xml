@@ -268,6 +268,18 @@
     <string name="word_sarf_prefix">Sarf (Morphology)</string>
     <string name="word_nahw_prefix">Nahw (Syntax)</string>
     <string name="word_other_forms_title">Other Forms in Al-Quran</string>
+    <string name="word_tab_meaning">Meaning</string>
+    <string name="word_tab_sarf">Morphology (Sarf)</string>
+    <string name="word_tab_nahw">Grammar (Nahw)</string>
+    <string name="word_tab_occurrences">Occurrences</string>
+    <string name="word_root_derived_banner">Root Form / Derived Form</string>
+    <string name="word_root_fmt">Root: %1$s</string>
+    <string name="word_derived_fmt">Derived: %1$s</string>
+    <string name="word_grammar_guide_tip">Understand each word deeply with meaning, morphology and grammar analysis.</string>
+    <string name="word_classical_lexicon_title">Classical Lexicon &amp; Theological Meaning</string>
+    <string name="word_classical_sarf_title">Classical Sarf &amp; Derivation (علم الصرف)</string>
+    <string name="word_classical_irab_title">Classical I\'rab &amp; Syntax (إعراب القرآن)</string>
+    <string name="word_bab_wazn_title">Morphological Pattern &amp; Conjugation (الوزن والباب)</string>
 
     <string name="location_picker_subtitle">All 64 Bangladesh Districts, Upazilas &amp; Global Cities</string>
     <string name="gps_button">Use GPS</string>

@@ -41,7 +41,19 @@ data class DetailedWordAnalysis(
     val nahwFunctionEn: String = "",
     val nahwFunctionBn: String = "",
     val definitenessEn: String = "",
-    val definitenessBn: String = ""
+    val definitenessBn: String = "",
+    val classicalIrabAr: String = "",
+    val classicalIrabBn: String = "",
+    val classicalIrabEn: String = "",
+    val classicalSarfAr: String = "",
+    val classicalSarfBn: String = "",
+    val classicalSarfEn: String = "",
+    val rootLetters: String = "",
+    val derivedFormArabic: String = "",
+    val derivedFormBn: String = "",
+    val classicalDefinitionAr: String = "",
+    val classicalDefinitionBn: String = "",
+    val classicalDefinitionEn: String = ""
 ) {
     fun localizedPos(uiLang: String): String = when (uiLang.lowercase()) {
         "bn" -> "$partOfSpeechBn ($partOfSpeechAr)"
@@ -80,11 +92,29 @@ data class DetailedWordAnalysis(
         "ar" -> explanationAr
         else -> explanationEn
     }
+
+    fun localizedClassicalIrab(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> if (classicalIrabBn.isNotBlank()) "$classicalIrabAr\n\n$classicalIrabBn" else classicalIrabAr
+        "ar" -> classicalIrabAr
+        else -> if (classicalIrabEn.isNotBlank()) "$classicalIrabAr\n\n$classicalIrabEn" else classicalIrabAr
+    }
+
+    fun localizedClassicalSarf(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> if (classicalSarfBn.isNotBlank()) "$classicalSarfAr\n\n$classicalSarfBn" else classicalSarfAr
+        "ar" -> classicalSarfAr
+        else -> if (classicalSarfEn.isNotBlank()) "$classicalSarfAr\n\n$classicalSarfEn" else classicalSarfAr
+    }
+
+    fun localizedClassicalDefinition(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> classicalDefinitionBn.ifBlank { classicalDefinitionAr }
+        "ar" -> classicalDefinitionAr
+        else -> classicalDefinitionEn.ifBlank { classicalDefinitionAr }
+    }
 }
 
 object WordMorphologyAnalyzer {
 
-    private val DIACRITIC_REGEX = Regex("[\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]")
+    private val DIACRITIC_REGEX = Regex("[\\u0610-\\u061A\\u0640\\u064B-\\u065F\\u0670\\u06D6-\\u06ED]")
     private val WAQF_MARKS_REGEX = Regex("[\\u06D6-\\u06DC\\u06DF-\\u06E8\\u06EA-\\u06ED]+$")
 
     private data class KnownLexiconEntry(
@@ -172,6 +202,262 @@ object WordMorphologyAnalyzer {
         "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
     )
 
+    data class ClassicalLexiconDetail(
+        val classicalIrabAr: String,
+        val classicalIrabBn: String,
+        val classicalIrabEn: String,
+        val classicalSarfAr: String,
+        val classicalSarfBn: String,
+        val classicalSarfEn: String,
+        val rootLetters: String,
+        val derivedFormArabic: String,
+        val derivedFormBn: String,
+        val classicalDefinitionAr: String,
+        val classicalDefinitionBn: String,
+        val classicalDefinitionEn: String
+    )
+
+    private val CLASSICAL_QURANIC_WORDS: Map<String, ClassicalLexiconDetail> = mapOf(
+        "الرحمن" to ClassicalLexiconDetail(
+            classicalIrabAr = "نَعْتٌ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "লাফযে জালালাহ (আল্লাহ)-র প্রথম সিফাত বা বিশেষণ হিসেবে মাজরুর (জেরযুক্ত), শেষ অক্ষরে কাসরাহ স্পষ্ট।",
+            classicalIrabEn = "Adjective / attribute (Na't) following the genitive divine name, governed with apparent kasrah.",
+            classicalSarfAr = "اسْمٌ مُذَكَّرٌ مُفْرَدٌ مُشْتَقٌّ صِيغَةُ مُبَالَغَةٍ : {الرَّحْمَنِ} سَمَاعِيَّةٌ مِنَ الْفِعْلِ الثَّلَاثِي: (رَحِمَ يَرْحَمُ) مِنْ بَابِ: (عَلِمَ يَعْلَمُ) ثُلَاثِيٌّ مَزِيدٌ بِحَرْفَيْنِ : الْأَلِفِ وَالنُّونِ عَلَى وَزْنِ: (فَعْلَانُ) مِنْ مَادَّةِ: (رحم)",
+            classicalSarfBn = "অতিশয় গুণবাচক বিশেষণ (ছিগায়ে মুবালাগা); সুলাসী ফে‘ল (رَحِمَ يَرْحَمُ) বাবে (عَلِمَ يَعْلَمُ) থেকে আলিফ-নুন বৃদ্ধিসহ (فَعْلَانُ) ওযনে সাধিত।",
+            classicalSarfEn = "Intensive descriptive noun (Sighat Mubalaghah) on the pattern (Fa'lan) from the triliteral root (r-h-m), denoting boundless, all-encompassing mercy.",
+            rootLetters = "رحم",
+            derivedFormArabic = "رحمن (فَعْلَان)",
+            derivedFormBn = "রহমান (ওযন: ফালান / فَعْلَان)",
+            classicalDefinitionAr = "ذُو الرَّحْمَةِ الْعَامَّةِ الَّذِي وَسِعَتْ رَحْمَتُهُ جَمِيعَ الْخَلْقِ فِي الدُّنْيَا.",
+            classicalDefinitionBn = "সর্বব্যাপী ও ব্যাপক রহমতের অধিকারী, যাঁর দয়া ও কৃপা দুনিয়াতে সকল সৃষ্টিকে পরিবেষ্টন করে রেখেছে।",
+            classicalDefinitionEn = "The Possessor of vast, all-encompassing mercy whose mercy embraces every created being."
+        ),
+        "الرحيم" to ClassicalLexiconDetail(
+            classicalIrabAr = "نَعْتٌ ثَانٍ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "দ্বিতীয় সিফাত বা বিশেষণ হিসেবে মাজরুর (জেরযুক্ত), শেষ বর্ণে কাসরাহ স্পষ্ট।",
+            classicalIrabEn = "Second attribute (Na't Thani) in the genitive case, marked with explicit terminal kasrah.",
+            classicalSarfAr = "اسْمٌ مُذَكَّرٌ مُفْرَدٌ مُشْتَقٌّ صِفَةٌ مُشَبَّهَةٌ بِاسْمِ الْفَاعِلِ أَوْ صِيغَةُ مُبَالَغَةٍ عَلَى وَزْنِ: (فَعِيل) مِنَ الْفِعْلِ الثَّلَاثِي: (رَحِمَ) مِنْ مَادَّةِ: (رحم)",
+            classicalSarfBn = "স্থায়ী গুণবাচক বিশেষণ (সিফাতে মুশাব্বাহা) বা অতিশয় গুণবাচক পদ; (فَعِيل) ওযনে সুলাসী ধাতু (ر-ح-ম) থেকে সাধিত।",
+            classicalSarfEn = "Permanent descriptive adjective (Sifah Mushabbahah) on pattern (Fa'il) from triliteral root (r-h-m), indicating continuous and specific mercy.",
+            rootLetters = "رحم",
+            derivedFormArabic = "رحيم (فَعِيل)",
+            derivedFormBn = "রহীম (ওযন: ফাঈল / فَعِيل)",
+            classicalDefinitionAr = "الْمُنْعِمُ بِجَلَائِلِ النِّعَمِ وَدَقَائِقِهَا، ذُو الرَّحْمَةِ الْخَاصَّةِ بِعِبَادِهِ الْمُؤْمِنِينَ خَاصَّةً فِي الْآخِرَةِ.",
+            classicalDefinitionBn = "সুনির্দিষ্ট ও চিরন্তন রহমতের অধিকারী, যাঁর বিশেষ দয়া আখেরাতে মুমিন বান্দাদের জন্য সংরক্ষিত।",
+            classicalDefinitionEn = "The constantly Merciful, Bestower of specialized and enduring mercy upon the believers."
+        ),
+        "بسم" to ClassicalLexiconDetail(
+            classicalIrabAr = "الْبَاءُ حَرْفُ جَرٍّ مَبْنِيٌّ عَلَى الْكَسْرِ، وَ(اسْمِ) اسْمٌ مَجْرُورٌ بِالْبَاءِ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ، وَهُوَ مُضَافٌ.",
+            classicalIrabBn = "‘বা’ হরফে জার, এবং ‘ইসম’ বা-এর প্রভাবে মাজরুর (কাসরাহযুক্ত), এবং এটি মুদাফ (পরবর্তী শব্দের সাথে সম্বন্ধযুক্ত)।",
+            classicalIrabEn = "The Ba is a genitive preposition; \"Ism\" is genitive noun governed by Ba, acting as construct (Mudaf).",
+            classicalSarfAr = "اسْمٌ ثُلَاثِيٌّ مُجَرَّدٌ مِنْ مَادَّةِ: (س م و)، حُذِفَتْ هَمْزَتُهُ وَلَامُهُ لِلتَّخْفِيفِ عِنْدَ اتِّصَالِهِ بِالْبَاءِ، وَأَصْلُهُ: (سِمْوٌ).",
+            classicalSarfBn = "(س م و) ধাতুমূল থেকে উৎপন্ন বিশেষ্য; সহজ উচ্চারণের জন্য শুরুতে বা হরফে জার যুক্ত হয়ে বাসরীতি অনুসারে লেখা হয়।",
+            classicalSarfEn = "Triliteral noun from root (s-m-w), prefixed by preposition Ba with elided hamza for ease of recitation.",
+            rootLetters = "سمو",
+            derivedFormArabic = "بِسْمِ (اسْمٌ)",
+            derivedFormBn = "বিসম (মুদাফ বিশেষ্য)",
+            classicalDefinitionAr = "ابْتِدَاءٌ بِذِكْرِ اسْمِ اللَّهِ تَعَالَى طَلَبًا لِلْبَرَكَةِ وَالْعَوْنِ وَالتَّوْفِيقِ.",
+            classicalDefinitionBn = "বরকত, সাহায্য ও তাওফীক কামনায় মহান আল্লাহর নাম স্মরণের মাধ্যমে শুভ সূচনা।",
+            classicalDefinitionEn = "Commencing with the Name of Allah seeking divine blessing, assistance, and guidance."
+        ),
+        "الله" to ClassicalLexiconDetail(
+            classicalIrabAr = "اسْمُ الْجَلَالَةِ مُضَافٌ إِلَيْهِ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ تَعْظِيمًا.",
+            classicalIrabBn = "আল্লাহর নাম: মুদাফ ইলাইহি হওয়ার কারণে মাজরুর (জেরযুক্ত), শেষ অক্ষরে কাসরাহ স্পষ্ট।",
+            classicalIrabEn = "Lafz al-Jalalah: possessive noun (Mudaf Ilayh), in genitive case with explicit kasrah.",
+            classicalSarfAr = "لَفْظُ الْجَلَالَةِ: اسْمُ عَلَمٍ عَلَى الذَّاتِ الْعَلِيَّةِ، أَلِفُهُ وَلَامُهُ لَازِمَةٌ لِلتَّعْظِيمِ، وَأَصْلُهُ مِنَ التَّأَلُّهِ وَالْإِلَهِيَّةِ مِنْ مَادَّةِ: (أله).",
+            classicalSarfBn = "লাফযে জালালাহ: মহান স্রষ্টার অনুপম সত্তাবাচক একক নাম, ‘আলিফ-লাম’ সম্মান ও মহিমাসূচক।",
+            classicalSarfEn = "Proper Divine Name (Lafz al-Jalalah), unique uncreated proper noun denoting the Almighty Creator.",
+            rootLetters = "أله",
+            derivedFormArabic = "اللَّه (عَلَمٌ)",
+            derivedFormBn = "আল্লাহ্ (অনুপম সত্তাবাচক নাম)",
+            classicalDefinitionAr = "عَلَمٌ عَلَى الذَّاتِ الْإِلَهِيَّةِ الْوَاجِبِ الْوُجُودِ الْمُسْتَحِقِّ لِجَمِيعِ الْمَحَامِدِ وَالْكَمَالَاتِ.",
+            classicalDefinitionBn = "ওয়াজিবুল উজুদ সত্তা যিনি নিখিল সৃষ্টির স্রষ্টা এবং সকল প্রশংসা ও পূর্ণ গুণের একমাত্র অধিকারী।",
+            classicalDefinitionEn = "The unique proper name of the Supreme Divine Essence, worthy of all worship and praise."
+        ),
+        "لله" to ClassicalLexiconDetail(
+            classicalIrabAr = "اللَّامُ حَرْفُ جَرٍّ لِلِاخْتِصَاصِ وَالِاسْتِحْقَاقِ، وَاسْمُ الْجَلَالَةِ مَجْرُورٌ بِاللَّامِ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ، وَالْجَارُّ وَالْمَجْرُورُ فِي مَحَلِّ رَفْعٍ خَبَرٌ.",
+            classicalIrabBn = "‘লাম’ হরফে জার যা একমাত্র অধিকার ও প্রাপ্যতা বোঝায়, এবং আল্লাহর নাম মাজরুর; জার ও মাজরুর মিলে খবর (বিধেয়)।",
+            classicalIrabEn = "Lam is preposition of exclusive right; Lafz al-Jalalah is genitive governed by Lam, functioning as predicate phrase.",
+            classicalSarfAr = "حَرْفُ جَرٍّ مَعَ اسْمِ الْجَلَالَةِ مِنْ مَادَّةِ: (أله).",
+            classicalSarfBn = "অব্যয় ও নামবাচক বিশেষ্যের মিলন রূপ।",
+            classicalSarfEn = "Preposition proclitic combined with Lafz al-Jalalah.",
+            rootLetters = "أله",
+            derivedFormArabic = "لِلَّهِ (جَارٌّ وَمَجْرُورٌ)",
+            derivedFormBn = "লিল্লাহি (জার ও মাজরুর)",
+            classicalDefinitionAr = "اخْتِصَاصُ جَمِيعِ أَنْوَاعِ الْمَحَامِدِ وَالْكَمَالَاتِ بِاللَّهِ وَحْدَهُ لَا شَرِيكَ لَهُ.",
+            classicalDefinitionBn = "সকল প্রশংসা ও পূর্ণ মহিমা একমাত্র আল্লাহ তাআলার জন্যই নির্ধারিত।",
+            classicalDefinitionEn = "Exclusive attribution of all praise, perfection, and majesty to Allah alone."
+        ),
+        "الحمد" to ClassicalLexiconDetail(
+            classicalIrabAr = "مُبْتَدَأٌ مَرْفُوعٌ بِالابْتِدَاءِ وَعَلَامَةُ رَفْعِهِ الضَّمَّةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "উদ্দেশ্য (মুবতাদা) হিসেবে মারফু (পেশযুক্ত), শেষ অক্ষরে দাম্মাহ স্পষ্ট।",
+            classicalIrabEn = "Subject of the nominal sentence (Mubtada), in nominative case with apparent terminal dammah.",
+            classicalSarfAr = "مَصْدَرٌ صَرِيحٌ لِلْفِعْلِ الثَّلَاثِي الْمُجَرَّدِ (حَمِدَ يَحْمَدُ) مِنْ بَابِ: (عَلِمَ يَعْلَمُ) عَلَى وَزْنِ: (فَعْل) مِنْ مَادَّةِ: (حمد)",
+            classicalSarfBn = "সুলাসী মুজাররাদ ফে‘ল (حَمِدَ يَحْمَدُ) বাবে (عَلِمَ)-এর ভাববাচ্য বিশেষ্য (মাসদার), ওযন: (فَعْل)।",
+            classicalSarfEn = "Verbal noun (Masdar) of triliteral Form I verb (hamida / yahmadu) on pattern (Fa'l) from root (h-m-d).",
+            rootLetters = "حمد",
+            derivedFormArabic = "حمد (فَعْل)",
+            derivedFormBn = "হামদ (ওযন: ফাল / فَعْل)",
+            classicalDefinitionAr = "الثَّنَاءُ التَّامُّ بِالْجَمِيلِ الِاخْتِيَارِيِّ عَلَى جِهَةِ التَّعْظِيمِ وَالْمَحَبَّةِ.",
+            classicalDefinitionBn = "পরম ভালোবাসা ও শ্রদ্ধাসহকারে কারো ঐচ্ছিক সুন্দর গুণাবলীর মৌখিক প্রশংসা নিবেদন।",
+            classicalDefinitionEn = "Complete and utter praise given with love, reverence, and gratitude."
+        ),
+        "رب" to ClassicalLexiconDetail(
+            classicalIrabAr = "نَعْتٌ لِاسْمِ الْجَلَالَةِ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ، وَهُوَ مُضَافٌ.",
+            classicalIrabBn = "লাফযে জালালাহর সিফাত (বিশেষণ) হিসেবে মাজরুর (জেরযুক্ত), এবং এটি মুদাফ (পরবর্তী শব্দের সাথে সম্বন্ধযুক্ত)।",
+            classicalIrabEn = "Adjective (Na't) modifying the divine name, in genitive case with apparent kasrah, acting as construct (Mudaf).",
+            classicalSarfAr = "صِفَةٌ مُشَبَّهَةٌ أَوْ اسْمٌ مَصْدَرِيٌّ عَلَى وَزْنِ: (فَعْل) مِنَ الْفِعْلِ: (رَبَّ يَرُبُّ) مُضَاعَفٌ ثُلَاثِيٌّ مِنْ مَادَّةِ: (ربب)",
+            classicalSarfBn = "সুলাসী মুদা‘আফ ধাতু (رَبَّ يَرُبُّ) থেকে সাধিত সিফাত বা নামপদ, ওযন: (فَعْل)।",
+            classicalSarfEn = "Doubled triliteral root (r-b-b), denoting master, nurturer, sustainer and creator.",
+            rootLetters = "ربب",
+            derivedFormArabic = "ربّ (فَعْل)",
+            derivedFormBn = "রব (ওযন: ফাল / فَعْل)",
+            classicalDefinitionAr = "الْمَالِكُ السَّيِّدُ الْمُدَبِّرُ الْمُرَبِّي لِخَلْقِهِ بِنِعَمِهِ وَإِحْسَانِهِ.",
+            classicalDefinitionBn = "একমাত্র মালিক, প্রভু, পরিচালক ও পালনকর্তা যিনি স্বীয় নেয়ামত দ্বারা সমস্ত সৃষ্টিকে লালন-পালন করেন।",
+            classicalDefinitionEn = "The Lord, Master, Sustainer, and Caregiver Who nurtures and maintains all creation."
+        ),
+        "العالمين" to ClassicalLexiconDetail(
+            classicalIrabAr = "مُضَافٌ إِلَيْهِ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْيَاءُ لِأَنَّهُ مُلْحَقٌ بِجَمْعِ الْمُذَكَّرِ السَّالِمِ.",
+            classicalIrabBn = "মুদাফ ইলাইহি হিসেবে মাজরুর; জমা মুজাক্কার সালেমের সাদৃশ্যপূর্ণ হওয়ায় ‘ইয়া’ দ্বারা মাজরুর।",
+            classicalIrabEn = "Construct complement (Mudaf Ilayh) in genitive case, marked with Ya as an annex to sound masculine plural.",
+            classicalSarfAr = "اسْمُ جَمْعٍ لَا وَاحِدَ لَهُ مِنْ لَفْظِهِ، مُلْحَقٌ بِجَمْعِ الْمُذَكَّرِ السَّالِمِ عَلَى وَزْنِ: (فَاعِلِينَ) مِنْ مَادَّةِ: (علم)",
+            classicalSarfBn = "সমষ্টিবাচক বিশেষ্য যা জমা মুজাক্কার সালেমের সমগোত্রীয়, (علم) ধাতুমূল থেকে সাধিত।",
+            classicalSarfEn = "Collective noun annexed to sound masculine plural, derived from root ('-l-m).",
+            rootLetters = "علم",
+            derivedFormArabic = "عالمين (فَاعِلِينَ)",
+            derivedFormBn = "আলামীন (ওযন: ফা‘ইলীনা)",
+            classicalDefinitionAr = "كُلُّ مَا سِوَى اللَّهِ تَعَالَى مِنْ عَالَمِ الْإِنْسِ وَالْجِنِّ وَالْمَلَائِكَةِ وَالْأَفْلَاكِ.",
+            classicalDefinitionBn = "আল্লাহ ব্যতীত সমগ্র সৃষ্টিজগৎ—মানুষ, জিন, ফেরেশতাকুল ও নিখিল বিশ্বব্রহ্মাণ্ড।",
+            classicalDefinitionEn = "All existing beings and realms created by Allah, including humankind, jinn, angels, and the cosmos."
+        ),
+        "مالك" to ClassicalLexiconDetail(
+            classicalIrabAr = "نَعْتٌ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ، وَهُوَ مُضَافٌ.",
+            classicalIrabBn = "সিফাত (বিশেষণ) হিসেবে মাজরুর (জেরযুক্ত), এবং এটি মুদাফ।",
+            classicalIrabEn = "Attribute (Na't) in genitive case with apparent kasrah, acting as construct (Mudaf).",
+            classicalSarfAr = "اسْمُ فَاعِلٍ مِنَ الْفِعْلِ الثَّلَاثِي الْمُجَرَّدِ: (مَلَكَ يَمْلِكُ) مِنْ بَابِ: (ضَرَبَ) عَلَى وَزْنِ: (فَاعِل) مِنْ مَادَّةِ: (ملك)",
+            classicalSarfBn = "সুলাসী মুজাররাদ ফে‘ল (مَلَكَ) বাবে (ضَرَبَ) থেকে ইসমে ফা‘ইল (কর্তৃবাচক পদ), ওযন: (فَاعِل)।",
+            classicalSarfEn = "Active participle (Ism Fa'il) on pattern (Fa'il) from triliteral root (m-l-k), meaning owner and possessor.",
+            rootLetters = "ملك",
+            derivedFormArabic = "مالك (فَاعِل)",
+            derivedFormBn = "মালিক (ওযন: ফা‘ইল / فَاعِل)",
+            classicalDefinitionAr = "صَاحِبُ الْمُلْكِ التَّامِّ وَالْمُتَصَرِّفُ الْمُطْلَقُ بِالْعَدْلِ وَالْحِكْمَةِ فِي يَوْمِ الْقِيَامَةِ.",
+            classicalDefinitionBn = "কিয়ামত দিবসের সার্বভৌম কর্তৃত্ব ও পরম সুবিচারের নিরঙ্কুশ অধিপতি।",
+            classicalDefinitionEn = "The Absolute Sovereign and Master Who possesses unmatched ownership on the Day of Recompense."
+        ),
+        "يوم" to ClassicalLexiconDetail(
+            classicalIrabAr = "مُضَافٌ إِلَيْهِ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ، وَهُوَ مُضَافٌ.",
+            classicalIrabBn = "মুদাফ ইলাইহি হিসেবে মাজরুর (জেরযুক্ত), এবং পরবর্তী শব্দের সাথে মুদাফ।",
+            classicalIrabEn = "Possessive noun in genitive case, governing the following term in construct state.",
+            classicalSarfAr = "اسْمُ زَمَانٍ ثُلَاثِيٌّ عَلَى وَزْنِ: (فَعْل) مِنْ مَادَّةِ: (يوم)",
+            classicalSarfBn = "সুলাসী কালবাচক বিশেষ্য (যরফ জামান), ওযন: (فَعْل)।",
+            classicalSarfEn = "Triliteral temporal noun on pattern (Fa'l) from root (y-w-m).",
+            rootLetters = "يوم",
+            derivedFormArabic = "يوم (فَعْل)",
+            derivedFormBn = "ইয়াউম (ওযন: ফাল / فَعْل)",
+            classicalDefinitionAr = "وَقْتُ الْحِسَابِ وَالْجَزَاءِ وَالْقِيَامَةِ.",
+            classicalDefinitionBn = "হিসাব-নিকাশ, কর্মফল নির্ধারণ ও প্রতিদান দিবসের নির্দিষ্ট সময়কাল।",
+            classicalDefinitionEn = "The fateful epoch of accountability, divine judgment, and eternal resurrection."
+        ),
+        "الدين" to ClassicalLexiconDetail(
+            classicalIrabAr = "مُضَافٌ إِلَيْهِ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "মুদাফ ইলাইহি হিসেবে মাজরুর (জেরযুক্ত), শেষ অক্ষরে কাসরাহ স্পষ্ট।",
+            classicalIrabEn = "Genitive complement (Mudaf Ilayh) marked with apparent terminal kasrah.",
+            classicalSarfAr = "مَصْدَرٌ صَرِيحٌ لِلْفِعْلِ الثَّلَاثِي الْمُجَرَّدِ: (دَانَ يَدِينُ) عَلَى وَزْنِ: (فِعْل) مِنْ مَادَّةِ: (دين)",
+            classicalSarfBn = "সুলাসী মুজাররাদ ফে‘ল (دَانَ يَدِينُ) থেকে ভাববাচ্য বিশেষ্য (মাসদার), ওযন: (فِعْل)।",
+            classicalSarfEn = "Verbal noun (Masdar) on pattern (Fi'l) from triliteral root (d-y-n).",
+            rootLetters = "دين",
+            derivedFormArabic = "دين (فِعْل)",
+            derivedFormBn = "দীন (ওযন: ফি‘ল / فِعْل)",
+            classicalDefinitionAr = "الْجَزَاءُ وَالْحِسَابُ وَالْقَضَاءُ بِالْعَدْلِ وَالْحَقِّ.",
+            classicalDefinitionBn = "সুবিচারপূর্ণ হিসাব-নিকাশ ও কর্মফল প্রাপ্তির চূড়ান্ত দিবস।",
+            classicalDefinitionEn = "The divine reckoning, just compensation, and ultimate retribution for deeds."
+        ),
+        "إياك" to ClassicalLexiconDetail(
+            classicalIrabAr = "ضَمِيرٌ مُنْفَصِلٌ مَبْنِيٌّ عَلَى الْفَتْحِ فِي مَحَلِّ نَصْبٍ مَفْعُولٌ بِهِ مُقَدَّمٌ لِإِفَادَةِ الْحَصْرِ وَالِاخْتِصَاصِ.",
+            classicalIrabBn = "মানসুব পৃথক সর্বনাম (দামীরে মুনফাসিল); একমাত্র সীমাবদ্ধতা প্রকাশের জন্য ক্রিয়ার পূর্বে মাফ‘উল হিসেবে অগ্রবর্তী হয়েছে।",
+            classicalIrabEn = "Detached objective pronoun built on fathah, placed early before verb for exclusive restriction (Hasr).",
+            classicalSarfAr = "ضَمِيرُ نَصْبٍ مُنْفَصِلٌ لِلْمُخَاطَبِ الْمُفْرَدِ الْمُذَكَّرِ، وَالْكَافُ حَرْفُ خِطَابٍ لَا مَحَلَّ لَهَا مِنَ الْإِعْرَابِ.",
+            classicalSarfBn = "মধ্যম পুরুষ পুংলিঙ্গবাচক মানসুব সর্বনাম; কাফ হরফে খিতাব।",
+            classicalSarfEn = "Detached accusative pronoun for second-person masculine singular.",
+            rootLetters = "",
+            derivedFormArabic = "إِيَّاكَ (ضَمِيرٌ)",
+            derivedFormBn = "ইয়্যাকা (সর্বনাম)",
+            classicalDefinitionAr = "تَخْصِيصُ اللَّهِ وَحْدَهُ دُونَ سِوَاهُ بِالْعِبَادَةِ وَالتَّأَلُّهِ.",
+            classicalDefinitionBn = "আল্লাহ ব্যতীত অন্য কাউকে বাদ দিয়ে কেবল তাঁরই ইবাদত ও দাসত্ব নির্দিষ্টকরণ।",
+            classicalDefinitionEn = "Exclusive dedication of all servitude and worship to Allah alone."
+        ),
+        "نعبد" to ClassicalLexiconDetail(
+            classicalIrabAr = "فِعْلٌ مُضَارِعٌ مَرْفُوعٌ وَعَلَامَةُ رَفْعِهِ الضَّمَّةُ الظَّاهِرَةُ، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ وُجُوبًا تَقْدِيرُهُ (نَحْنُ).",
+            classicalIrabBn = "ফে‘লে মুদারি (বর্তমান/ভবিষ্যৎ ক্রিয়া): মারফু (পেশযুক্ত); এবং কর্তা হলো উহ্য সর্বনাম ‘আমরা’ (نَحْنُ)।",
+            classicalIrabEn = "Imperfect verb in nominative case with apparent dammah; subject is obligatory implied pronoun \"Nahnu\" (We).",
+            classicalSarfAr = "فِعْلٌ مُضَارِعٌ ثُلَاثِيٌّ مُجَرَّدٌ: (عَبَدَ يَعْبُدُ) مِنْ بَابِ: (نَصَرَ يَنْصُرُ) عَلَى وَزْنِ: (نَفْعُلُ) مِنْ مَادَّةِ: (عبد)",
+            classicalSarfBn = "সুলাসী মুজাররাদ ফে‘ল (عَبَدَ يَعْبُدُ) বাবে (نَصَرَ) থেকে মুদারি রূপ, ওযন: (نَفْعُلُ)।",
+            classicalSarfEn = "Imperfect verb of triliteral Form I (abada / ya'budu) on pattern (Naf'ulu) from root ('-b-d).",
+            rootLetters = "عبد",
+            derivedFormArabic = "نعبد (نَفْعُلُ)",
+            derivedFormBn = "না‘বুদু (ওযন: নাফ‘উলু / نَفْعُلُ)",
+            classicalDefinitionAr = "نَخْضَعُ وَنَذِلُّ وَنُطِيعُ كَمَالَ الطَّاعَةِ مَعَ غَايَةِ الْمَحَبَّةِ وَالتَّعْظِيمِ.",
+            classicalDefinitionBn = "পরম ভালোবাসা ও বিনম্র শ্রদ্ধাসহকারে আমরা আপনারই দাসত্ব ও আনুগত্য স্বীকার করি।",
+            classicalDefinitionEn = "We submit, obey, and worship with utmost love, reverence, and devotion."
+        ),
+        "نستعين" to ClassicalLexiconDetail(
+            classicalIrabAr = "فِعْلٌ مُضَارِعٌ مَرْفُوعٌ وَعَلَامَةُ رَفْعِهِ الضَّمَّةُ الظَّاهِرَةُ، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ وُجُوبًا تَقْدِيرُهُ (نَحْنُ).",
+            classicalIrabBn = "ফে‘লে মুদারি: মারফু (পেশযুক্ত); এবং কর্তা হলো উহ্য সর্বনাম ‘আমরা’ (نَحْنُ)।",
+            classicalIrabEn = "Imperfect verb in nominative case with apparent dammah; subject is obligatory implied pronoun \"Nahnu\" (We).",
+            classicalSarfAr = "فِعْلٌ مُضَارِعٌ سُدَاسِيٌّ مَزِيدٌ بِثَلَاثَةِ أَحْرُفٍ: (اسْتَعَانَ يَسْتَعِينُ) مِنْ بَابِ: (الِاسْتِفْعَالِ) عَلَى وَزْنِ: (نَسْتَفْعِلُ) مِنْ مَادَّةِ: (عون)",
+            classicalSarfBn = "সুলাসী মাযীদ ফিহ (اسْتَعَانَ) বাবে ইস্তিফ‘আল থেকে ৩ বর্ণ বৃদ্ধিপ্রাপ্ত মুদারি রূপ, ওযন: (نَسْتَفْعِلُ)।",
+            classicalSarfEn = "Form X (Istif'al) imperfect verb (ista'ana / yasta'inu) on pattern (Nastaf'ilu) from root ('-w-n).",
+            rootLetters = "عون",
+            derivedFormArabic = "نستعين (نَسْتَفْعِلُ)",
+            derivedFormBn = "নাস্তা‘ঈন (ওযন: নাস্তাফ‘ইলু / نَسْتَفْعِلُ)",
+            classicalDefinitionAr = "نَطْلُبُ الْعَوْنَ وَالتَّوْفِيقَ وَالتَّثْبِيتَ مِنْكَ وَحْدَكَ فِي جَمِيعِ أُمُورِنَا.",
+            classicalDefinitionBn = "আমাদের যাবতীয় কাজে ও সংকটে আমরা একমাত্র আপনারই সাহায্য, কৃপা ও তাওফীক প্রার্থনা করি।",
+            classicalDefinitionEn = "We seek assistance, divine guidance, and strength from You alone in all our affairs."
+        ),
+        "اهدنا" to ClassicalLexiconDetail(
+            classicalIrabAr = "فِعْلُ دُعَاءٍ وَطَلَبٍ مَبْنِيٌّ عَلَى حَذْفِ حَرْفِ الْعِلَّةِ (الْيَاءِ)، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ وُجُوبًا تَقْدِيرُهُ (أَنْتَ)، وَ(نَا) ضَمِيرٌ مُتَّصِلٌ فِي مَحَلِّ نَصْبٍ مَفْعُولٌ بِهِ.",
+            classicalIrabBn = "প্রার্থনাসূচক আমর ক্রিয়া: হরফে ইল্লত (ইয়া) বিলুপ্ত হওয়ার মাধ্যমে মাবনী; কর্তা উহ্য (আপনি), এবং ‘না’ হলো মাফ‘উল (কর্মকারক সর্বনাম)।",
+            classicalIrabEn = "Supplicatory imperative verb built on omission of final weak letter (Ya); subject is implied \"Anta\" (You), and \"Na\" is attached object pronoun.",
+            classicalSarfAr = "فِعْلُ أَمْرٍ ثُلَاثِيٌّ مُجَرَّدٌ: (هَدَى يَهْدِي) مِنْ بَابِ: (ضَرَبَ يَضْرِبُ) عَلَى وَزْنِ: (افْعِ) حُذِفَتْ لَامُهُ لِلْبِنَاءِ، وَاتَّصَلَ بِهِ ضَمِيرُ (نَا) مِنْ مَادَّةِ: (هدي)",
+            classicalSarfBn = "সুলাসী মুজাররাদ ফে‘ল (هَدَى) বাবে (ضَرَبَ) থেকে আদেশ/প্রার্থনা রূপ, শেষ বর্ণ বিলুপ্ত, ওযন: (افْعِ)।",
+            classicalSarfEn = "Imperative verb from weak triliteral root (h-d-y), built on truncation of the weak vowel, affixed with pronoun \"Na\".",
+            rootLetters = "هدي",
+            derivedFormArabic = "اهد (افْعِ)",
+            derivedFormBn = "ইহদি (ওযন: ইফ‘ই / افْعِ)",
+            classicalDefinitionAr = "دُلَّنَا وَأَرْشِدْنَا وَوَفِّقْنَا وَثَبِّتْنَا عَلَى دِينِ الْحَقِّ وَالْهُدَى.",
+            classicalDefinitionBn = "আমাদের সত্যের সন্ধান দিন, সঠিক পথের দিশা দিন এবং সিরাতুল মুস্তাকীমের ওপর অবিচল রাখুন।",
+            classicalDefinitionEn = "Guide us, direct us, show us, and firmly establish us upon the true path."
+        ),
+        "الصراط" to ClassicalLexiconDetail(
+            classicalIrabAr = "مَفْعُولٌ بِهِ ثَانٍ مَنْصُوبٌ وَعَلَامَةُ نَصْبِهِ الْفَتْحَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "দ্বিতীয় মাফ‘উল (কর্মকারক) হিসেবে মানসুব (যবরযুক্ত), শেষ অক্ষরে ফাতহাহ স্পষ্ট।",
+            classicalIrabEn = "Second direct object (Maf'ul bihi thani) in accusative case with apparent fathah.",
+            classicalSarfAr = "اسْمٌ ثُلَاثِيٌّ مَزِيدٌ بِحَرْفٍ: (صِرَاط) عَلَى وَزْنِ: (فِعَال) مِنْ مَادَّةِ: (سرط / صرط)",
+            classicalSarfBn = "সুলাসী মাযীদ বিশেষ্য, ওযন: (فِعَال)।",
+            classicalSarfEn = "Triliteral augmented noun on pattern (Fi'al) from root (s-r-t).",
+            rootLetters = "صرط",
+            derivedFormArabic = "صراط (فِعَال)",
+            derivedFormBn = "সিরাত (ওযন: ফি‘আল / فِعَال)",
+            classicalDefinitionAr = "الطَّرِيقُ الْوَاضِحُ الْمُسْتَقِيمُ الَّذِي لَا اعْوِجَاجَ فِيهِ، وَهُوَ دِينُ الْإِسْلَامِ وَالْقُرْآنُ.",
+            classicalDefinitionBn = "সুস্পষ্ট, সরল ও নিষ্কলুষ জীবনবিধান—যা ইসলাম, কুরআন ও রাসূল (সা.)-এর আদর্শ।",
+            classicalDefinitionEn = "The clear, straight, and unobstructed highway of truth—Islam and the Quran."
+        ),
+        "المستقيم" to ClassicalLexiconDetail(
+            classicalIrabAr = "نَعْتٌ لِلصِّرَاطِ مَنْصُوبٌ وَعَلَامَةُ نَصْبِهِ الْفَتْحَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+            classicalIrabBn = "সিরাতের সিফাত বা বিশেষণ হিসেবে মানসুব (যবরযুক্ত), শেষ বর্ণে ফাতহাহ স্পষ্ট।",
+            classicalIrabEn = "Attribute (Na't) modifying \"al-Sirat\", in accusative case with apparent terminal fathah.",
+            classicalSarfAr = "اسْمُ فَاعِلٍ مِنْ فِعْلٍ سُدَاسِيٍّ: (اسْتَقَامَ يَسْتَقِيمُ) مِنْ بَابِ: (الِاسْتِفْعَالِ) عَلَى وَزْنِ: (مُسْتَفْعِل) مِنْ مَادَّةِ: (قوم)",
+            classicalSarfBn = "সুলাসী মাযীদ (اسْتَقَامَ) বাবে ইস্তিফ‘আল থেকে গঠিত কর্তৃবাচক বিশেষণ (ইসমে ফা‘ইল), ওযন: (مُسْتَفْعِل)।",
+            classicalSarfEn = "Active participle (Ism Fa'il) of Form X (istaqama) on pattern (Mustaf'il) from root (q-w-m).",
+            rootLetters = "قوم",
+            derivedFormArabic = "مستقيم (مُسْتَفْعِل)",
+            derivedFormBn = "মুস্তাকীম (ওযন: মুস্তাফ‘ইল / مُسْتَفْعِل)",
+            classicalDefinitionAr = "الَّذِي لَا عِوَجَ فِيهِ وَلَا انْحِرَافَ عَنِ الْحَقِّ وَالْعَدْلِ.",
+            classicalDefinitionBn = "যা সম্পূর্ণ নির্ভুল, বক্রতাহীন এবং সত্য ও ন্যায়বিচার থেকে বিচ্যুত নয়।",
+            classicalDefinitionEn = "That which is completely upright, free of deviation, error, or distortion."
+        )
+    )
+
     fun analyze(
         word: WordEntity,
         translations: List<WordTranslationEntity>
@@ -234,7 +520,19 @@ object WordMorphologyAnalyzer {
                 nahwFunctionEn = "Independent Initial Constituent (مبتدأ مقدر أو فاتحة)",
                 nahwFunctionBn = "সূচনাকারী স্বতন্ত্র বাক্যাংশ (ফাতিহা)",
                 definitenessEn = "Proper Letter Entity",
-                definitenessBn = "নির্দিষ্ট অক্ষর সত্তা"
+                definitenessBn = "নির্দিষ্ট অক্ষর সত্তা",
+                classicalIrabAr = "حُرُوفٌ مُقَطَّعَةٌ لِافْتِتَاحِ السُّوَرِ مَبْنِيَّةٌ عَلَى السُّكُونِ لَا مَحَلَّ لَهَا مِنَ الْإِعْرَابِ.",
+                classicalIrabBn = "হুরূফে মুকাত্তাআত: সূরার শুরুতে অবতীর্ণ পবিত্র বিচ্ছিন্ন অক্ষর, মাবনী (অপরিবর্তনীয়) যার কোনো বাক্যগত ই‘রাব নেই।",
+                classicalIrabEn = "Sacred disjointed opening letters of the Surah, invariable with no dependent syntactic inflection.",
+                classicalSarfAr = "حُرُوفٌ هِجَائِيَّةٌ مُفْرَدَةٌ غَيْرُ مُشْتَقَّةٍ، وَعِلْمُهَا عِنْدَ اللَّهِ تَعَالَى دَلَالَةً عَلَى إِعْجَازِ الْقُرْآنِ.",
+                classicalSarfBn = "অব্যুৎপন্ন একক বর্ণমালা, কোনো ধাতু থেকে সাধিত নয়; এর গূঢ় রহস্য আল্লাহ তাআলার জ্ঞানে সংরক্ষিত এবং তা কুরআনের অলৌকিকতার নিদর্শন।",
+                classicalSarfEn = "Non-derived phonetic alphabet letters pointing to the miraculous linguistic inimitability (I'jaz) of the Quran.",
+                rootLetters = "",
+                derivedFormArabic = rawArabic,
+                derivedFormBn = "পবিত্র বিচ্ছিন্ন অক্ষর (মুকাত্তাআত)",
+                classicalDefinitionAr = "حُرُوفٌ قُرْآنِيَّةٌ مُقَدَّسَةٌ فِي أَوَائِلِ السُّوَرِ، اسْتَأْثَرَ اللَّهُ تَعَالَى بِعِلْمِهَا.",
+                classicalDefinitionBn = "পবিত্র কুরআনের কয়েকটি সূরার প্রারম্ভিক অলৌকিক বিচ্ছিন্ন হরফ, যার নিগূঢ় অর্থ কেবল আল্লাহ তাআলাই সম্যক অবগত।",
+                classicalDefinitionEn = "Sacred opening letters whose exact esoteric meanings are known to Allah alone, demonstrating the I'jaz of the Quran."
             )
         }
 
@@ -393,6 +691,28 @@ object WordMorphologyAnalyzer {
             bareWord = bareWord
         )
 
+        val bareStem = stripDiacriticsAndAlefWasla(extraction.stem)
+        val classical = CLASSICAL_QURANIC_WORDS[bareWord]
+            ?: CLASSICAL_QURANIC_WORDS[bareStem]
+            ?: synthesizeClassicalGrammar(
+                rawArabic = rawArabic,
+                stemArabic = extraction.stem,
+                bareWord = bareWord,
+                posEn = posEn,
+                posAr = posAr,
+                posBn = posBn,
+                caseEn = caseEn,
+                caseBn = caseBn,
+                numGenderEn = numGenderEn,
+                numGenderBn = numGenderBn,
+                segments = extraction.segments,
+                rootArabic = spacedRoot,
+                sarf = sarf,
+                nahw = nahw,
+                enMeaning = enMeaning,
+                bnMeaning = bnMeaning
+            )
+
         return DetailedWordAnalysis(
             partOfSpeechEn = posEn,
             partOfSpeechAr = posAr,
@@ -417,7 +737,154 @@ object WordMorphologyAnalyzer {
             nahwFunctionEn = nahw.roleEn,
             nahwFunctionBn = nahw.roleBn,
             definitenessEn = nahw.defEn,
-            definitenessBn = nahw.defBn
+            definitenessBn = nahw.defBn,
+            classicalIrabAr = classical.classicalIrabAr,
+            classicalIrabBn = classical.classicalIrabBn,
+            classicalIrabEn = classical.classicalIrabEn,
+            classicalSarfAr = classical.classicalSarfAr,
+            classicalSarfBn = classical.classicalSarfBn,
+            classicalSarfEn = classical.classicalSarfEn,
+            rootLetters = if (spacedRoot.isNotBlank()) classical.rootLetters.ifBlank { spacedRoot.trim() } else "",
+            derivedFormArabic = classical.derivedFormArabic.ifBlank { extraction.stem },
+            derivedFormBn = classical.derivedFormBn.ifBlank { extraction.stem },
+            classicalDefinitionAr = classical.classicalDefinitionAr,
+            classicalDefinitionBn = classical.classicalDefinitionBn,
+            classicalDefinitionEn = classical.classicalDefinitionEn
+        )
+    }
+
+    private fun synthesizeClassicalGrammar(
+        rawArabic: String,
+        stemArabic: String,
+        bareWord: String,
+        posEn: String,
+        posAr: String,
+        posBn: String,
+        caseEn: String,
+        caseBn: String,
+        numGenderEn: String,
+        numGenderBn: String,
+        segments: List<WordSegmentPart>,
+        rootArabic: String,
+        sarf: SarfDetails,
+        nahw: NahwDetails,
+        enMeaning: String,
+        bnMeaning: String
+    ): ClassicalLexiconDetail {
+        val bareStem = stripDiacriticsAndAlefWasla(stemArabic)
+        val hasRoot = rootArabic.isNotBlank()
+        val cleanRoot = if (hasRoot) rootArabic.replace(" ", "").trim() else ""
+
+        // 1. Classical I'rab formulation
+        val isParticle = posEn.contains("Particle") || (posEn.contains("Preposition") && bareWord in KNOWN_FUNCTION_WORDS)
+        val hasPrep = segments.any { it.roleType == SegmentRoleType.PREFIX && (it.arabicPrefixOrPart.contains("بِ") || it.arabicPrefixOrPart.contains("لِ") || it.arabicPrefixOrPart.contains("كَ")) }
+
+        val (irabAr, irabBn, irabEn) = when {
+            hasPrep -> Triple(
+                "شِبْهُ جُمْلَةٍ: حَرْفُ جَرٍّ، وَمَا بَعْدَهُ اسْمٌ مَجْرُورٌ وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+                "জার ও মাজরুর (অব্যয় ও সম্বন্ধ পদ): হরফে জারের প্রভাবে পরবর্তী পদটি কাসরাহ বা জেরযোগে মাজরুর হয়েছে।",
+                "Prepositional phrase (Jar wa Majrur): noun in genitive case governed by the preceding preposition."
+            )
+            posAr.contains("فعل أمر") -> Triple(
+                "فِعْلُ أَمْرٍ مَبْنِيٌّ عَلَى السُّكُونِ، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ وُجُوبًا.",
+                "আদেশসূচক ক্রিয়া (ফে‘লে আমর): সুকুনযোগে মাবনী (অপরিবর্তনীয়), এবং এতে কর্তা উহ্য রয়েছে।",
+                "Imperative verb (Fi'l Amr): built on sukun, with an implied obligatory subject pronoun."
+            )
+            posAr.contains("فعل مضارع") && (numGenderEn.contains("Plural") || rawArabic.endsWith("ونَ") || rawArabic.endsWith("ينَ")) -> Triple(
+                "فِعْلٌ مُضَارِعٌ مَرْفُوعٌ وَعَلَامَةُ رَفْعِهِ ثُبُوتُ النُّونِ لِأَنَّهُ مِنَ الْأَفْعَالِ الْخَمْسَةِ، وَالْوَاوُ ضَمِيرٌ مُتَّصِلٌ فِي مَحَلِّ رَفْعٍ فَاعِلٌ.",
+                "ফে‘লে মুদারি (বর্তমান/ভবিষ্যৎ ক্রিয়া): আফ‘আলে খামসাহ-র অন্তর্ভুক্ত হওয়ায় নূন বহাল থাকার মাধ্যমে মারফু, এবং ওয়াও কর্তাকারক সর্বনাম।",
+                "Imperfect verb (Mudari'): nominative with retention of Nun (Af'al Khamsah), with the attached Waw as subject."
+            )
+            posAr.contains("فعل مضارع") -> {
+                val caseMark = if (caseEn.contains("Subjunctive")) "مَنْصُوبٌ وَعَلَامَةُ نَصْبِهِ الْفَتْحَةُ الظَّاهِرَةُ" else if (caseEn.contains("Jussive")) "مَجْزُومٌ وَعَلَامَةُ جَزْمِهِ السُّكُونُ" else "مَرْفُوعٌ وَعَلَامَةُ رَفْعِهِ الضَّمَّةُ الظَّاهِرَةُ"
+                Triple(
+                    "فِعْلٌ مُضَارِعٌ $caseMark عَلَى آخِرِهِ، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ.",
+                    "ফে‘লে মুদারি (বর্তমান/ভবিষ্যৎ ক্রিয়া): ব্যাকরণগত অবস্থা অনুসারে শেষ বর্ণে নির্ধারিত হরকত গৃহীত হয়েছে।",
+                    "Imperfect verb (Mudari'): inflected according to syntactic governors with explicit terminal vowel mark."
+                )
+            }
+            posAr.contains("فعل ماض") && (numGenderEn.contains("Plural") || rawArabic.endsWith("ُوا") || rawArabic.endsWith("وا")) -> Triple(
+                "فِعْلٌ مَاضٍ مَبْنِيٌّ عَلَى الضَّمِّ لِاتِّصَالِهِ بِوَاوِ الْجَمَاعَةِ، وَالْوَاوُ ضَمِيرٌ مُتَّصِلٌ فِي مَحَلِّ رَفْعٍ فَاعِلٌ.",
+                "ফে‘লে মাদি (অতীত ক্রিয়া): বহুবচনের ওয়াও যুক্ত হওয়ায় দাম্মাহর ওপর মাবনী, এবং ওয়াও কর্তাকারক সর্বনাম।",
+                "Perfect verb (Fi'l Madi): built on dammah due to attached plural Waw, acting as subjective agent."
+            )
+            posAr.contains("فعل ماض") -> Triple(
+                "فِعْلٌ مَاضٍ مَبْنِيٌّ عَلَى الْفَتْحِ الظَّاهِرِ، وَالْفَاعِلُ ضَمِيرٌ مُسْتَتِرٌ.",
+                "ফে‘লে মাদি (অতীত ক্রিয়া): ফাতহাহ (যবর)-এর ওপর মাবনী (অপরিবর্তনীয়)।",
+                "Perfect verb (Fi'l Madi): built on apparent fathah, with third-person implied subject."
+            )
+            isParticle -> Triple(
+                "حَرْفٌ مَبْنِيٌّ لَا مَحَلَّ لَهُ مِنَ الْإِعْرَابِ.",
+                "মাবনী অব্যয় (হরফ): অপরিবর্তনীয় পদ যার স্বতন্ত্র বাক্যগত ই‘রাব নেই।",
+                "Invariable particle (Harf Mabni): non-inflected particle with no independent syntactic inflection."
+            )
+            caseEn.contains("Genitive") -> Triple(
+                "اسْمٌ مَجْرُورٌ (بِالْإِضَافَةِ أَوْ بِحَرْفِ الْجَرِّ) وَعَلَامَةُ جَرِّهِ الْكَسْرَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+                "মাজরুর বিশেষ্য পদ: হরফে জার বা ইদাফাতের (সম্বন্ধের) কারণে শেষ অক্ষরে কাসরাহ (জের) স্পষ্ট।",
+                "Genitive substantive noun: governed with apparent terminal kasrah."
+            )
+            caseEn.contains("Accusative") -> Triple(
+                "اسْمٌ مَنْصُوبٌ (مَفْعُولٌ بِهِ أَوْ حَالٌ) وَعَلَامَةُ نَصْبِهِ الْفَتْحَةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+                "মানসুব বিশেষ্য পদ: মাফ‘উল বা অবস্থা অনুসারে শেষ অক্ষরে ফাতহাহ (যবর) স্পষ্ট।",
+                "Accusative substantive noun: marked with apparent terminal fathah."
+            )
+            caseEn.contains("Nominative") -> Triple(
+                "اسْمٌ مَرْفُوعٌ (مُبْتَدَأٌ أَوْ فَاعِلٌ أَوْ خَبَرٌ) وَعَلَامَةُ رَفْعِهِ الضَّمَّةُ الظَّاهِرَةُ عَلَى آخِرِهِ.",
+                "মারফু বিশেষ্য পদ: কর্তা (ফা‘ইল), মুবতাদা বা খবর হিসেবে শেষ অক্ষরে দাম্মাহ (পেশ) স্পষ্ট।",
+                "Nominative substantive noun: marked with apparent terminal dammah."
+            )
+            else -> Triple(
+                "اسْمٌ مُعْرَبٌ يَتَحَدَّدُ إِعْرَابُهُ بِمَوْقِعِهِ فِي السَّيَاقِ الْقُرْآنِيِّ.",
+                "কুরআনের বিশেষ্য পদ: আয়াতের বাক্যগঠন ও পূর্বাপর অন্বয় অনুসারে নির্ধারিত ই‘রাবযুক্ত।",
+                "Inflected Quranic noun: determined by its contextual syntactic role in the noble verse."
+            )
+        }
+
+        // 2. Classical Sarf formulation
+        val (sarfAr, sarfBn, sarfEn) = if (hasRoot) {
+            Triple(
+                "اسْمٌ / كَلِمَةٌ مُشْتَقَّةٌ مِنَ الْجَذْرِ الثُّلَاثِيِّ: ($cleanRoot) عَلَى وَزْنِ: (${sarf.patternAr.ifBlank { "الْأَصْل" }}).",
+                "($cleanRoot) ধাতুমূল থেকে উৎপন্ন সাধিত পদ; রূপতাত্ত্বিক ওযন: ${sarf.patternBn}।",
+                "Derived Quranic morphological form from root ($cleanRoot) on pattern ${sarf.patternEn}."
+            )
+        } else {
+            Triple(
+                "كَلِمَةٌ قُرْآنِيَّةٌ جَامِدَةٌ أَوْ ثَابِتَةُ الْبِنْيَةِ: ${sarf.patternAr}.",
+                "অপরিবর্তনীয় বা মৌলিক কাঠামোবিশিষ্ট কুরআনিক শব্দরূপ: ${sarf.patternBn}।",
+                "Fixed or non-derived Quranic lexical structure: ${sarf.patternEn}."
+            )
+        }
+
+        // 3. Root vs Derived
+        val derivedAr = if (hasRoot) "$bareStem (${sarf.patternAr.ifBlank { "مُشْتَقّ" }})" else "$bareStem (أَصْلِيّ)"
+        val derivedBn = if (hasRoot) "$bareStem (ওযন: ${sarf.patternBn.ifBlank { "সাধিত রূপ" }})" else "$bareStem (মৌলিক রূপ)"
+
+        // 4. Classical Definition
+        val defAr = "الْمَعْنَى الْقُرْآنِيُّ لِكَلِمَةِ «$rawArabic»: تَدُلُّ عَلَى $posAr، وَتُفِيدُ دَلَالَةً بَلِيغَةً مُعْجِزَةً فِي سِيَاقِ الْآيَةِ."
+        val defBn = if (bnMeaning.isNotBlank()) {
+            "«$rawArabic» শব্দের কুরআনিক অর্থ: «$bnMeaning»; যা আয়াতের প্রসঙ্গে পরম ভাবগাম্ভীর্য ও অলঙ্কারপূর্ণ তাৎপর্য প্রকাশ করে।"
+        } else {
+            "«$rawArabic» একটি তাৎপর্যমণ্ডিত কুরআনিক শব্দ যা প্রসঙ্গানুসারে বিশেষ ভাবার্থ প্রকাশ করে।"
+        }
+        val defEn = if (enMeaning.isNotBlank()) {
+            "Quranic meaning of \"$rawArabic\": denotes \"$enMeaning\" with precise divine eloquence in this context."
+        } else {
+            "Quranic vocabulary term expressing nuanced linguistic and contextual significance."
+        }
+
+        return ClassicalLexiconDetail(
+            classicalIrabAr = irabAr,
+            classicalIrabBn = irabBn,
+            classicalIrabEn = irabEn,
+            classicalSarfAr = sarfAr,
+            classicalSarfBn = sarfBn,
+            classicalSarfEn = sarfEn,
+            rootLetters = if (hasRoot) cleanRoot else "",
+            derivedFormArabic = derivedAr,
+            derivedFormBn = derivedBn,
+            classicalDefinitionAr = defAr,
+            classicalDefinitionBn = defBn,
+            classicalDefinitionEn = defEn
         )
     }
 
@@ -568,6 +1035,7 @@ object WordMorphologyAnalyzer {
         return text.replace(DIACRITIC_REGEX, "")
             .replace('ٱ', 'ا')
             .replace('ى', 'ي')
+            .replace("\u0640", "")
             .trim()
     }
 

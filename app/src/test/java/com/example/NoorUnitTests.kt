@@ -635,4 +635,76 @@ class NoorUnitTests {
         assertFalse(defaults.showInlineTafsir)
         assertEquals(com.example.core.localization.ArabicFontFamilyOption.AUTO, defaults.arabicFontFamily)
     }
+
+    // 16. Classical Arabic I'rab, Sarf, Root vs Derived, and Theological Lexicon Analysis
+    @Test
+    fun testClassicalArabicIrabSarfAndLexiconAnalysis() {
+        val rahmanWord = WordEntity(
+            id = 1003L,
+            ayahId = 1,
+            position = 3,
+            textUthmani = "ٱلرَّحْمَـٰنِ",
+            textIndopak = "الرَّحْمٰنِ",
+            transliteration = "ar-Rahman",
+            rootArabic = "ر ح م",
+            lemmaArabic = "رَحْمَـٰن",
+            grammarTagJson = "Noun, Genitive",
+            audioUrl = ""
+        )
+        val translations = listOf(
+            WordTranslationEntity(1003L, "bn", "পরম করুণাময়"),
+            WordTranslationEntity(1003L, "en", "The Entirely Merciful")
+        )
+        val analysis = WordMorphologyAnalyzer.analyze(rahmanWord, translations)
+
+        // Verify authentic classical Arabic I'rab & Sarf
+        assertTrue(analysis.classicalIrabAr.contains("نَعْتٌ مَجْرُورٌ"))
+        assertTrue(analysis.classicalSarfAr.contains("صِيغَةُ مُبَالَغَةٍ"))
+        assertTrue(analysis.classicalSarfAr.contains("فَعْلَانُ"))
+        assertTrue(analysis.classicalSarfAr.contains("رحم"))
+        assertTrue(analysis.classicalDefinitionAr.contains("ذُو الرَّحْمَةِ الْعَامَّةِ"))
+        assertEquals("رحم", analysis.rootLetters)
+        assertTrue(analysis.derivedFormArabic.contains("رحمن"))
+
+        // Disconnected letter verification (Huruf Muqatta'at)
+        val alifLamMim = WordEntity(
+            id = 2001L,
+            ayahId = 2,
+            position = 1,
+            textUthmani = "الٓمٓ",
+            textIndopak = "الٓمٓ",
+            transliteration = "Alif-Lam-Meem",
+            rootArabic = "",
+            lemmaArabic = "",
+            grammarTagJson = "",
+            audioUrl = ""
+        )
+        val muqattaatAnalysis = WordMorphologyAnalyzer.analyze(alifLamMim, emptyList())
+        assertTrue(muqattaatAnalysis.classicalIrabAr.contains("حُرُوفٌ مُقَطَّعَةٌ"))
+        assertEquals("", muqattaatAnalysis.spacedRoot)
+        assertEquals("", muqattaatAnalysis.rootLetters)
+
+        // Untagged general word synthesis without hallucination
+        val generalWord = WordEntity(
+            id = 3001L,
+            ayahId = 10,
+            position = 4,
+            textUthmani = "يَعْلَمُونَ",
+            textIndopak = "يَعْلَمُونَ",
+            transliteration = "ya'lamoon",
+            rootArabic = "",
+            lemmaArabic = "",
+            grammarTagJson = "",
+            audioUrl = ""
+        )
+        val generalAnalysis = WordMorphologyAnalyzer.analyze(
+            generalWord,
+            listOf(WordTranslationEntity(3001L, "bn", "তারা জানে"))
+        )
+        assertTrue("Expected Mudari' Arabic I'rab for yalamuun", generalAnalysis.classicalIrabAr.contains("فِعْلٌ مُضَارِعٌ"))
+        assertTrue(generalAnalysis.classicalSarfAr.isNotBlank())
+        assertTrue(generalAnalysis.classicalDefinitionAr.isNotBlank())
+        assertEquals("", generalAnalysis.spacedRoot)
+        assertEquals("", generalAnalysis.rootLetters)
+    }
 }
