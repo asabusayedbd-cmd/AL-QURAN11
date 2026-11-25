@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.database.AyahEntity
 import com.example.core.database.AyahTranslationEntity
+import com.example.core.database.DuaEntity
 import com.example.core.database.NoorDatabase
 import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.SurahEntity
@@ -13,6 +14,8 @@ import com.example.core.localization.UserPreferences
 import com.example.core.network.QuranSyncRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +38,7 @@ data class ExplorerUiState(
     val searchQuery: String = "",
     val matchedSurahs: List<SurahEntity> = emptyList(),
     val searchResults: List<ExplorerSearchResult> = emptyList(),
+    val matchedDuas: List<DuaEntity> = emptyList(),
     val downloadingSurahId: Int? = null,
     val downloadMessage: String? = null
 )
@@ -47,10 +51,12 @@ class ExplorerViewModel(
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
+    private val duaDao = database.duaDao()
 
     private val _searchQuery = MutableStateFlow("")
     private val _matchedSurahs = MutableStateFlow<List<SurahEntity>>(emptyList())
     private val _searchResults = MutableStateFlow<List<ExplorerSearchResult>>(emptyList())
+    private val _matchedDuas = MutableStateFlow<List<DuaEntity>>(emptyList())
     private val _downloadingSurahId = MutableStateFlow<Int?>(null)
     private val _downloadMessage = MutableStateFlow<String?>(null)
     private var searchJob: Job? = null
@@ -61,6 +67,7 @@ class ExplorerViewModel(
         _searchQuery,
         _matchedSurahs,
         _searchResults,
+        _matchedDuas,
         _downloadingSurahId,
         _downloadMessage
     ) { array ->
@@ -72,8 +79,10 @@ class ExplorerViewModel(
         val surahMatches = array[3] as List<SurahEntity>
         @Suppress("UNCHECKED_CAST")
         val results = array[4] as List<ExplorerSearchResult>
-        val downloadingId = array[5] as Int?
-        val dlMessage = array[6] as String?
+        @Suppress("UNCHECKED_CAST")
+        val duaMatches = array[5] as List<DuaEntity>
+        val downloadingId = array[6] as Int?
+        val dlMessage = array[7] as String?
 
         ExplorerUiState(
             surahs = surahs,
@@ -81,6 +90,7 @@ class ExplorerViewModel(
             searchQuery = query,
             matchedSurahs = surahMatches,
             searchResults = results,
+            matchedDuas = duaMatches,
             downloadingSurahId = downloadingId,
             downloadMessage = dlMessage
         )
@@ -99,28 +109,96 @@ class ExplorerViewModel(
         if (trimmed.isBlank()) {
             _matchedSurahs.value = emptyList()
             _searchResults.value = emptyList()
+            _matchedDuas.value = emptyList()
             return
         }
-        searchJob = viewModelScope.launch(Dispatchers.Default) {
-            delay(90L)
+        searchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(75L)
             val allSurahs = uiState.value.surahs
-            val numQuery = trimmed.toIntOrNull()
-            val normalized = BidiUtils.normalizeArabicForSearch(trimmed)
+            val asciiDigitsQuery = BidiUtils.normalizeDigitsToAscii(trimmed)
+            val normalizedArabic = BidiUtils.normalizeArabicForSearch(trimmed)
+            val hasArabicScript = trimmed.any { it in '\u0600'..'\u06FF' }
+
+            // Multi-form verse key parsing: "2:255", "2 255", "২:২৫৫", "40-3", "surah 40", "সূরা ৪০"
+            val verseKeyMatch = VERSE_KEY_REGEX.matchEntire(asciiDigitsQuery)
+            val parsedVerseKey = verseKeyMatch?.let { m ->
+                val s = m.groupValues[1].toIntOrNull()
+                val a = m.groupValues[2].toIntOrNull()
+                if (s != null && s in 1..114 && a != null && a >= 1) "$s:$a" else null
+            }
+
+            val bareNumber = SURAH_NUM_EXTRACT_REGEX.find(asciiDigitsQuery)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                ?: asciiDigitsQuery.toIntOrNull()
+
             val surahMatches = allSurahs.filter { surah ->
-                (numQuery != null && surah.id == numQuery) ||
+                (bareNumber != null && surah.id == bareNumber) ||
+                    (verseKeyMatch != null && surah.id == verseKeyMatch.groupValues[1].toIntOrNull()) ||
                     surah.nameTransliteration.contains(trimmed, ignoreCase = true) ||
                     surah.nameArabic.contains(trimmed) ||
-                    BidiUtils.normalizeArabicForSearch(surah.nameArabic).contains(normalized.ifBlank { trimmed }) ||
+                    (normalizedArabic.isNotBlank() && BidiUtils.normalizeArabicForSearch(surah.nameArabic).contains(normalizedArabic)) ||
                     surah.localizedNamesJson.contains(trimmed, ignoreCase = true)
             }.take(8)
             _matchedSurahs.value = surahMatches
 
-            val matchedAyahs = quranDao.searchAyahs(
-                exactQuery = trimmed,
-                normalizedQuery = normalized.ifBlank { trimmed },
-                rawQuery = trimmed
-            )
-            mapAndEmitResults(matchedAyahs)
+            // Ensure target Surah from verseKey is seeded offline before lookup
+            if (parsedVerseKey != null) {
+                val sid = parsedVerseKey.substringBefore(':').toIntOrNull()
+                if (sid != null && quranDao.countAyahsInSurah(sid) == 0) {
+                    seeder?.ensureSurahLoadedFromAssets(sid)
+                }
+            }
+
+            // Fast split indexed queries in parallel instead of a slow 4-way LEFT JOIN
+            val combinedAyahs = coroutineScope {
+                val exactDef = async {
+                    parsedVerseKey?.let { quranDao.getAyahByKey(it) }
+                }
+                val arabicNormDef = async {
+                    if (hasArabicScript && normalizedArabic.isNotBlank()) {
+                        quranDao.searchAyahsByNormalizedArabic(normalizedArabic)
+                    } else emptyList()
+                }
+                val arabicRawDef = async {
+                    if (hasArabicScript) {
+                        quranDao.searchAyahsByUthmani(trimmed)
+                    } else emptyList()
+                }
+                val trIdsDef = async {
+                    if (trimmed.length >= 2 && parsedVerseKey == null) {
+                        quranDao.searchAyahIdsByTranslation(trimmed)
+                    } else emptyList()
+                }
+                val wordIdsDef = async {
+                    if (trimmed.length >= 2 && parsedVerseKey == null) {
+                        quranDao.searchAyahIdsByWord(trimmed, normalizedArabic.ifBlank { trimmed })
+                    } else emptyList()
+                }
+                val duaDef = async {
+                    if (trimmed.length >= 2 && parsedVerseKey == null) {
+                        duaDao.searchDuas(trimmed)
+                    } else emptyList()
+                }
+
+                _matchedDuas.value = duaDef.await()
+
+                val ordered = LinkedHashMap<Int, AyahEntity>()
+                exactDef.await()?.let { ordered[it.id] = it }
+                arabicNormDef.await().forEach { ordered.putIfAbsent(it.id, it) }
+                arabicRawDef.await().forEach { ordered.putIfAbsent(it.id, it) }
+
+                val extraIds = (wordIdsDef.await() + trIdsDef.await())
+                    .distinct()
+                    .filter { it !in ordered }
+                    .take(60)
+                if (extraIds.isNotEmpty()) {
+                    extraIds.chunked(200)
+                        .flatMap { quranDao.getAyahsByIds(it) }
+                        .forEach { ordered.putIfAbsent(it.id, it) }
+                }
+                ordered.values.take(60)
+            }
+
+            mapAndEmitResults(combinedAyahs)
         }
     }
 
@@ -200,5 +278,10 @@ class ExplorerViewModel(
             ExplorerSearchResult(ayah, surahName, bestTr)
         }
         _searchResults.update { mapped }
+    }
+
+    companion object {
+        private val VERSE_KEY_REGEX = Regex("^(\\d{1,3})\\s*[:\\-/\\s]\\s*(\\d{1,3})$")
+        private val SURAH_NUM_EXTRACT_REGEX = Regex("^(?:surah|sura|সূরা|سورة)\\s*(\\d{1,3})$", RegexOption.IGNORE_CASE)
     }
 }

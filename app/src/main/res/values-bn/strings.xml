@@ -260,4 +260,39 @@
     <string name="dm_tab_audio">অডিও</string>
     <string name="dm_tab_translations">অনুবাদ</string>
     <string name="dm_tab_tafsirs">তাফসীর</string>
+
+    <string name="word_sarf_pattern_label">সরফ ওজন (وزن)</string>
+    <string name="word_definiteness_label">নির্দিষ্টতা (تعريف)</string>
+    <string name="word_exact_occurrences_label">কুরআনে হুবহু এই শব্দ</string>
+    <string name="word_sarf_nahw_title">সরফ ও নাহু বিশ্লেষণ (صرف ونحو)</string>
+    <string name="word_sarf_prefix">সরফ (রূপতত্ত্ব)</string>
+    <string name="word_nahw_prefix">নাহু (বাক্যতত্ত্ব)</string>
+    <string name="word_other_forms_title">কুরআনে একই মূলের অন্যান্য রূপ</string>
+
+    <string name="location_picker_subtitle">বাংলাদেশের ৬৪ জেলা, উপজেলা ও বিশ্বব্যাপী শহর</string>
+    <string name="gps_button">জিপিএস</string>
+    <string name="search_bangladesh_city_hint">জেলা, উপজেলা বা শহর খুঁজুন (ঢাকা, সিলেট, Cumilla…)</string>
+    <string name="places_found_fmt">%1$dটি স্থান পাওয়া গেছে</string>
+    <string name="qibla_calibrate_hint">কম্পাসের সঠিকতা বাড়াতে ফোনটি ইংরেজি ৮ (figure-8) আকারে ঘোরান</string>
+    <string name="qibla_no_sensor_hint">কম্পাস সেন্সর পাওয়া যায়নি। উত্তর দিক থেকে %1$d° ঘড়ির কাঁটার দিকে ফিরুন।</string>
+
+    <string name="dua_grade_quranic">মান: কুরআনিক</string>
+    <string name="dua_grade_sahih">মান: সহীহ</string>
+    <string name="dua_grade_hasan">মান: হাসান</string>
+
+    <string name="translation_grade_verified">যাচাইকৃত সংস্করণ</string>
+    <string name="translation_grade_classical">ক্লাসিক সংস্করণ</string>
+    <string name="translation_grade_standard">প্রামাণ্য সংস্করণ</string>
+
+    <string name="tajweed_academy_title">তাজবীদ, মাখারিজ ও ওয়াকফ একাডেমি</string>
+    <string name="tajweed_tab_makharij">মাখারিজ</string>
+    <string name="tajweed_tab_letters">২৯ হরফ</string>
+    <string name="tajweed_tab_rules">তাজবীদ</string>
+    <string name="tajweed_tab_waqf">ওয়াকফ (وقف)</string>
+
+    <string name="flashcards_title">কুরআনের শব্দভাণ্ডার ও দীর্ঘ আয়াত ফ্ল্যাশকার্ড</string>
+    <string name="flashcards_long_ayahs">দীর্ঘ আয়াত</string>
+    <string name="flashcards_surah_deck">সূরা ডেক</string>
+    <string name="flashcards_essential_deck">মৌলিক শব্দ</string>
+    <string name="flashcards_bookmarks_deck">বুকমার্ক</string>
 </resources>

@@ -33,7 +33,8 @@ data class SurahEntity(
         Index("surahId"),
         Index("verseKey", unique = true),
         Index("juzNumber"),
-        Index("pageNumber")
+        Index("pageNumber"),
+        Index("normalizedArabic")
     ]
 )
 data class AyahEntity(
@@ -61,7 +62,12 @@ data class AyahEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("ayahId"), Index("rootArabic")]
+    indices = [
+        Index("ayahId"),
+        Index("rootArabic"),
+        Index("textUthmani"),
+        Index("normalizedText")
+    ]
 )
 data class WordEntity(
     @PrimaryKey val id: Long,
@@ -73,7 +79,8 @@ data class WordEntity(
     val rootArabic: String,
     val lemmaArabic: String,
     val grammarTagJson: String,
-    val audioUrl: String? = null
+    val audioUrl: String? = null,
+    val normalizedText: String = ""
 )
 
 @Entity(

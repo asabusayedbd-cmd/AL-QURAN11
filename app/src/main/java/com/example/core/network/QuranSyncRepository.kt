@@ -47,6 +47,7 @@ class QuranSyncRepository(
             )
             val allTranslationSources = quranDao.getAllTranslationSources()
             val translationLangById = allTranslationSources.associate { it.id to it.languageCode }
+            val translationTitleById = allTranslationSources.associate { it.id to it.translatorName }
             val resolvedTranslationIds = translationIds?.takeIf { it.isNotEmpty() }
                 ?: allTranslationSources
                     .filter { it.isEnabled }
@@ -130,7 +131,8 @@ class QuranSyncRepository(
                                 grammarTagJson = "",
                                 audioUrl = w.audioUrl?.takeIf { it.isNotBlank() }?.let { url ->
                                     if (url.startsWith("http")) url else "https://audio.qurancdn.com/$url"
-                                }
+                                },
+                                normalizedText = BidiUtils.normalizeArabicForSearch(wordTextUthmani)
                             )
                         )
                         val meaning = cleanHtml(w.translation?.text.orEmpty())
@@ -147,12 +149,15 @@ class QuranSyncRepository(
 
                     for (tr in v.translations) {
                         val langCode = translationLangById[tr.resourceId] ?: inferTranslationLang(tr.resourceId)
+                        val bookTitle = translationTitleById[tr.resourceId]?.takeIf { it.isNotBlank() }
+                            ?: tr.resourceName
+                            ?: "Quran Translation"
                         ayahTranslationsToSave.add(
                             AyahTranslationEntity(
                                 sourceId = tr.resourceId,
                                 ayahId = v.id,
                                 languageCode = langCode,
-                                translatorName = tr.resourceName ?: "Quran Translation",
+                                translatorName = bookTitle,
                                 translatedText = cleanHtml(tr.text)
                             )
                         )
@@ -237,7 +242,8 @@ class QuranSyncRepository(
                             rootArabic = old.rootArabic.ifBlank { w.rootArabic },
                             lemmaArabic = old.lemmaArabic.ifBlank { w.lemmaArabic },
                             grammarTagJson = old.grammarTagJson.ifBlank { w.grammarTagJson },
-                            transliteration = w.transliteration.ifBlank { old.transliteration }
+                            transliteration = w.transliteration.ifBlank { old.transliteration },
+                            normalizedText = w.normalizedText.ifBlank { old.normalizedText }
                         )
                     } else w
                 }
@@ -540,7 +546,9 @@ class QuranSyncRepository(
                                 sourceId = source.id,
                                 ayahId = localAyah.id,
                                 languageCode = source.languageCode,
-                                translatorName = tr.resourceName?.takeIf { it.isNotBlank() } ?: source.translatorName,
+                                translatorName = source.translatorName.takeIf { it.isNotBlank() }
+                                    ?: tr.resourceName?.takeIf { it.isNotBlank() }
+                                    ?: "Quran Translation",
                                 translatedText = cleanText
                             )
                         )

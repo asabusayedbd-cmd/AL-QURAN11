@@ -3,11 +3,15 @@ package com.example.feature.home
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.GeomagneticField
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.LocationManager
+import android.os.Build
+import android.view.Surface as AndroidSurface
+import android.view.WindowManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -66,6 +70,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -95,6 +100,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import androidx.compose.ui.graphics.nativeCanvas
 import com.example.R
 import com.example.core.ibadah.PrayerTimeCalculator
 import com.example.core.ibadah.PrayerTimesSummary
@@ -103,7 +109,10 @@ import com.example.ui.components.ShareCardGenerator
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
 import java.util.Calendar
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 private data class QuickShortcut(val surahId: Int, val ayahNumber: Int, val title: String, val subtitle: String)
 
@@ -764,14 +773,15 @@ fun HomeScreen(
 
     if (showCityPicker) {
         var cityQuery by remember { mutableStateOf("") }
-        val filteredPresets = remember(cityQuery) {
-            if (cityQuery.isBlank()) {
-                PrayerTimeCalculator.CITY_PRESETS
-            } else {
-                PrayerTimeCalculator.CITY_PRESETS.filter {
-                    it.name.contains(cityQuery, ignoreCase = true)
-                }
-            }
+        var selectedRegion by remember { mutableStateOf("All") }
+        val divisionChips = remember {
+            listOf("All", "Dhaka", "Chattogram", "Rajshahi", "Khulna", "Barishal", "Sylhet", "Rangpur", "Mymensingh", "Global")
+        }
+        val filteredPresets = remember(cityQuery, selectedRegion) {
+            PrayerTimeCalculator.searchLocations(
+                query = cityQuery,
+                divisionFilter = if (selectedRegion == "All") null else selectedRegion
+            )
         }
         ModalBottomSheet(onDismissRequest = { showCityPicker = false }) {
             Column(
@@ -780,14 +790,49 @@ fun HomeScreen(
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Text(stringResource(R.string.prayer_times_title), style = MaterialTheme.typography.titleLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.prayer_times_title), style = MaterialTheme.typography.titleLarge)
+                        Text(
+                            text = stringResource(R.string.location_picker_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            val granted = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                            if (granted) {
+                                fetchLastCoarseLocation(context) { lat, lon ->
+                                    viewModel.updateLocation("GPS Location", lat, lon)
+                                    showCityPicker = false
+                                }
+                            } else {
+                                locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
+                            }
+                        },
+                        modifier = Modifier.testTag("use_gps_location_button")
+                    ) {
+                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(stringResource(R.string.gps_button))
+                    }
+                }
+
                 OutlinedTextField(
                     value = cityQuery,
                     onValueChange = { cityQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("city_search_input"),
-                    placeholder = { Text("Search city or country...") },
+                    placeholder = { Text(stringResource(R.string.search_bangladesh_city_hint)) },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                     trailingIcon = {
                         if (cityQuery.isNotEmpty()) {
@@ -799,13 +844,34 @@ fun HomeScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp)
                 )
+
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(divisionChips, key = { it }) { region ->
+                        FilterChip(
+                            selected = selectedRegion == region,
+                            onClick = { selectedRegion = region },
+                            label = { Text(region) },
+                            modifier = Modifier.testTag("region_chip_$region")
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.places_found_fmt, filteredPresets.size),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(340.dp),
+                        .height(320.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredPresets, key = { it.name }) { preset ->
+                    items(filteredPresets, key = { "${it.region}_${it.name}" }) { preset ->
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             color = if (preset.name == state.preferences.locationName) {
@@ -821,11 +887,39 @@ fun HomeScreen(
                                     showCityPicker = false
                                 }
                         ) {
-                            Text(
-                                text = preset.name,
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(14.dp)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 11.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (preset.banglaName.isNotBlank()) "${preset.name} (${preset.banglaName})" else preset.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    val utcLabel = preset.utcOffsetHours?.let { h ->
+                                        " • UTC${if (h >= 0) "+" else ""}${if (h % 1.0 == 0.0) h.toInt().toString() else h.toString()}"
+                                    }.orEmpty()
+                                    Text(
+                                        text = "${preset.region}$utcLabel",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(
+                                    Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = if (preset.name == state.preferences.locationName) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -838,6 +932,9 @@ fun HomeScreen(
         QiblaCompassSheet(
             qiblaBearingDeg = state.qiblaBearingDegrees,
             locationName = state.preferences.locationName,
+            latitude = state.preferences.latitude,
+            longitude = state.preferences.longitude,
+            distanceKm = state.distanceToKaabaKm,
             onDismiss = { showQiblaSheet = false },
             onOpenCityPicker = { showCityPicker = true }
         )
@@ -962,90 +1059,320 @@ private fun PrayerCell(name: String, time: String) {
 private fun QiblaCompassSheet(
     qiblaBearingDeg: Float,
     locationName: String,
+    latitude: Double,
+    longitude: Double,
+    distanceKm: Int,
     onDismiss: () -> Unit,
     onOpenCityPicker: () -> Unit
 ) {
     val context = LocalContext.current
     var azimuthDeg by remember { mutableFloatStateOf(0f) }
+    var hasSensorReading by remember { mutableStateOf(false) }
+    var hasHardwareCompass by remember { mutableStateOf(true) }
+    var needsCalibration by remember { mutableStateOf(false) }
+    var sensorSourceLabel by remember { mutableStateOf("Calibrating...") }
 
-    DisposableEffect(context) {
+    val declinationDeg = remember(latitude, longitude) {
+        runCatching {
+            GeomagneticField(
+                latitude.toFloat(),
+                longitude.toFloat(),
+                0f,
+                System.currentTimeMillis()
+            ).declination
+        }.getOrDefault(0f)
+    }
+
+    DisposableEffect(context, declinationDeg) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val rotationSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
-        val listener = object : SensorEventListener {
-            val rotationMatrix = FloatArray(9)
-            val orientation = FloatArray(3)
-            override fun onSensorChanged(event: SensorEvent) {
-                SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-                SensorManager.getOrientation(rotationMatrix, orientation)
-                val deg = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                azimuthDeg = ((deg + 360f) % 360f)
+        val accelSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val magnetSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+        if (sensorManager == null || (rotationSensor == null && (accelSensor == null || magnetSensor == null))) {
+            hasHardwareCompass = false
+            sensorSourceLabel = "No magnetometer sensor on device"
+            onDispose { }
+        } else {
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
+            val listener = object : SensorEventListener {
+                val rawRotation = FloatArray(9)
+                val remappedRotation = FloatArray(9)
+                val inclinationMatrix = FloatArray(9)
+                val orientation = FloatArray(3)
+                val gravity = FloatArray(3)
+                val geomagnetic = FloatArray(3)
+                var hasGravity = false
+                var hasMagnetic = false
+                var receivedRotationVector = false
+                var smoothedTrueAzimuth = 0f
+                var initializedSmoothing = false
+
+                private fun updateSmoothedHeading(rawMatrix: FloatArray, sourceName: String) {
+                    @Suppress("DEPRECATION")
+                    val displayRotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        runCatching { context.display?.rotation }.getOrNull()
+                            ?: windowManager?.defaultDisplay?.rotation
+                            ?: AndroidSurface.ROTATION_0
+                    } else {
+                        windowManager?.defaultDisplay?.rotation ?: AndroidSurface.ROTATION_0
+                    }
+
+                    val (axisX, axisY) = when (displayRotation) {
+                        AndroidSurface.ROTATION_90 -> SensorManager.AXIS_Y to SensorManager.AXIS_MINUS_X
+                        AndroidSurface.ROTATION_180 -> SensorManager.AXIS_MINUS_X to SensorManager.AXIS_MINUS_Y
+                        AndroidSurface.ROTATION_270 -> SensorManager.AXIS_MINUS_Y to SensorManager.AXIS_X
+                        else -> SensorManager.AXIS_X to SensorManager.AXIS_Y
+                    }
+
+                    val targetMatrix = if (SensorManager.remapCoordinateSystem(rawMatrix, axisX, axisY, remappedRotation)) {
+                        remappedRotation
+                    } else {
+                        rawMatrix
+                    }
+                    SensorManager.getOrientation(targetMatrix, orientation)
+                    val magneticDeg = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                    val trueNorthDeg = ((magneticDeg + declinationDeg) % 360f + 360f) % 360f
+
+                    if (!initializedSmoothing) {
+                        smoothedTrueAzimuth = trueNorthDeg
+                        initializedSmoothing = true
+                    } else {
+                        val delta = ((trueNorthDeg - smoothedTrueAzimuth + 540f) % 360f) - 180f
+                        smoothedTrueAzimuth = ((smoothedTrueAzimuth + delta * 0.22f) % 360f + 360f) % 360f
+                    }
+                    azimuthDeg = smoothedTrueAzimuth
+                    hasSensorReading = true
+                    sensorSourceLabel = sourceName
+                }
+
+                override fun onSensorChanged(event: SensorEvent) {
+                    when (event.sensor.type) {
+                        Sensor.TYPE_ROTATION_VECTOR -> {
+                            receivedRotationVector = true
+                            SensorManager.getRotationMatrixFromVector(rawRotation, event.values)
+                            updateSmoothedHeading(rawRotation, "Fusion Sensor • True North")
+                        }
+                        Sensor.TYPE_ACCELEROMETER -> {
+                            val alpha = 0.8f
+                            if (!hasGravity) {
+                                System.arraycopy(event.values, 0, gravity, 0, 3)
+                                hasGravity = true
+                            } else {
+                                gravity[0] = alpha * gravity[0] + (1f - alpha) * event.values[0]
+                                gravity[1] = alpha * gravity[1] + (1f - alpha) * event.values[1]
+                                gravity[2] = alpha * gravity[2] + (1f - alpha) * event.values[2]
+                            }
+                            if (!receivedRotationVector && hasMagnetic &&
+                                SensorManager.getRotationMatrix(rawRotation, inclinationMatrix, gravity, geomagnetic)
+                            ) {
+                                updateSmoothedHeading(rawRotation, "Magnetic + Accel • True North")
+                            }
+                        }
+                        Sensor.TYPE_MAGNETIC_FIELD -> {
+                            val alpha = 0.8f
+                            if (!hasMagnetic) {
+                                System.arraycopy(event.values, 0, geomagnetic, 0, 3)
+                                hasMagnetic = true
+                            } else {
+                                geomagnetic[0] = alpha * geomagnetic[0] + (1f - alpha) * event.values[0]
+                                geomagnetic[1] = alpha * geomagnetic[1] + (1f - alpha) * event.values[1]
+                                geomagnetic[2] = alpha * geomagnetic[2] + (1f - alpha) * event.values[2]
+                            }
+                            if (!receivedRotationVector && hasGravity &&
+                                SensorManager.getRotationMatrix(rawRotation, inclinationMatrix, gravity, geomagnetic)
+                            ) {
+                                updateSmoothedHeading(rawRotation, "Magnetic + Accel • True North")
+                            }
+                        }
+                    }
+                }
+
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+                    if (sensor?.type == Sensor.TYPE_MAGNETIC_FIELD || sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
+                        needsCalibration = accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE ||
+                            accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW
+                    }
+                }
             }
-            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-        }
-        if (rotationSensor != null) {
-            sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_UI)
-        }
-        onDispose {
-            sensorManager?.unregisterListener(listener)
+
+            if (rotationSensor != null) {
+                sensorManager.registerListener(listener, rotationSensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+            if (accelSensor != null) {
+                sensorManager.registerListener(listener, accelSensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+            if (magnetSensor != null) {
+                sensorManager.registerListener(listener, magnetSensor, SensorManager.SENSOR_DELAY_GAME)
+            }
+
+            onDispose {
+                sensorManager.unregisterListener(listener)
+            }
         }
     }
 
-    val relativeAngle = ((qiblaBearingDeg - azimuthDeg) + 360f) % 360f
-    val ringColor = MaterialTheme.colorScheme.outline
-    val primaryColor = MaterialTheme.colorScheme.primary
+    val relativeAngle = if (hasSensorReading) {
+        ((qiblaBearingDeg - azimuthDeg) % 360f + 360f) % 360f
+    } else {
+        qiblaBearingDeg
+    }
+    val signedDiff = ((relativeAngle + 540f) % 360f) - 180f
+    val isAligned = hasSensorReading && abs(signedDiff) <= 5f
+
+    val ringColor = if (isAligned) Color(0xFF1B8A5A) else MaterialTheme.colorScheme.outline
+    val primaryColor = if (isAligned) Color(0xFF1B8A5A) else MaterialTheme.colorScheme.primary
     val goldColor = MaterialTheme.colorScheme.secondary
+    val labelTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(stringResource(R.string.qibla_compass_title), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.qibla_compass_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                text = stringResource(R.string.qibla_bearing_fmt, locationName, qiblaBearingDeg.roundToInt()),
+                text = stringResource(R.string.qibla_bearing_fmt, locationName, qiblaBearingDeg.roundToInt()) +
+                    " • ${BidiUtils.formatNumber(distanceKm, "en")} km to Makkah",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
-            FilledTonalButton(
-                onClick = {
-                    onDismiss()
-                    onOpenCityPicker()
-                },
-                modifier = Modifier.testTag("qibla_change_city_button")
-            ) {
-                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(stringResource(R.string.change_city))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                FilledTonalButton(
+                    onClick = {
+                        onDismiss()
+                        onOpenCityPicker()
+                    },
+                    modifier = Modifier.testTag("qibla_change_city_button")
+                ) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(stringResource(R.string.change_city))
+                }
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = if (isAligned) Color(0xFF1B8A5A).copy(alpha = 0.16f) else MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = when {
+                            !hasHardwareCompass -> "Fixed North Bearing"
+                            isAligned -> "Aligned with Qibla"
+                            hasSensorReading -> "Heading ${azimuthDeg.roundToInt()}°"
+                            else -> "Hold phone flat"
+                        },
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isAligned) Color(0xFF1B8A5A) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
+                    )
+                }
             }
 
             Box(
                 modifier = Modifier
-                    .size(210.dp)
+                    .size(240.dp)
                     .padding(8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val radius = size.minDimension / 2f
-                    drawCircle(color = ringColor, radius = radius, style = Stroke(width = 6.dp.toPx()))
+                    val compassRotation = if (hasSensorReading) -azimuthDeg else 0f
+
+                    drawCircle(
+                        color = ringColor.copy(alpha = if (isAligned) 0.9f else 0.45f),
+                        radius = radius,
+                        style = Stroke(width = if (isAligned) 8.dp.toPx() else 4.dp.toPx())
+                    )
+
+                    // Rotate compass dial with North
+                    rotate(degrees = compassRotation) {
+                        for (deg in 0 until 360 step 15) {
+                            val rad = Math.toRadians(deg.toDouble())
+                            val isMajor = deg % 90 == 0
+                            val innerR = radius * if (isMajor) 0.80f else 0.88f
+                            val outerR = radius * 0.96f
+                            drawLine(
+                                color = if (deg == 0) Color(0xFFD32F2F) else ringColor.copy(alpha = if (isMajor) 0.7f else 0.3f),
+                                start = Offset(
+                                    center.x + (innerR * sin(rad)).toFloat(),
+                                    center.y - (innerR * cos(rad)).toFloat()
+                                ),
+                                end = Offset(
+                                    center.x + (outerR * sin(rad)).toFloat(),
+                                    center.y - (outerR * cos(rad)).toFloat()
+                                ),
+                                strokeWidth = if (isMajor) 3.dp.toPx() else 1.5.dp.toPx()
+                            )
+                        }
+                        val paint = android.graphics.Paint().apply {
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            textSize = 13.sp.toPx()
+                            isFakeBoldText = true
+                            color = android.graphics.Color.argb(
+                                230,
+                                (labelTextColor.red * 255).toInt(),
+                                (labelTextColor.green * 255).toInt(),
+                                (labelTextColor.blue * 255).toInt()
+                            )
+                        }
+                        val northPaint = android.graphics.Paint(paint).apply {
+                            color = android.graphics.Color.rgb(211, 47, 47)
+                        }
+                        val labelR = radius * 0.68f
+                        drawContext.canvas.nativeCanvas.drawText("N", center.x, center.y - labelR + 5.dp.toPx(), northPaint)
+                        drawContext.canvas.nativeCanvas.drawText("S", center.x, center.y + labelR + 5.dp.toPx(), paint)
+                        drawContext.canvas.nativeCanvas.drawText("E", center.x + labelR, center.y + 5.dp.toPx(), paint)
+                        drawContext.canvas.nativeCanvas.drawText("W", center.x - labelR, center.y + 5.dp.toPx(), paint)
+                    }
+
+                    // Qibla Pointer Needle
                     rotate(degrees = relativeAngle) {
                         drawLine(
                             color = primaryColor,
-                            start = center,
-                            end = Offset(center.x, center.y - radius * 0.78f),
+                            start = Offset(center.x, center.y + radius * 0.16f),
+                            end = Offset(center.x, center.y - radius * 0.74f),
                             strokeWidth = 7.dp.toPx(),
                             cap = StrokeCap.Round
                         )
                         drawCircle(
                             color = goldColor,
-                            radius = 10.dp.toPx(),
-                            center = Offset(center.x, center.y - radius * 0.78f)
+                            radius = 12.dp.toPx(),
+                            center = Offset(center.x, center.y - radius * 0.76f)
                         )
                     }
                     drawCircle(color = primaryColor, radius = 8.dp.toPx(), center = center)
                 }
+            }
+
+            if (needsCalibration) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.tertiaryContainer
+                ) {
+                    Text(
+                        text = stringResource(R.string.qibla_calibrate_hint),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Text(
+                    text = if (hasHardwareCompass) {
+                        "$sensorSourceLabel • Declination ${if (declinationDeg >= 0) "+" else ""}${declinationDeg.roundToInt()}°"
+                    } else {
+                        stringResource(R.string.qibla_no_sensor_hint, qiblaBearingDeg.roundToInt())
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
             }
 
             Button(onClick = onDismiss) {

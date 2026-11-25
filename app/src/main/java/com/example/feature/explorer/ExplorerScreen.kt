@@ -279,6 +279,62 @@ fun ExplorerScreen(
                             }
                         }
                     }
+
+                    if (state.matchedDuas.isNotEmpty()) {
+                        items(state.matchedDuas, key = { "dua_${it.id}" }) { dua ->
+                            OutlinedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("search_dua_${dua.id}")
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Dua #${dua.id} • ${dua.title}",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Surface(
+                                            shape = MaterialTheme.shapes.small,
+                                            color = MaterialTheme.colorScheme.secondaryContainer
+                                        ) {
+                                            Text(
+                                                text = dua.category,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = dua.arabicText,
+                                        fontFamily = arabicScriptFont(state.preferences.scriptType),
+                                        fontSize = 20.sp,
+                                        lineHeight = 32.sp
+                                    )
+                                    Text(
+                                        text = dua.translation,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = dua.reference,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             } else {
                 TabRow(selectedTabIndex = selectedTab) {

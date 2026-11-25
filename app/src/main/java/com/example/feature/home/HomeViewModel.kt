@@ -48,6 +48,7 @@ data class HomeUiState(
     val verseOfTheDay: VerseOfTheDayItem? = null,
     val prayerTimes: PrayerTimesSummary = PrayerTimeCalculator.calculateDailyTimes(23.8103, 90.4125),
     val qiblaBearingDegrees: Float = PrayerTimeCalculator.calculateQiblaBearing(23.8103, 90.4125),
+    val distanceToKaabaKm: Int = PrayerTimeCalculator.calculateDistanceToKaabaKm(23.8103, 90.4125),
     val gregorianDate: String = "",
     val hijriDate: String = "",
     val tasbeehPhraseIndex: Int = 0
@@ -138,6 +139,12 @@ class HomeViewModel(
 
         val (gregorian, hijri) = BidiUtils.formatGregorianAndHijriDate(prefs.uiLanguageCode)
 
+        val resolvedUtcOffset = PrayerTimeCalculator.resolveUtcOffsetForLocation(
+            locationName = prefs.locationName,
+            latitude = prefs.latitude,
+            longitude = prefs.longitude
+        )
+
         HomeUiState(
             preferences = prefs,
             progress = progress,
@@ -150,9 +157,11 @@ class HomeViewModel(
             prayerTimes = PrayerTimeCalculator.calculateDailyTimes(
                 latitude = prefs.latitude,
                 longitude = prefs.longitude,
-                hanafiAsr = prefs.hanafiAsr
+                hanafiAsr = prefs.hanafiAsr,
+                timeZoneOffsetHours = resolvedUtcOffset
             ),
             qiblaBearingDegrees = PrayerTimeCalculator.calculateQiblaBearing(prefs.latitude, prefs.longitude),
+            distanceToKaabaKm = PrayerTimeCalculator.calculateDistanceToKaabaKm(prefs.latitude, prefs.longitude),
             gregorianDate = gregorian,
             hijriDate = hijri,
             tasbeehPhraseIndex = phraseIdx

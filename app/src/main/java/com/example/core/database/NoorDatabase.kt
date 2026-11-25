@@ -26,7 +26,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         HabitStreakEntity::class,
         DuaEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class NoorDatabase : RoomDatabase() {
@@ -62,6 +62,15 @@ abstract class NoorDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `words` ADD COLUMN `normalizedText` TEXT NOT NULL DEFAULT ''")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_words_textUthmani` ON `words` (`textUthmani`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_words_normalizedText` ON `words` (`normalizedText`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ayahs_normalizedArabic` ON `ayahs` (`normalizedArabic`)")
+            }
+        }
+
         fun getInstance(context: Context): NoorDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -70,7 +79,7 @@ abstract class NoorDatabase : RoomDatabase() {
                     "noor_al_quran.db"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                     .also { INSTANCE = it }
             }

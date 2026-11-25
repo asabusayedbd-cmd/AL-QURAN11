@@ -44,15 +44,48 @@ object BidiUtils {
     }
 
     /**
-     * Strips tashkeel/harakat and normalizes alef variants for fast harakat-insensitive Arabic search.
+     * Fast single-pass harakat/diacritic stripping and Alef/Ya/Ta-Marbuta normalization
+     * so indexing 77k+ Quran words runs with minimal allocation overhead.
      */
     fun normalizeArabicForSearch(input: String): String {
-        val noDiacritics = ARABIC_DIACRITICS_REGEX.replace(input, "")
-        val normalizedAlef = ARABIC_ALEF_VARIANTS_REGEX.replace(noDiacritics, "ا")
-        return normalizedAlef
-            .replace('ى', 'ي')
-            .replace('ة', 'ه')
-            .trim()
+        if (input.isEmpty()) return ""
+        val sb = StringBuilder(input.length)
+        for (i in 0 until input.length) {
+            val ch = input[i]
+            val code = ch.code
+            if ((code in 0x0610..0x061A) ||
+                (code in 0x064B..0x065F) ||
+                code == 0x0670 ||
+                (code in 0x06D6..0x06ED) ||
+                code == 0x0640 // Tatweel
+            ) {
+                continue
+            }
+            when (ch) {
+                '\u0622', '\u0623', '\u0625', '\u0671' -> sb.append('ا')
+                'ى' -> sb.append('ي')
+                'ة' -> sb.append('ه')
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString().trim()
+    }
+
+    /**
+     * Converts Bangla (০-৯) or Arabic-Indic (٠-٩ / ۰-۹) numerals to ASCII digits for universal verse-key search.
+     */
+    fun normalizeDigitsToAscii(input: String): String {
+        if (input.isEmpty()) return ""
+        val sb = StringBuilder(input.length)
+        for (ch in input) {
+            when (ch) {
+                in '০'..'৯' -> sb.append(('0'.code + (ch - '০')).toChar())
+                in '٠'..'٩' -> sb.append(('0'.code + (ch - '٠')).toChar())
+                in '۰'..'۹' -> sb.append(('0'.code + (ch - '۰')).toChar())
+                else -> sb.append(ch)
+            }
+        }
+        return sb.toString()
     }
 
     /**

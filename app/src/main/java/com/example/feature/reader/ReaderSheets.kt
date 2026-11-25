@@ -447,8 +447,16 @@ fun WordMorphologySheet(
                         value = analysis.localizedPos(uiLanguageCode)
                     )
                     MorphologyRow(
+                        label = stringResource(R.string.word_sarf_pattern_label),
+                        value = analysis.localizedSarfPattern(uiLanguageCode)
+                    )
+                    MorphologyRow(
                         label = stringResource(R.string.word_case_label),
                         value = analysis.localizedCaseMood(uiLanguageCode)
+                    )
+                    MorphologyRow(
+                        label = stringResource(R.string.word_definiteness_label),
+                        value = analysis.localizedDefiniteness(uiLanguageCode)
                     )
                     MorphologyRow(
                         label = stringResource(R.string.word_number_gender_label),
@@ -473,9 +481,99 @@ fun WordMorphologySheet(
                         )
                     }
                     MorphologyRow(
+                        label = stringResource(R.string.word_exact_occurrences_label),
+                        value = stringResource(R.string.word_times_fmt, inspected.exactOccurrencesCount)
+                    )
+                    MorphologyRow(
                         label = stringResource(R.string.word_occurrences_label),
                         value = stringResource(R.string.word_times_fmt, inspected.rootOccurrencesCount)
                     )
+                }
+            }
+
+            // Sarf (Morphology) & Nahw (Syntax) Insight Card
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.word_sarf_nahw_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    HorizontalDivider(thickness = 0.5.dp)
+                    val sarfNote = if (uiLanguageCode.equals("bn", true)) analysis.sarfNoteBn else analysis.sarfNoteEn
+                    val nahwNote = analysis.localizedNahwFunction(uiLanguageCode)
+                    if (sarfNote.isNotBlank()) {
+                        Text(
+                            text = "${stringResource(R.string.word_sarf_prefix)}: $sarfNote",
+                            style = banglaSafeBodyStyle(13.5f, uiLanguageCode),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    if (nahwNote.isNotBlank()) {
+                        Text(
+                            text = "${stringResource(R.string.word_nahw_prefix)}: $nahwNote",
+                            style = banglaSafeBodyStyle(13.5f, uiLanguageCode),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            // Other Forms in the Quran (Sarf Morphological Family)
+            if (inspected.otherForms.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.word_other_forms_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        inspected.otherForms.forEach { form ->
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.surfaceVariant,
+                                border = BorderStroke(0.75.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
+                                modifier = Modifier
+                                    .testTag("word_form_chip_${form.sampleVerseKey}")
+                                    .clickable {
+                                        onNavigateToOccurrence(form.sampleSurahId, form.sampleAyahNumber)
+                                        onDismiss()
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = form.textUthmani,
+                                        fontFamily = arabicScriptFont(scriptType),
+                                        fontSize = 18.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "×${form.occurrenceCount}",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 

@@ -15,6 +15,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -31,6 +32,17 @@ class AppContainer(context: Context) {
     val database: NoorDatabase by lazy { NoorDatabase.getInstance(appContext) }
     val seeder: QuranDatabaseSeeder by lazy { QuranDatabaseSeeder(appContext, database) }
     val preferencesRepository: PreferencesRepository by lazy { PreferencesRepository(appContext) }
+    val pendingPlaybackJump = MutableStateFlow<Pair<Int, Int>?>(null)
+
+    fun requestPlaybackJump(surahId: Int, ayahNumber: Int) {
+        if (surahId in 1..114) {
+            pendingPlaybackJump.value = surahId to ayahNumber.coerceAtLeast(1)
+        }
+    }
+
+    fun clearPlaybackJump() {
+        pendingPlaybackJump.value = null
+    }
 
     private val moshi: Moshi by lazy {
         Moshi.Builder()

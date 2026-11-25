@@ -30,47 +30,89 @@ data class PrayerTimesSummary(
 data class CityLocationPreset(
     val name: String,
     val latitude: Double,
-    val longitude: Double
-)
+    val longitude: Double,
+    val banglaName: String = "",
+    val region: String = "",
+    val aliases: String = "",
+    val utcOffsetHours: Double? = null
+) {
+    fun matchesQuery(query: String): Boolean {
+        val q = query.trim()
+        if (q.isEmpty()) return true
+        return name.contains(q, ignoreCase = true) ||
+            banglaName.contains(q, ignoreCase = true) ||
+            region.contains(q, ignoreCase = true) ||
+            aliases.contains(q, ignoreCase = true)
+    }
+}
 
 object PrayerTimeCalculator {
 
     private const val KAABA_LAT = 21.4225
     private const val KAABA_LON = 39.8262
+    private const val EARTH_RADIUS_KM = 6371.0
 
-    val CITY_PRESETS = listOf(
-        CityLocationPreset("Dhaka, Bangladesh", 23.8103, 90.4125),
-        CityLocationPreset("Chattogram, Bangladesh", 22.3569, 91.7832),
-        CityLocationPreset("Sylhet, Bangladesh", 24.8949, 91.8687),
-        CityLocationPreset("Rajshahi, Bangladesh", 24.3745, 88.6042),
-        CityLocationPreset("Khulna, Bangladesh", 22.8456, 89.5403),
-        CityLocationPreset("Makkah, Saudi Arabia", 21.4225, 39.8262),
-        CityLocationPreset("Madinah, Saudi Arabia", 24.4672, 39.6111),
-        CityLocationPreset("Riyadh, Saudi Arabia", 24.7136, 46.6753),
-        CityLocationPreset("Cairo, Egypt", 30.0444, 31.2357),
-        CityLocationPreset("Istanbul, Turkey", 41.0082, 28.9784),
-        CityLocationPreset("Ankara, Turkey", 39.9334, 32.8597),
-        CityLocationPreset("Jakarta, Indonesia", -6.2088, 106.8456),
-        CityLocationPreset("Surabaya, Indonesia", -7.2575, 112.7521),
-        CityLocationPreset("Kuala Lumpur, Malaysia", 3.1390, 101.6869),
-        CityLocationPreset("Karachi, Pakistan", 24.8607, 67.0011),
-        CityLocationPreset("Lahore, Pakistan", 31.5204, 74.3587),
-        CityLocationPreset("Islamabad, Pakistan", 33.6844, 73.0479),
-        CityLocationPreset("Delhi, India", 28.7041, 77.1025),
-        CityLocationPreset("Mumbai, India", 19.0760, 72.8777),
-        CityLocationPreset("Hyderabad, India", 17.3850, 78.4867),
-        CityLocationPreset("Dubai, UAE", 25.2048, 55.2708),
-        CityLocationPreset("Doha, Qatar", 25.2854, 51.5310),
-        CityLocationPreset("London, UK", 51.5074, -0.1278),
-        CityLocationPreset("Birmingham, UK", 52.4862, -1.8904),
-        CityLocationPreset("Paris, France", 48.8566, 2.3522),
-        CityLocationPreset("Berlin, Germany", 52.5200, 13.4050),
-        CityLocationPreset("New York, USA", 40.7128, -74.0060),
-        CityLocationPreset("Chicago, USA", 41.8781, -87.6298),
-        CityLocationPreset("Toronto, Canada", 43.6532, -79.3832),
-        CityLocationPreset("Sydney, Australia", -33.8688, 151.2093),
-        CityLocationPreset("Tokyo, Japan", 35.6762, 139.6503)
+    val WORLD_CITIES = listOf(
+        CityLocationPreset("Makkah, Saudi Arabia", 21.4225, 39.8262, "মক্কা, সৌদি আরব", "Saudi Arabia", "Mecca", 3.0),
+        CityLocationPreset("Madinah, Saudi Arabia", 24.4672, 39.6111, "মদীনা, সৌদি আরব", "Saudi Arabia", "Medina", 3.0),
+        CityLocationPreset("Riyadh, Saudi Arabia", 24.7136, 46.6753, "রিয়াদ, সৌদি আরব", "Saudi Arabia", "", 3.0),
+        CityLocationPreset("Jeddah, Saudi Arabia", 21.4858, 39.1925, "জেদ্দা, সৌদি আরব", "Saudi Arabia", "", 3.0),
+        CityLocationPreset("Cairo, Egypt", 30.0444, 31.2357, "কায়রো, মিশর", "Egypt", "", 2.0),
+        CityLocationPreset("Istanbul, Turkey", 41.0082, 28.9784, "ইস্তানবুল, তুরস্ক", "Turkey", "", 3.0),
+        CityLocationPreset("Ankara, Turkey", 39.9334, 32.8597, "আঙ্কারা, তুরস্ক", "Turkey", "", 3.0),
+        CityLocationPreset("Jakarta, Indonesia", -6.2088, 106.8456, "জাকার্তা, ইন্দোনেশিয়া", "Indonesia", "", 7.0),
+        CityLocationPreset("Surabaya, Indonesia", -7.2575, 112.7521, "সুরাবায়া, ইন্দোনেশিয়া", "Indonesia", "", 7.0),
+        CityLocationPreset("Kuala Lumpur, Malaysia", 3.1390, 101.6869, "কুয়ালালামপুর, মালয়েশিয়া", "Malaysia", "", 8.0),
+        CityLocationPreset("Karachi, Pakistan", 24.8607, 67.0011, "করাচি, পাকিস্তান", "Pakistan", "", 5.0),
+        CityLocationPreset("Lahore, Pakistan", 31.5204, 74.3587, "লাহোর, পাকিস্তান", "Pakistan", "", 5.0),
+        CityLocationPreset("Islamabad, Pakistan", 33.6844, 73.0479, "ইসলামাবাদ, পাকিস্তান", "Pakistan", "", 5.0),
+        CityLocationPreset("Kolkata, India", 22.5726, 88.3639, "কলকাতা, ভারত", "India", "Calcutta West Bengal", 5.5),
+        CityLocationPreset("Delhi, India", 28.7041, 77.1025, "দিল্লি, ভারত", "India", "New Delhi", 5.5),
+        CityLocationPreset("Mumbai, India", 19.0760, 72.8777, "মুম্বাই, ভারত", "India", "", 5.5),
+        CityLocationPreset("Hyderabad, India", 17.3850, 78.4867, "হায়দ্রাবাদ, ভারত", "India", "", 5.5),
+        CityLocationPreset("Dubai, UAE", 25.2048, 55.2708, "দুবাই, সংযুক্ত আরব আমিরাত", "UAE", "", 4.0),
+        CityLocationPreset("Abu Dhabi, UAE", 24.4539, 54.3773, "আবু ধাবি", "UAE", "", 4.0),
+        CityLocationPreset("Doha, Qatar", 25.2854, 51.5310, "দোহা, কাতার", "Qatar", "", 3.0),
+        CityLocationPreset("Kuwait City, Kuwait", 29.3759, 47.9774, "কুয়েত সিটি", "Kuwait", "", 3.0),
+        CityLocationPreset("Muscat, Oman", 23.5880, 58.3829, "মাস্কাট, ওমান", "Oman", "", 4.0),
+        CityLocationPreset("London, UK", 51.5074, -0.1278, "লন্ডন, যুক্তরাজ্য", "UK", "", 0.0),
+        CityLocationPreset("Birmingham, UK", 52.4862, -1.8904, "বার্মিংহাম, যুক্তরাজ্য", "UK", "", 0.0),
+        CityLocationPreset("Paris, France", 48.8566, 2.3522, "প্যারিস, ফ্রান্স", "France", "", 1.0),
+        CityLocationPreset("Berlin, Germany", 52.5200, 13.4050, "বার্লিন, জার্মানি", "Germany", "", 1.0),
+        CityLocationPreset("New York, USA", 40.7128, -74.0060, "নিউ ইয়র্ক, যুক্তরাষ্ট্র", "USA", "", -5.0),
+        CityLocationPreset("Chicago, USA", 41.8781, -87.6298, "শিকাগো, যুক্তরাষ্ট্র", "USA", "", -6.0),
+        CityLocationPreset("Toronto, Canada", 43.6532, -79.3832, "টরন্টো, কানাডা", "Canada", "", -5.0),
+        CityLocationPreset("Sydney, Australia", -33.8688, 151.2093, "সিডনি, অস্ট্রেলিয়া", "Australia", "", 10.0),
+        CityLocationPreset("Tokyo, Japan", 35.6762, 139.6503, "টোকিও, জাপান", "Japan", "", 9.0),
+        CityLocationPreset("Singapore", 1.3521, 103.8198, "সিঙ্গাপুর", "Singapore", "", 8.0)
     )
+
+    val CITY_PRESETS: List<CityLocationPreset> = BangladeshLocations.ALL_PLACES + WORLD_CITIES
+
+    fun searchLocations(query: String, divisionFilter: String? = null): List<CityLocationPreset> {
+        val trimmed = query.trim()
+        val pool = if (divisionFilter.isNullOrBlank() || divisionFilter == "All") {
+            CITY_PRESETS
+        } else if (divisionFilter == "Global") {
+            WORLD_CITIES
+        } else {
+            CITY_PRESETS.filter { it.region.contains(divisionFilter, ignoreCase = true) }
+        }
+        if (trimmed.isEmpty()) return pool
+        return pool.filter { it.matchesQuery(trimmed) }
+    }
+
+    fun resolveUtcOffsetForLocation(locationName: String, latitude: Double, longitude: Double): Double? {
+        val exact = CITY_PRESETS.firstOrNull {
+            it.name.equals(locationName, ignoreCase = true)
+        }?.utcOffsetHours
+        if (exact != null) return exact
+        // Approximate Bangladesh bounding box when GPS detects inside Bangladesh
+        if (latitude in 20.5..26.7 && longitude in 88.0..92.7) {
+            return 6.0
+        }
+        return null
+    }
 
     fun calculateQiblaBearing(latitude: Double, longitude: Double): Float {
         val phiK = Math.toRadians(KAABA_LAT)
@@ -85,14 +127,27 @@ object PrayerTimeCalculator {
         return ((bearingDeg + 360.0) % 360.0).toFloat()
     }
 
+    fun calculateDistanceToKaabaKm(latitude: Double, longitude: Double): Int {
+        val dLat = Math.toRadians(KAABA_LAT - latitude)
+        val dLon = Math.toRadians(KAABA_LON - longitude)
+        val lat1 = Math.toRadians(latitude)
+        val lat2 = Math.toRadians(KAABA_LAT)
+        val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+            cos(lat1) * cos(lat2) * sin(dLon / 2.0) * sin(dLon / 2.0)
+        val c = 2.0 * atan2(kotlin.math.sqrt(a), kotlin.math.sqrt((1.0 - a).coerceAtLeast(0.0)))
+        return (EARTH_RADIUS_KM * c).roundToInt()
+    }
+
     fun calculateDailyTimes(
         latitude: Double,
         longitude: Double,
         calendar: Calendar = Calendar.getInstance(),
         hanafiAsr: Boolean = false,
-        angleMethod: Int = 0 // 0: MWL / Karachi (18 deg), 1: ISNA (15 deg), 2: Egyptian (19.5 deg)
+        angleMethod: Int = 0, // 0: MWL / Karachi (18 deg), 1: ISNA (15 deg), 2: Egyptian (19.5 deg)
+        timeZoneOffsetHours: Double? = null
     ): PrayerTimesSummary {
-        val tzHours = TimeZone.getDefault().getOffset(calendar.timeInMillis) / 3600000.0
+        val tzHours = timeZoneOffsetHours
+            ?: (TimeZone.getDefault().getOffset(calendar.timeInMillis) / 3600000.0)
         val julian = julianDay(
             calendar.get(Calendar.YEAR),
             calendar.get(Calendar.MONTH) + 1,

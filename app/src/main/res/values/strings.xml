@@ -260,4 +260,39 @@
     <string name="dm_tab_audio">Audio</string>
     <string name="dm_tab_translations">Translations</string>
     <string name="dm_tab_tafsirs">Tafsirs</string>
+
+    <string name="word_sarf_pattern_label">Sarf Pattern (وزن)</string>
+    <string name="word_definiteness_label">Definiteness (تعريف)</string>
+    <string name="word_exact_occurrences_label">Exact Word in Loaded Quran</string>
+    <string name="word_sarf_nahw_title">Sarf &amp; Nahw Insights (صرف ونحو)</string>
+    <string name="word_sarf_prefix">Sarf (Morphology)</string>
+    <string name="word_nahw_prefix">Nahw (Syntax)</string>
+    <string name="word_other_forms_title">Other Forms in Al-Quran</string>
+
+    <string name="location_picker_subtitle">All 64 Bangladesh Districts, Upazilas &amp; Global Cities</string>
+    <string name="gps_button">Use GPS</string>
+    <string name="search_bangladesh_city_hint">Search district, upazila, or city (Dhaka, Sylhet, কুমিল্লা…)</string>
+    <string name="places_found_fmt">%1$d places found</string>
+    <string name="qibla_calibrate_hint">Move phone in a figure-8 motion to calibrate compass accuracy</string>
+    <string name="qibla_no_sensor_hint">No compass sensor detected. Face %1$d° clockwise from North.</string>
+
+    <string name="dua_grade_quranic">Grade: Quranic</string>
+    <string name="dua_grade_sahih">Grade: Sahih</string>
+    <string name="dua_grade_hasan">Grade: Hasan</string>
+
+    <string name="translation_grade_verified">Verified Edition</string>
+    <string name="translation_grade_classical">Classical Edition</string>
+    <string name="translation_grade_standard">Academic Edition</string>
+
+    <string name="tajweed_academy_title">Tajweed, Makharij &amp; Waqf Academy</string>
+    <string name="tajweed_tab_makharij">Makharij</string>
+    <string name="tajweed_tab_letters">29 Letters</string>
+    <string name="tajweed_tab_rules">Tajweed</string>
+    <string name="tajweed_tab_waqf">Waqf (وقف)</string>
+
+    <string name="flashcards_title">Quran Vocabulary &amp; Long Ayah Flashcards</string>
+    <string name="flashcards_long_ayahs">Long Ayahs</string>
+    <string name="flashcards_surah_deck">Surah Deck</string>
+    <string name="flashcards_essential_deck">Essential</string>
+    <string name="flashcards_bookmarks_deck">Bookmarked</string>
 </resources>

@@ -109,7 +109,8 @@ class QuranPlaybackService : MediaSessionService() {
         }
 
         val launchIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_OPEN_CURRENT_PLAYBACK, true)
         }
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this,
@@ -167,5 +168,6 @@ class QuranPlaybackService : MediaSessionService() {
     companion object {
         private const val NOTIFICATION_ID = 1001
         private const val CHANNEL_ID = "al_quran_playback"
+        const val EXTRA_OPEN_CURRENT_PLAYBACK = "open_current_playback"
     }
 }

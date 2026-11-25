@@ -479,4 +479,137 @@ class NoorUnitTests {
                 enOnlyAnalysis.localizedExplanation("ar").contains("Singular")
         )
     }
+
+    // 11. Bangladesh 64 Districts + Upazilas Search, UTC+6 Resolution & Kaaba Distance
+    @Test
+    fun testBangladeshLocationsSearchAndUtcOffset() {
+        val allBd = com.example.core.ibadah.BangladeshLocations.ALL_PLACES
+        assertTrue("Expected >= 150 Bangladesh places, got ${allBd.size}", allBd.size >= 150)
+
+        val expectedDistricts = listOf(
+            "Dhaka", "Faridpur", "Gazipur", "Gopalganj", "Kishoreganj", "Madaripur", "Manikganj",
+            "Munshiganj", "Narayanganj", "Narsingdi", "Rajbari", "Shariatpur", "Tangail",
+            "Bandarban", "Brahmanbaria", "Chandpur", "Chattogram", "Cumilla", "Cox's Bazar",
+            "Feni", "Khagrachhari", "Lakshmipur", "Noakhali", "Rangamati",
+            "Bogura", "Chapainawabganj", "Joypurhat", "Naogaon", "Natore", "Pabna", "Rajshahi", "Sirajganj",
+            "Bagerhat", "Chuadanga", "Jashore", "Jhenaidah", "Khulna", "Kushtia", "Magura",
+            "Meherpur", "Narail", "Satkhira",
+            "Barguna", "Barishal", "Bhola", "Jhalokati", "Patuakhali", "Pirojpur",
+            "Habiganj", "Moulvibazar", "Sunamganj", "Sylhet",
+            "Dinajpur", "Gaibandha", "Kurigram", "Lalmonirhat", "Nilphamari", "Panchagarh", "Rangpur", "Thakurgaon",
+            "Jamalpur", "Mymensingh", "Netrokona", "Sherpur"
+        )
+        assertEquals(64, expectedDistricts.size)
+        expectedDistricts.forEach { district ->
+            val hits = PrayerTimeCalculator.searchLocations(district)
+            assertTrue("Expected district '$district' in searchLocations", hits.isNotEmpty())
+        }
+
+        // Bangla script & legacy English spelling alias search
+        assertTrue(PrayerTimeCalculator.searchLocations("কুমিল্লা").any { it.name.contains("Cumilla") })
+        assertTrue(PrayerTimeCalculator.searchLocations("Comilla").any { it.name.contains("Cumilla") })
+        assertTrue(PrayerTimeCalculator.searchLocations("সিলেট").any { it.name.contains("Sylhet") })
+        assertTrue(PrayerTimeCalculator.searchLocations("Chittagong").any { it.name.contains("Chattogram") })
+
+        // Timezone offset & Kaaba distance checks
+        assertEquals(6.0, PrayerTimeCalculator.resolveUtcOffsetForLocation("Sylhet, Bangladesh", 24.89, 91.87) ?: 0.0, 0.01)
+        assertEquals(3.0, PrayerTimeCalculator.resolveUtcOffsetForLocation("Makkah, Saudi Arabia", 21.42, 39.82) ?: 0.0, 0.01)
+        val distanceKm = PrayerTimeCalculator.calculateDistanceToKaabaKm(23.8103, 90.4125)
+        assertTrue("Expected Dhaka->Makkah distance ~5180 km, got $distanceKm", distanceKm in 4900..5400)
+    }
+
+    // 12. Room MIGRATION_2_3 schema & search/word index verification
+    @Test
+    fun testMigration2To3SchemaAndIndexes() {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val dbName = "migration_2_3_${System.nanoTime()}.db"
+        val helper = androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory().create(
+            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(appContext)
+                .name(dbName)
+                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(2) {
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `ayahs` (`id` INTEGER NOT NULL PRIMARY KEY, `normalizedArabic` TEXT NOT NULL DEFAULT '')")
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `words` (`id` INTEGER NOT NULL PRIMARY KEY, `ayahId` INTEGER NOT NULL, `position` INTEGER NOT NULL, `textUthmani` TEXT NOT NULL)")
+                    }
+
+                    override fun onUpgrade(
+                        db: androidx.sqlite.db.SupportSQLiteDatabase,
+                        oldVersion: Int,
+                        newVersion: Int
+                    ) = Unit
+                })
+                .build()
+        )
+        try {
+            val db = helper.writableDatabase
+            com.example.core.database.NoorDatabase.MIGRATION_2_3.migrate(db)
+            db.query("PRAGMA table_info(`words`)").use { c ->
+                val cols = mutableListOf<String>()
+                val nameIdx = c.getColumnIndex("name")
+                while (c.moveToNext()) {
+                    cols.add(c.getString(nameIdx))
+                }
+                assertTrue("Expected normalizedText column on words after MIGRATION_2_3", "normalizedText" in cols)
+            }
+            db.query("SELECT name FROM sqlite_master WHERE type='index'").use { c ->
+                val indexes = mutableListOf<String>()
+                while (c.moveToNext()) {
+                    indexes.add(c.getString(0))
+                }
+                assertTrue("index_ayahs_normalizedArabic" in indexes)
+                assertTrue("index_words_textUthmani" in indexes)
+                assertTrue("index_words_normalizedText" in indexes)
+            }
+            helper.close()
+        } finally {
+            appContext.getDatabasePath(dbName).delete()
+        }
+    }
+
+    // 13. Sarf & Nahw Breakdown & Zero-Hallucination Root Guarantee
+    @Test
+    fun testWordSarfNahwAndNoHallucinatedRoots() {
+        val untaggedWord = WordEntity(
+            id = 501L,
+            ayahId = 1,
+            position = 2,
+            textUthmani = "ٱلْحَمْدُ",
+            textIndopak = "اَلْحَمْدُ",
+            transliteration = "al-hamdu",
+            rootArabic = "",
+            lemmaArabic = "",
+            grammarTagJson = "",
+            audioUrl = ""
+        )
+        val analysis = WordMorphologyAnalyzer.analyze(
+            untaggedWord,
+            listOf(WordTranslationEntity(501L, "en", "All praise"))
+        )
+        assertTrue(analysis.sarfPatternEn.isNotBlank())
+        assertTrue(analysis.definitenessEn.contains("Definite", ignoreCase = true))
+        assertTrue(analysis.nahwFunctionEn.isNotBlank())
+        assertTrue(analysis.normalizedStem.isNotBlank())
+        // Zero hallucination: if rootArabic is empty in DB, spacedRoot must remain empty (never fabricated)
+        assertEquals("", analysis.spacedRoot)
+    }
+
+    // 14. Curated Translation Book Titles & Multi-Script Search Digit Normalization
+    @Test
+    fun testTranslationBookTitlesAndSearchDigitNormalization() {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val starterText = appContext.assets.open("quran_starter/quran_starter.json").bufferedReader().use { it.readText() }
+        val sources = JSONObject(starterText).getJSONArray("translationSources")
+        val titlesById = mutableMapOf<Int, String>()
+        for (i in 0 until sources.length()) {
+            val obj = sources.getJSONObject(i)
+            titlesById[obj.getInt("id")] = obj.getString("translatorName")
+        }
+        assertTrue(titlesById[161]?.contains("বয়ানুল কুরআন") == true)
+        assertTrue(titlesById[131]?.contains("The Clear Quran") == true)
+        assertEquals("Saheeh International Translation", titlesById[20])
+
+        // Multi-script search digits (Bangla & Arabic-Indic -> ASCII)
+        assertEquals("2:255", BidiUtils.normalizeDigitsToAscii("২:২৫৫"))
+        assertEquals("40:3", BidiUtils.normalizeDigitsToAscii("٤٠:٣"))
+    }
 }

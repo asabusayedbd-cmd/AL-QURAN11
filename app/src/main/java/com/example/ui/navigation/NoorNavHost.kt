@@ -24,7 +24,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -81,6 +83,16 @@ fun NoorAppRoot(
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val pendingPlaybackJump by appContainer.pendingPlaybackJump.collectAsStateWithLifecycle()
+
+    LaunchedEffect(pendingPlaybackJump) {
+        pendingPlaybackJump?.let { (sid, ayahNum) ->
+            navController.navigate("reader/$sid/$ayahNum?page=0") {
+                launchSingleTop = true
+            }
+            appContainer.clearPlaybackJump()
+        }
+    }
 
     val topDestinations = listOf(
         TopNavDestination(ROUTE_HOME, R.string.nav_home, Icons.Default.Home),

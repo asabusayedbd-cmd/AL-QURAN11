@@ -354,7 +354,11 @@ fun LibraryScreen(
                                 }
                             }
                             if (showFlashcards) {
-                                VocabularyFlashcardsSheet(onDismiss = { showFlashcards = false })
+                                VocabularyFlashcardsSheet(
+                                    uiLanguageCode = state.preferences.uiLanguageCode,
+                                    scriptType = state.preferences.scriptType,
+                                    onDismiss = { showFlashcards = false }
+                                )
                             }
                         }
                     }

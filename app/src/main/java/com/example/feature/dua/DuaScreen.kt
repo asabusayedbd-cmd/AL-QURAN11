@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -90,6 +91,18 @@ private fun getDuaCategoryLabel(category: String): String = when (category) {
     "Gratitude & Praise" -> stringResource(R.string.dua_cat_gratitude_praise)
     "Rabbana Quranic Duas" -> stringResource(R.string.dua_cat_rabbana)
     else -> category
+}
+
+@Composable
+private fun resolveDuaGradeLabel(reference: String): String {
+    val ref = reference.lowercase()
+    return when {
+        ref.contains("quran") || ref.contains("surah") || Regex("""\d+:\d+""").containsMatchIn(ref) ->
+            stringResource(R.string.dua_grade_quranic)
+        ref.contains("bukhari") || ref.contains("muslim") || ref.contains("sahih") || ref.contains("hisn") ->
+            stringResource(R.string.dua_grade_sahih)
+        else -> stringResource(R.string.dua_grade_hasan)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -303,13 +316,14 @@ fun DuaScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(duas, key = { it.id }) { dua ->
+                    itemsIndexed(duas, key = { _, d -> d.id }) { index, dua ->
                         val isDownloaded = dua.id in audioState.downloadedIds
                         val isDownloading = dua.id in audioState.downloadingIds
                         val isPlaying = audioState.activePlayingId == dua.id || audioState.isTtsSpeakingId == dua.id
                         val isTranslating = dua.id in translationState.translatingIds
                         val translated = translationState.translatedById[dua.id]
                         DuaCard(
+                            displayNumber = index + 1,
                             dua = dua,
                             isDownloaded = isDownloaded,
                             isDownloading = isDownloading,
@@ -341,6 +355,7 @@ fun DuaScreen(
 
 @Composable
 private fun DuaCard(
+    displayNumber: Int,
     dua: DuaEntity,
     isDownloaded: Boolean,
     isDownloading: Boolean,
@@ -358,6 +373,7 @@ private fun DuaCard(
     val effectiveTranslation = translated?.second?.translation ?: dua.translation
     val effectiveVirtue = translated?.second?.virtueOrContext ?: dua.virtueOrContext
     val targetLang = translated?.first ?: "en"
+    val gradeLabel = resolveDuaGradeLabel(dua.reference)
 
     Card(
         modifier = Modifier
@@ -377,17 +393,47 @@ private fun DuaCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Text(
-                        text = getDuaCategoryLabel(dua.category),
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Text(
+                            text = "#$displayNumber",
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = getDuaCategoryLabel(dua.category),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer
+                    ) {
+                        Text(
+                            text = gradeLabel,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {

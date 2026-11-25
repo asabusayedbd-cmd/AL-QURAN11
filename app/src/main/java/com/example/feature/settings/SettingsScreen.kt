@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -908,7 +909,7 @@ private fun TranslationsPickerModalSheet(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Search translator or language…") },
+                placeholder = { Text("Search book title, translation, or language…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (query.isNotEmpty()) {
@@ -937,7 +938,12 @@ private fun TranslationsPickerModalSheet(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filtered, key = { "tr_${it.id}" }) { src ->
+                itemsIndexed(filtered, key = { _, src -> "tr_${src.id}" }) { index, src ->
+                    val gradeLabel = when {
+                        src.id in setOf(20, 131, 161, 163, 85, 84) -> stringResource(R.string.translation_grade_verified)
+                        src.id in setOf(19, 22, 162, 16, 158) -> stringResource(R.string.translation_grade_classical)
+                        else -> stringResource(R.string.translation_grade_standard)
+                    }
                     Surface(
                         shape = MaterialTheme.shapes.medium,
                         color = if (src.isEnabled) {
@@ -952,12 +958,32 @@ private fun TranslationsPickerModalSheet(
                                 .fillMaxWidth()
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(src.translatorName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (src.isEnabled) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                }
+                            ) {
                                 Text(
-                                    text = "${src.languageName} • ${src.fileSizeKb} KB • ${if (src.isDownloaded) "Offline" else "Cloud"}",
+                                    text = "#${index + 1}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (src.isEnabled) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(src.translatorName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    text = "${src.languageName} • $gradeLabel • ${src.fileSizeKb} KB • ${if (src.isDownloaded) "Offline" else "Cloud"}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1068,7 +1094,7 @@ private fun TafsirsPickerModalSheet(
                 contentPadding = PaddingValues(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filtered, key = { "taf_${it.id}" }) { src ->
+                itemsIndexed(filtered, key = { _, src -> "taf_${src.id}" }) { index, src ->
                     val isSelected = src.id == activeTafsirSourceId
                     Surface(
                         shape = MaterialTheme.shapes.medium,
@@ -1086,8 +1112,28 @@ private fun TafsirsPickerModalSheet(
                                 .fillMaxWidth()
                                 .padding(horizontal = 14.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isSelected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.secondaryContainer
+                                }
+                            ) {
+                                Text(
+                                    text = "#${index + 1}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) {
+                                        MaterialTheme.colorScheme.onPrimary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSecondaryContainer
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = src.tafsirName,
@@ -1095,7 +1141,7 @@ private fun TafsirsPickerModalSheet(
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
                                 Text(
-                                    text = "${src.languageName} • ${if (src.isDownloaded) "Offline Ready" else "On-Demand API"}",
+                                    text = "${src.languageName} • ${stringResource(R.string.translation_grade_classical)} • ${if (src.isDownloaded) "Offline Ready" else "On-Demand API"}",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

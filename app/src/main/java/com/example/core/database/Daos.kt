@@ -53,6 +53,40 @@ interface QuranDao {
     @Query("SELECT * FROM ayahs WHERE verseKey IN (:verseKeys)")
     suspend fun getAyahsByKeys(verseKeys: List<String>): List<AyahEntity>
 
+    @Query("SELECT * FROM ayahs WHERE id IN (:ayahIds) ORDER BY surahId ASC, ayahNumber ASC")
+    suspend fun getAyahsByIds(ayahIds: List<Int>): List<AyahEntity>
+
+    @Query("SELECT * FROM ayahs WHERE normalizedArabic LIKE '%' || :normalizedQuery || '%' ORDER BY surahId ASC, ayahNumber ASC LIMIT 50")
+    suspend fun searchAyahsByNormalizedArabic(normalizedQuery: String): List<AyahEntity>
+
+    @Query("SELECT * FROM ayahs WHERE textUthmani LIKE '%' || :rawQuery || '%' ORDER BY surahId ASC, ayahNumber ASC LIMIT 50")
+    suspend fun searchAyahsByUthmani(rawQuery: String): List<AyahEntity>
+
+    @Query("SELECT DISTINCT ayahId FROM ayah_translations WHERE translatedText LIKE '%' || :rawQuery || '%' ORDER BY ayahId ASC LIMIT 60")
+    suspend fun searchAyahIdsByTranslation(rawQuery: String): List<Int>
+
+    @Query(
+        """
+        SELECT DISTINCT w.ayahId FROM words w
+        LEFT JOIN word_translations wt ON wt.wordId = w.id
+        WHERE w.transliteration LIKE '%' || :rawQuery || '%'
+           OR w.normalizedText LIKE '%' || :normalizedQuery || '%'
+           OR wt.meaningText LIKE '%' || :rawQuery || '%'
+        ORDER BY w.ayahId ASC
+        LIMIT 50
+        """
+    )
+    suspend fun searchAyahIdsByWord(rawQuery: String, normalizedQuery: String): List<Int>
+
+    @Query(
+        """
+        SELECT * FROM ayahs
+        WHERE verseKey IN ('2:255', '2:282', '2:286', '3:190', '4:176', '24:35', '33:35', '59:22', '59:23', '59:24')
+        ORDER BY surahId ASC, ayahNumber ASC
+        """
+    )
+    suspend fun getLongAyahsInQuran(): List<AyahEntity>
+
     @Query(
         """
         SELECT DISTINCT a.* FROM ayahs a
@@ -99,8 +133,17 @@ interface QuranDao {
     @Query("SELECT COUNT(*) FROM words WHERE textUthmani = :wordArabic")
     suspend fun countWordsByArabic(wordArabic: String): Int
 
+    @Query("SELECT COUNT(*) FROM words WHERE normalizedText = :normalizedText AND normalizedText != ''")
+    suspend fun countWordsByNormalized(normalizedText: String): Int
+
     @Query("SELECT * FROM words WHERE rootArabic = :rootArabic AND rootArabic != '' ORDER BY ayahId ASC, position ASC LIMIT 30")
     suspend fun getWordsByRoot(rootArabic: String): List<WordEntity>
+
+    @Query("SELECT COUNT(*) FROM words WHERE normalizedText = ''")
+    suspend fun countWordsWithoutNormalized(): Int
+
+    @Query("SELECT * FROM words WHERE normalizedText = '' LIMIT :limit")
+    suspend fun getWordsWithoutNormalizedBatch(limit: Int): List<WordEntity>
 
     @Query(
         """
@@ -127,6 +170,107 @@ interface QuranDao {
         """
     )
     suspend fun getWordOccurrencesByArabic(wordArabic: String): List<WordOccurrenceProjection>
+
+    @Query(
+        """
+        SELECT a.verseKey AS verseKey, a.surahId AS surahId, a.ayahNumber AS ayahNumber,
+               a.textUthmani AS ayahArabic, w.textUthmani AS wordArabic, w.transliteration AS transliteration
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE w.normalizedText = :normalizedText AND w.normalizedText != ''
+        ORDER BY a.surahId ASC, a.ayahNumber ASC, w.position ASC
+        LIMIT 25
+        """
+    )
+    suspend fun getWordOccurrencesByNormalized(normalizedText: String): List<WordOccurrenceProjection>
+
+    @Query(
+        """
+        SELECT w.textUthmani AS textUthmani, COUNT(*) AS occurrenceCount,
+               MIN(a.surahId) AS sampleSurahId, MIN(a.ayahNumber) AS sampleAyahNumber,
+               MIN(a.verseKey) AS sampleVerseKey
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE w.rootArabic = :rootArabic AND w.rootArabic != ''
+        GROUP BY w.textUthmani
+        ORDER BY occurrenceCount DESC
+        LIMIT 12
+        """
+    )
+    suspend fun getDistinctFormsByRoot(rootArabic: String): List<WordFormStatProjection>
+
+    @Query(
+        """
+        SELECT w.textUthmani AS textUthmani, COUNT(*) AS occurrenceCount,
+               MIN(a.surahId) AS sampleSurahId, MIN(a.ayahNumber) AS sampleAyahNumber,
+               MIN(a.verseKey) AS sampleVerseKey
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE (w.normalizedText = :normalizedText OR w.normalizedText LIKE '%' || :normalizedStem || '%')
+          AND w.normalizedText != ''
+        GROUP BY w.textUthmani
+        ORDER BY occurrenceCount DESC
+        LIMIT 12
+        """
+    )
+    suspend fun getDistinctFormsByNormalizedStem(normalizedText: String, normalizedStem: String): List<WordFormStatProjection>
+
+    @Query(
+        """
+        SELECT w.id AS wordId, w.ayahId AS ayahId, a.surahId AS surahId, a.ayahNumber AS ayahNumber,
+               a.verseKey AS verseKey, w.position AS position, w.textUthmani AS textUthmani,
+               w.textIndopak AS textIndopak, w.transliteration AS transliteration,
+               w.rootArabic AS rootArabic, w.lemmaArabic AS lemmaArabic, w.grammarTagJson AS grammarTagJson,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'en' THEN wt.meaningText END), '') AS meaningEn,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'bn' THEN wt.meaningText END), '') AS meaningBn,
+               w.audioUrl AS audioUrl
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        LEFT JOIN word_translations wt ON wt.wordId = w.id
+        WHERE a.surahId = :surahId
+        GROUP BY w.id
+        ORDER BY a.ayahNumber ASC, w.position ASC
+        """
+    )
+    suspend fun getFlashcardWordsForSurah(surahId: Int): List<FlashcardWordProjection>
+
+    @Query(
+        """
+        SELECT w.id AS wordId, w.ayahId AS ayahId, a.surahId AS surahId, a.ayahNumber AS ayahNumber,
+               a.verseKey AS verseKey, w.position AS position, w.textUthmani AS textUthmani,
+               w.textIndopak AS textIndopak, w.transliteration AS transliteration,
+               w.rootArabic AS rootArabic, w.lemmaArabic AS lemmaArabic, w.grammarTagJson AS grammarTagJson,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'en' THEN wt.meaningText END), '') AS meaningEn,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'bn' THEN wt.meaningText END), '') AS meaningBn,
+               w.audioUrl AS audioUrl
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        LEFT JOIN word_translations wt ON wt.wordId = w.id
+        WHERE a.verseKey = :verseKey
+        GROUP BY w.id
+        ORDER BY w.position ASC
+        """
+    )
+    suspend fun getFlashcardWordsForAyah(verseKey: String): List<FlashcardWordProjection>
+
+    @Query(
+        """
+        SELECT w.id AS wordId, w.ayahId AS ayahId, a.surahId AS surahId, a.ayahNumber AS ayahNumber,
+               a.verseKey AS verseKey, w.position AS position, w.textUthmani AS textUthmani,
+               w.textIndopak AS textIndopak, w.transliteration AS transliteration,
+               w.rootArabic AS rootArabic, w.lemmaArabic AS lemmaArabic, w.grammarTagJson AS grammarTagJson,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'en' THEN wt.meaningText END), '') AS meaningEn,
+               COALESCE(MAX(CASE WHEN wt.languageCode = 'bn' THEN wt.meaningText END), '') AS meaningBn,
+               w.audioUrl AS audioUrl
+        FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        LEFT JOIN word_translations wt ON wt.wordId = w.id
+        WHERE a.verseKey IN (:verseKeys)
+        GROUP BY w.id
+        ORDER BY a.surahId ASC, a.ayahNumber ASC, w.position ASC
+        """
+    )
+    suspend fun getFlashcardWordsForVerseKeys(verseKeys: List<String>): List<FlashcardWordProjection>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWords(words: List<WordEntity>)
@@ -328,6 +472,32 @@ data class WordOccurrenceProjection(
     val transliteration: String
 )
 
+data class WordFormStatProjection(
+    val textUthmani: String,
+    val occurrenceCount: Int,
+    val sampleSurahId: Int,
+    val sampleAyahNumber: Int,
+    val sampleVerseKey: String
+)
+
+data class FlashcardWordProjection(
+    val wordId: Long,
+    val ayahId: Int,
+    val surahId: Int,
+    val ayahNumber: Int,
+    val verseKey: String,
+    val position: Int,
+    val textUthmani: String,
+    val textIndopak: String,
+    val transliteration: String,
+    val rootArabic: String,
+    val lemmaArabic: String,
+    val grammarTagJson: String,
+    val meaningEn: String,
+    val meaningBn: String,
+    val audioUrl: String?
+)
+
 @Dao
 interface UserLibraryDao {
     @Query("SELECT * FROM user_collections ORDER BY createdAtEpochMs ASC")
@@ -344,6 +514,9 @@ interface UserLibraryDao {
 
     @Query("SELECT * FROM user_bookmarks ORDER BY updatedAtEpochMs DESC")
     fun observeBookmarks(): Flow<List<UserBookmarkEntity>>
+
+    @Query("SELECT verseKey FROM user_bookmarks WHERE surahId = :surahId")
+    fun observeBookmarkedKeysForSurah(surahId: Int): Flow<List<String>>
 
     @Query("SELECT * FROM user_bookmarks WHERE verseKey = :verseKey LIMIT 1")
     suspend fun getBookmarkByVerseKey(verseKey: String): UserBookmarkEntity?
@@ -362,6 +535,9 @@ interface UserLibraryDao {
 
     @Query("SELECT * FROM user_notes ORDER BY updatedAtEpochMs DESC")
     fun observeNotes(): Flow<List<UserNoteEntity>>
+
+    @Query("SELECT verseKey FROM user_notes WHERE surahId = :surahId")
+    fun observeNoteKeysForSurah(surahId: Int): Flow<List<String>>
 
     @Query("SELECT * FROM user_notes WHERE verseKey = :verseKey LIMIT 1")
     fun observeNoteForVerse(verseKey: String): Flow<UserNoteEntity?>
@@ -419,6 +595,21 @@ interface DuaDao {
 
     @Query("SELECT id FROM duas WHERE isBookmarked = 1")
     suspend fun getBookmarkedDuaIds(): List<Int>
+
+    @Query(
+        """
+        SELECT * FROM duas
+        WHERE title LIKE '%' || :query || '%'
+           OR translation LIKE '%' || :query || '%'
+           OR transliteration LIKE '%' || :query || '%'
+           OR category LIKE '%' || :query || '%'
+           OR reference LIKE '%' || :query || '%'
+           OR arabicText LIKE '%' || :query || '%'
+        ORDER BY id ASC
+        LIMIT 30
+        """
+    )
+    suspend fun searchDuas(query: String): List<DuaEntity>
 
     @Query("SELECT COUNT(*) FROM duas")
     suspend fun countDuas(): Int

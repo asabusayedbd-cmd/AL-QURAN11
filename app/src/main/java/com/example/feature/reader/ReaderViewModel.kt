@@ -18,6 +18,7 @@ import com.example.core.database.TafsirSourceEntity
 import com.example.core.database.UserBookmarkEntity
 import com.example.core.database.UserNoteEntity
 import com.example.core.database.WordEntity
+import com.example.core.database.WordFormStatProjection
 import com.example.core.database.WordOccurrenceProjection
 import com.example.core.database.WordTranslationEntity
 import com.example.core.ibadah.StreakCalculator
@@ -63,7 +64,9 @@ data class WordInspectorState(
     val localizedMeaning: String,
     val ayahVerseKey: String,
     val surahName: String,
+    val exactOccurrencesCount: Int = 1,
     val rootOccurrencesCount: Int,
+    val otherForms: List<WordFormStatProjection> = emptyList(),
     val rootOccurrences: List<WordOccurrenceProjection>,
     val analysis: DetailedWordAnalysis,
     val translatedTargetLang: String? = null,
@@ -177,8 +180,9 @@ class ReaderViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ActivePlaybackCursor())
 
-    private val bundlesFlow = _surahId.flatMapLatest { sid ->
+    private val surahAndBundlesFlow = _surahId.flatMapLatest { sid ->
         combine(
+            quranDao.observeSurah(sid),
             quranDao.observeAyahsBySurah(sid),
             quranDao.observeWordsBySurah(sid),
             quranDao.observeWordTranslationsBySurah(sid),
@@ -186,23 +190,34 @@ class ReaderViewModel(
             combine(
                 preferencesRepository.preferencesFlow,
                 quranDao.observeEnabledTranslationSources(),
-                userLibraryDao.observeBookmarks(),
-                userLibraryDao.observeNotes()
-            ) { prefs, enabledSources, bookmarks, notes ->
-                Pair(prefs to enabledSources, bookmarks to notes)
+                userLibraryDao.observeBookmarkedKeysForSurah(sid),
+                userLibraryDao.observeNoteKeysForSurah(sid)
+            ) { prefs, enabledSources, bookmarkedKeys, noteKeys ->
+                Pair(prefs to enabledSources, bookmarkedKeys.toHashSet() to noteKeys.toHashSet())
             }
-        ) { ayahs, allWords, wordTrs, allTranslations, meta ->
-            if (ayahs.isEmpty()) {
+        ) { arr ->
+            val surah = arr[0] as SurahEntity?
+            @Suppress("UNCHECKED_CAST")
+            val ayahs = arr[1] as List<AyahEntity>
+            @Suppress("UNCHECKED_CAST")
+            val allWords = arr[2] as List<WordEntity>
+            @Suppress("UNCHECKED_CAST")
+            val wordTrs = arr[3] as List<WordTranslationEntity>
+            @Suppress("UNCHECKED_CAST")
+            val allTranslations = arr[4] as List<AyahTranslationEntity>
+            @Suppress("UNCHECKED_CAST")
+            val meta = arr[5] as Pair<Pair<UserPreferences, List<com.example.core.database.TranslationSourceEntity>>, Pair<HashSet<String>, HashSet<String>>>
+
+            val (prefs, enabledSources) = meta.first
+            val (bookmarkedKeys, noteKeys) = meta.second
+            val bundles = if (ayahs.isEmpty()) {
                 emptyList()
             } else {
-                val (prefs, enabledSources) = meta.first
-                val (bookmarks, notes) = meta.second
                 val enabledIds = enabledSources.map { it.id }.toSet()
+                val sourceTitleMap = enabledSources.associate { it.id to it.translatorName }
                 val wordsByAyah = allWords.groupBy { it.ayahId }
                 val trsByAyah = allTranslations.groupBy { it.ayahId }
                 val wordTrById = wordTrs.groupBy { it.wordId }
-                val bookmarkedKeys = bookmarks.map { it.verseKey }.toSet()
-                val noteKeys = notes.map { it.verseKey }.toSet()
 
                 ayahs.map { ayah ->
                     val wList = wordsByAyah[ayah.id].orEmpty().map { w ->
@@ -213,9 +228,18 @@ class ReaderViewModel(
                             ?: ""
                         WordDisplayItem(w, meaning)
                     }
-                    val ayahTrs = trsByAyah[ayah.id].orEmpty()
+                    val rawTrs = trsByAyah[ayah.id].orEmpty()
+                    val ayahTrs = rawTrs
                         .filter { enabledIds.isEmpty() || it.sourceId in enabledIds }
-                        .ifEmpty { trsByAyah[ayah.id].orEmpty() }
+                        .ifEmpty { rawTrs }
+                        .map { tr ->
+                            val canonicalTitle = sourceTitleMap[tr.sourceId]
+                            if (!canonicalTitle.isNullOrBlank() && canonicalTitle != tr.translatorName) {
+                                tr.copy(translatorName = canonicalTitle)
+                            } else {
+                                tr
+                            }
+                        }
                     AyahDisplayBundle(
                         ayah = ayah,
                         words = wList,
@@ -225,6 +249,7 @@ class ReaderViewModel(
                     )
                 }
             }
+            Triple(surah, bundles, prefs)
         }
     }.flowOn(Dispatchers.Default)
 
@@ -266,16 +291,8 @@ class ReaderViewModel(
         )
     }
 
-    private val readerCoreFlow = combine(
-        _surahId.flatMapLatest { quranDao.observeSurah(it) },
-        bundlesFlow,
-        preferencesRepository.preferencesFlow
-    ) { surah, bundles, prefs ->
-        Triple(surah, bundles, prefs)
-    }
-
     val uiState: StateFlow<ReaderUiState> = combine(
-        readerCoreFlow,
+        surahAndBundlesFlow,
         catalogFlow,
         overlayFlow
     ) { core, catalog, overlay ->
@@ -447,22 +464,45 @@ class ReaderViewModel(
             val allTranslations = quranDao.getWordTranslations(item.word.id)
             val analysis = WordMorphologyAnalyzer.analyze(item.word, allTranslations)
             val hasRoot = item.word.rootArabic.isNotBlank()
-            val occurrences = if (hasRoot) {
-                quranDao.getRootOccurrences(item.word.rootArabic)
-            } else {
-                quranDao.getWordOccurrencesByArabic(item.word.textUthmani)
+            val normalizedWord = item.word.normalizedText.ifBlank {
+                BidiUtils.normalizeArabicForSearch(item.word.textUthmani)
             }
+            val exactCount = quranDao.countWordsByArabic(item.word.textUthmani).coerceAtLeast(1)
+            val normalizedCount = if (normalizedWord.isNotBlank()) {
+                quranDao.countWordsByNormalized(normalizedWord).coerceAtLeast(exactCount)
+            } else {
+                exactCount
+            }
+
+            val occurrences = when {
+                hasRoot -> quranDao.getRootOccurrences(item.word.rootArabic)
+                normalizedWord.isNotBlank() -> quranDao.getWordOccurrencesByNormalized(normalizedWord)
+                    .ifEmpty { quranDao.getWordOccurrencesByArabic(item.word.textUthmani) }
+                else -> quranDao.getWordOccurrencesByArabic(item.word.textUthmani)
+            }
+
+            val otherForms = when {
+                hasRoot -> quranDao.getDistinctFormsByRoot(item.word.rootArabic)
+                analysis.normalizedStem.length >= 2 && normalizedWord.isNotBlank() ->
+                    quranDao.getDistinctFormsByNormalizedStem(normalizedWord, analysis.normalizedStem)
+                else -> emptyList()
+            }
+
             val totalOccurrencesCount = if (hasRoot) {
-                quranDao.countWordsByRoot(item.word.rootArabic).coerceAtLeast(occurrences.size)
+                quranDao.countWordsByRoot(item.word.rootArabic).coerceAtLeast(occurrences.size).coerceAtLeast(exactCount)
             } else {
-                quranDao.countWordsByArabic(item.word.textUthmani).coerceAtLeast(occurrences.size).coerceAtLeast(1)
+                val formSum = otherForms.sumOf { it.occurrenceCount }
+                maxOf(normalizedCount, formSum, occurrences.size, exactCount)
             }
+
             _inspectedWord.value = WordInspectorState(
                 word = item.word,
                 localizedMeaning = item.localizedMeaning,
                 ayahVerseKey = verseKey,
                 surahName = uiState.value.localizedSurahName,
+                exactOccurrencesCount = exactCount,
                 rootOccurrencesCount = totalOccurrencesCount,
+                otherForms = otherForms,
                 rootOccurrences = occurrences,
                 analysis = analysis
             )

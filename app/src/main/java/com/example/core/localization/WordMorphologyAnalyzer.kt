@@ -31,7 +31,17 @@ data class DetailedWordAnalysis(
     val explanationEn: String,
     val explanationBn: String,
     val explanationAr: String,
-    val allMeanings: List<Pair<String, String>> // languageLabel to meaningText
+    val allMeanings: List<Pair<String, String>>, // languageLabel to meaningText
+    val normalizedStem: String = "",
+    val sarfPatternEn: String = "",
+    val sarfPatternAr: String = "",
+    val sarfPatternBn: String = "",
+    val sarfNoteEn: String = "",
+    val sarfNoteBn: String = "",
+    val nahwFunctionEn: String = "",
+    val nahwFunctionBn: String = "",
+    val definitenessEn: String = "",
+    val definitenessBn: String = ""
 ) {
     fun localizedPos(uiLang: String): String = when (uiLang.lowercase()) {
         "bn" -> "$partOfSpeechBn ($partOfSpeechAr)"
@@ -47,6 +57,22 @@ data class DetailedWordAnalysis(
     fun localizedNumberGender(uiLang: String): String = when (uiLang.lowercase()) {
         "bn" -> numberAndGenderBn
         else -> numberAndGender
+    }
+
+    fun localizedSarfPattern(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> "$sarfPatternBn ($sarfPatternAr)"
+        "ar" -> sarfPatternAr
+        else -> "$sarfPatternEn • $sarfPatternAr"
+    }
+
+    fun localizedNahwFunction(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> nahwFunctionBn
+        else -> nahwFunctionEn
+    }
+
+    fun localizedDefiniteness(uiLang: String): String = when (uiLang.lowercase()) {
+        "bn" -> definitenessBn
+        else -> definitenessEn
     }
 
     fun localizedExplanation(uiLang: String): String = when (uiLang.lowercase()) {
@@ -111,7 +137,35 @@ object WordMorphologyAnalyzer {
         "قال" to KnownLexiconEntry("Perfect Verb (Past)", "فعل ماضٍ", "অতীত কালের ক্রিয়া (তিনি বললেন)", "Built on Fathah (مبني على الفتح)", "ফাতহাযুক্ত অতীত ক্রিয়া", "Singular • 3rd Person Masc.", "একবচন • পুংলিঙ্গ"),
         "قالوا" to KnownLexiconEntry("Perfect Verb (Past Plural)", "فعل ماضٍ + واو الجماعة", "অতীত কালের বহুবচন ক্রিয়া (তারা বলল)", "Built on Dammah (مبني على الضم)", "বহুবচন অতীত ক্রিয়া", "Plural • 3rd Person Masc.", "বহুবচন • পুংলিঙ্গ"),
         "كان" to KnownLexiconEntry("Auxiliary Past Verb (Fi'l Naqis)", "فعل ماضٍ ناقص", "অসম্পূর্ণ অতীত ক্রিয়া (ছিলেন/ছিল)", "Built on Fathah (مبني على الفتح)", "অসম্পূর্ণ অতীত ক্রিয়া", "Singular • 3rd Person Masc.", "একবচন • পুংলিঙ্গ"),
-        "يا" to KnownLexiconEntry("Vocative Particle (O!)", "حرف نداء", "সম্বোধনসূচক অব্যয় (হে!)", "Vocative (نداء)", "সম্বোধন অব্যয়", "Particle • Vocative", "অব্যয় • সম্বোধন")
+        "يا" to KnownLexiconEntry("Vocative Particle (O!)", "حرف نداء", "সম্বোধনসূচক অব্যয় (হে!)", "Vocative (نداء)", "সম্বোধন অব্যয়", "Particle • Vocative", "অব্যয় • সম্বোধন"),
+        "رب" to KnownLexiconEntry("Noun (Lord / Sustainer)", "اسم (رب)", "বিশেষ্য (রব / প্রতিপালক)", "Contextual Inflection", "বাক্যগত অবস্থা", "Singular • Masculine", "একবচন • পুংলিঙ্গ"),
+        "يوم" to KnownLexiconEntry("Noun / Adverb of Time (Day)", "اسم / ظرف زمان", "বিশেষ্য / সময়বাচক পদ (দিন)", "Contextual Inflection", "বাক্যগত অবস্থা", "Singular • Masculine", "একবচন • পুংলিঙ্গ"),
+        "كل" to KnownLexiconEntry("Quantifier Noun (Every / All)", "اسم يفيد الشمول (كل)", "সামষ্টিক বিশেষ্য (প্রত্যেক/সব)", "Construct State (مضاف)", "সম্বন্ধ পদের পূর্বপদ (মুদাফ)", "Singular Form • Collective", "একক রূপ • সামষ্টিক"),
+        "عند" to KnownLexiconEntry("Adverb of Place/Time (With / Near)", "ظرف مكان / زمان", "স্থান/কালবাচক অব্যয় (নিকট)", "Accusative Adverb (منصوب)", "স্থান/কাল মানসুব", "Adverb • Construct", "ক্রিয়াবিশেষণ"),
+        "مع" to KnownLexiconEntry("Adverbial Noun (With / Together)", "ظرف يفيد المصاحبة", "সহযোগিতাবাচক পদ (সাথে)", "Accusative / Construct", "মানসুব / মুদাফ", "Invariant Form", "অপরিবর্তনীয় রূপ"),
+        "بين" to KnownLexiconEntry("Adverb of Place (Between)", "ظرف مكان", "স্থানবাচক পদ (মাঝে/মধ্যে)", "Accusative Adverb (منصوب)", "স্থানবাচক মানসুব", "Adverb • Construct", "স্থানবাচক"),
+        "قبل" to KnownLexiconEntry("Adverb of Time (Before)", "ظرف زمان", "সময়বাচক পদ (পূর্বে)", "Accusative / Genitive", "মানসুব / মাজরুর", "Adverb • Time", "সময়বাচক"),
+        "بعد" to KnownLexiconEntry("Adverb of Time (After)", "ظرف زمان", "সময়বাচক পদ (পরে)", "Accusative / Genitive", "মানসুব / মাজরুর", "Adverb • Time", "সময়বাচক"),
+        "إلا" to KnownLexiconEntry("Exception Particle (Except)", "أداة استثناء", "ব্যতিক্রমসূচক অব্যয় (ব্যতীত)", "Exception Government", "ইস্তিসনা (ব্যতিক্রম)", "Particle • Invariant", "অব্যয় • ব্যতিক্রম"),
+        "إنما" to KnownLexiconEntry("Restrictive Particle (Only / Indeed)", "أداة حصر", "সীমাবদ্ধতাসূচক অব্যয় (কেবল/নিশ্চয়ই)", "Invariant (مبني)", "অপরিবর্তনীয় অব্যয়", "Particle • Restriction", "অব্যয় • সীমাবদ্ধতা"),
+        "لعل" to KnownLexiconEntry("Particle of Hope/Expectation", "حرف ترجٍّ ونصب", "আশাবাচক অব্যয় (যাতে/সম্ভবত)", "Accusative Subject (منصوب)", "মানসুবকারক অব্যয়", "Particle • Invariant", "অব্যয় • আশা"),
+        "لو" to KnownLexiconEntry("Conditional Particle (If)", "حرف شرط غير جازم", "শর্তবাচক অব্যয় (যদি)", "Non-Jussive Conditional", "অব্যয় • শর্ত", "Particle • Conditional", "অব্যয় • শর্ত"),
+        "لولا" to KnownLexiconEntry("Conditional Particle (Were it not)", "حرف امتناع لوجود", "শর্তবাচক অব্যয় (যদি না হতো)", "Nominal Clause Marker", "শর্তবাচক অব্যয়", "Particle • Conditional", "অব্যয় • শর্ত"),
+        "كيف" to KnownLexiconEntry("Interrogative Adverb (How)", "اسم استفهام", "প্রশ্নবোধক পদ (কীভাবে)", "Built on Fathah (مبني)", "প্রশ্নবোধক • অপরিবর্তনীয়", "Interrogative", "প্রশ্নবোধক"),
+        "أين" to KnownLexiconEntry("Interrogative Adverb (Where)", "اسم استفهام للمكان", "স্থানবাচক প্রশ্নবোধক (কোথায়)", "Built on Fathah (مبني)", "প্রশ্নবোধক • অপরিবর্তনীয়", "Interrogative", "প্রশ্নবোধক"),
+        "آمنوا" to KnownLexiconEntry("Form IV Perfect Verb (They believed)", "فعل ماضٍ (أَفْعَلَ - باب الإفعال)", "বাবে ইফ‘আল অতীত ক্রিয়া (তারা ঈমান এনেছে)", "Built on Dammah (مبني على الضم)", "বহুবচন অতীত ক্রিয়া", "Plural • 3rd Person Masc.", "বহুবচন • পুংলিঙ্গ"),
+        "يعلمون" to KnownLexiconEntry("Imperfect Verb (They know)", "فعل مضارع (من الأفعال الخمسة)", "বর্তমান/ভবিষ্যৎ ক্রিয়া (তারা জানে)", "Indicative with Nun (مرفوع بثبوت النون)", "মারফু — নুন-সহ বর্তমান ক্রিয়া", "Plural • 3rd Person Masc.", "বহুবচন • পুংলিঙ্গ"),
+        "يؤمنون" to KnownLexiconEntry("Form IV Imperfect Verb (They believe)", "فعل مضارع (يُفْعِلُ - باب الإفعال)", "বাবে ইফ‘আল বর্তমান ক্রিয়া (তারা বিশ্বাস করে)", "Indicative with Nun (مرفوع بثبوت النون)", "মারফু — নুন-সহ বর্তমান ক্রিয়া", "Plural • 3rd Person Masc.", "বহুবচন • পুংলিঙ্গ"),
+        "المتقين" to KnownLexiconEntry("Definite Active Participle (God-conscious)", "اسم فاعل معرف بأل (مُتَّقِي)", "নির্দিষ্ট কর্তৃবাচক বিশেষণ (মুত্তাকীগণ)", "Genitive / Accusative Pl. (بالياء)", "মাজরুর / মানসুব বহুবচন", "Plural • Masculine", "বহুবচন • পুংলিঙ্গ"),
+        "المؤمنين" to KnownLexiconEntry("Definite Active Participle (Believers)", "اسم فاعل معرف بأل (مُؤْمِن)", "নির্দিষ্ট কর্তৃবাচক বিশেষণ (মুমিনগণ)", "Genitive / Accusative Pl. (بالياء)", "মাজরুর / মানসুব বহুবচন", "Plural • Masculine", "বহুবচন • পুংলিঙ্গ"),
+        "المؤمنون" to KnownLexiconEntry("Definite Active Participle (Believers)", "اسم فاعل معرف بأل (مُؤْمِن)", "নির্দিষ্ট কর্তৃবাচক বিশেষণ (মুমিনগণ)", "Nominative Pl. (مرفوع بالواو)", "মারফু — কর্তৃকারক বহুবচন", "Plural • Masculine", "বহুবচন • পুংলিঙ্গ"),
+        "الكافرين" to KnownLexiconEntry("Definite Active Participle (Disbelievers)", "اسم فاعل معرف بأل (كَافِر)", "নির্দিষ্ট কর্তৃবাচক বিশেষণ (কাফিরগণ)", "Genitive / Accusative Pl. (بالياء)", "মাজরুর / মানসুব বহুবচন", "Plural • Masculine", "বহুবচন • পুংলিঙ্গ"),
+        "السماوات" to KnownLexiconEntry("Definite Sound Fem. Plural (Heavens)", "جمع مؤنث سالم معرف بأل", "নির্দিষ্ট স্ত্রী-বহুবচন বিশেষ্য (আকাশমণ্ডলী)", "Kasrah for Genitive/Accusative", "বহুবচন বিশেষ্য", "Plural • Feminine", "বহুবচন • স্ত্রীলিঙ্গ"),
+        "الأرض" to KnownLexiconEntry("Definite Noun (The Earth)", "اسم معرف بأل", "নির্দিষ্ট বিশেষ্য (পৃথিবী)", "Contextual Inflection", "বাক্যগত ই‘রাব", "Singular • Feminine (Sama'i)", "একবচন • স্ত্রীলিঙ্গ"),
+        "الكتاب" to KnownLexiconEntry("Definite Noun (The Book / Scripture)", "اسم معرف بأل (فِعَال)", "নির্দিষ্ট বিশেষ্য (কিতাব/গ্রন্থ)", "Contextual Inflection", "বাক্যগত ই‘রাব", "Singular • Masculine", "একবচন • পুংলিঙ্গ"),
+        "العالمين" to KnownLexiconEntry("Definite Plural Noun (All Worlds)", "ملحق بجمع المذكر السالم", "নির্দিষ্ট বহুবচন বিশেষ্য (সকল জগৎ)", "Genitive / Accusative Pl. (بالياء)", "মাজরুর / মানসুব বহুবচন", "Plural • Masculine", "বহুবচন • পুংলিঙ্গ"),
+        "الرحمن" to KnownLexiconEntry("Intensive Attribute (Entirely Merciful)", "صيغة مبالغة (فَعْلَان)", "অতিশয় গুণবাচক বিশেষণ (পরম দয়ালু)", "Contextual Inflection", "বাক্যগত ই‘রাব", "Singular • Intensive", "একবচন • অতিশয়"),
+        "الرحيم" to KnownLexiconEntry("Resembling Adjective (Especially Merciful)", "صفة مشبهة (فَعِيل)", "স্থায়ী গুণবাচক বিশেষণ (অসীম দয়ালু)", "Contextual Inflection", "বাক্যগত ই‘রাব", "Singular • Permanent Attribute", "একবচন • স্থায়ী গুণ")
     )
 
     fun analyze(
@@ -254,6 +308,27 @@ object WordMorphologyAnalyzer {
             bnMeaning = bnMeaning
         )
 
+        val normStem = BidiUtils.normalizeArabicForSearch(extraction.stem)
+        val sarf = deriveSarfInfo(
+            rawArabic = rawArabic,
+            stemArabic = extraction.stem,
+            bareWord = bareWord,
+            posEn = posEn,
+            posAr = posAr,
+            rootArabic = spacedRoot,
+            segments = extraction.segments,
+            lowerGrammar = lower
+        )
+        val nahw = deriveNahwInfo(
+            posEn = posEn,
+            posAr = posAr,
+            caseEn = caseEn,
+            hasPrepPrefix = hasPrepPrefix,
+            hasDefiniteArticle = hasDefiniteArticle,
+            hasSuffix = hasSuffix,
+            bareWord = bareWord
+        )
+
         return DetailedWordAnalysis(
             partOfSpeechEn = posEn,
             partOfSpeechAr = posAr,
@@ -268,8 +343,161 @@ object WordMorphologyAnalyzer {
             explanationEn = expEn,
             explanationBn = expBn,
             explanationAr = expAr,
-            allMeanings = orderedMeanings
+            allMeanings = orderedMeanings,
+            normalizedStem = normStem,
+            sarfPatternEn = sarf.patternEn,
+            sarfPatternAr = sarf.patternAr,
+            sarfPatternBn = sarf.patternBn,
+            sarfNoteEn = sarf.noteEn,
+            sarfNoteBn = sarf.noteBn,
+            nahwFunctionEn = nahw.roleEn,
+            nahwFunctionBn = nahw.roleBn,
+            definitenessEn = nahw.defEn,
+            definitenessBn = nahw.defBn
         )
+    }
+
+    private data class SarfDetails(
+        val patternEn: String,
+        val patternAr: String,
+        val patternBn: String,
+        val noteEn: String,
+        val noteBn: String
+    )
+
+    private data class NahwDetails(
+        val roleEn: String,
+        val roleBn: String,
+        val defEn: String,
+        val defBn: String
+    )
+
+    private fun deriveSarfInfo(
+        rawArabic: String,
+        stemArabic: String,
+        bareWord: String,
+        posEn: String,
+        posAr: String,
+        rootArabic: String,
+        segments: List<WordSegmentPart>,
+        lowerGrammar: String
+    ): SarfDetails {
+        val bareStem = stripDiacriticsAndAlefWasla(stemArabic)
+        val prefixes = segments.filter { it.roleType == SegmentRoleType.PREFIX }
+        val suffixes = segments.filter { it.roleType == SegmentRoleType.SUFFIX }
+        val rootCount = rootArabic.split(" ").count { it.isNotBlank() }
+
+        val (patEn, patAr, patBn) = when {
+            lowerGrammar.contains("form iv") || (posAr.contains("فعل") && (stemArabic.startsWith("أَ") || stemArabic.startsWith("يُ") || bareStem.startsWith("مُ"))) ->
+                Triple("Form IV (If'al — أَفْعَلَ / يُفْعِلُ)", "باب الإفعال (أَفْعَلَ)", "বাবে ইফ‘আল (أَفْعَلَ / يُفْعِلُ)")
+            lowerGrammar.contains("form ii") || (posAr.contains("فعل") && stemArabic.contains("ّ") && bareStem.length in 3..4) ->
+                Triple("Form II (Taf'il — فَعَّلَ / يُفَعِّلُ)", "باب التفعيل (فَعَّلَ)", "বাবে তাফ‘ঈল (فَعَّلَ)")
+            lowerGrammar.contains("form x") || bareStem.startsWith("است") || bareStem.startsWith("مست") ->
+                Triple("Form X (Istif'al — اِسْتَفْعَلَ)", "باب الاستفعال (اِسْتَفْعَلَ)", "বাবে ইস্তিফ‘আল (اِسْتَفْعَلَ)")
+            lowerGrammar.contains("active participle") || (bareStem.startsWith("م") && posEn.contains("Participle")) ->
+                Triple("Active Participle (Ism Fa'il — فَاعِل / مُفْعِل)", "اسم الفاعل", "কর্তৃবাচক বিশেষণ (ইসমে ফা‘ইল)")
+            lowerGrammar.contains("passive participle") ->
+                Triple("Passive Participle (Ism Maf'ul — مَفْعُول)", "اسم المفعول", "কর্মবাচক বিশেষণ (ইসমে মাফ‘উল)")
+            bareStem == "رحمن" ->
+                Triple("Intensive Pattern (Fa'lan — فَعْلَان)", "صيغة مبالغة: فَعْلَان", "অতিশয় ওযন (فَعْلَان)")
+            bareStem == "رحيم" || bareStem == "عليم" || bareStem == "حكيم" || bareStem == "كريم" || bareStem == "عظيم" || bareStem == "بصير" || bareStem == "سميع" ->
+                Triple("Resembling Adjective (Fa'il — فَعِيل)", "صفة مشبهة: فَعِيل", "স্থায়ী গুণবাচক ওযন (فَعِيل)")
+            posAr.contains("فعل أمر") ->
+                Triple("Imperative Form (Fi'l Amr — اِفْعَلْ)", "صيغة الأمر", "আদেশসূচক রূপ (ফে‘লে আমর)")
+            posAr.contains("فعل مضارع") ->
+                Triple("Imperfect Form (Mudari' — يَفْعَلُ)", "الفعل المضارع", "বর্তমান/ভবিষ্যৎ ক্রিয়া রূপ (মুদারি)")
+            posAr.contains("فعل ماض") ->
+                Triple("Perfect Form (Madi — فَعَلَ)", "الفعل الماضي", "অতীত ক্রিয়া রূপ (মাদি)")
+            posAr.contains("فعل") ->
+                Triple("Verbal Stem (Fi'l)", "صيغة فعلية", "ক্রিয়ামূল (ফে‘ল)")
+            posEn.contains("Particle") || posEn.contains("Preposition") && bareWord in KNOWN_FUNCTION_WORDS ->
+                Triple("Invariable Particle (Harf Mabni)", "حرف مبني غير متصرف", "অপরিবর্তনীয় অব্যয় (মাবনী)")
+            bareWord == "الله" || bareWord == "لله" || bareWord == "بالله" || bareWord == "والله" ->
+                Triple("Proper Divine Name (Lafz al-Jalalah)", "لفظ الجلالة", "লাফযে জালালাহ (আল্লাহ নাম)")
+            rootCount == 3 ->
+                Triple("Triliteral Stem (Thulathi — ثُلَاثِي)", "جذر ثلاثي", "তিন-অক্ষরবিশিষ্ট ধাতুমূল (সুলাসী)")
+            rootCount == 4 ->
+                Triple("Quadriliteral Stem (Ruba'i — رُبَاعِي)", "جذر رباعي", "চার-অক্ষরবিশিষ্ট ধাতুমূল (রুবা‘ঈ)")
+            else ->
+                Triple("Nominal / Derived Stem (Ism)", "كلمة اسمية / مشتقة", "নামপদ / সাধিত শব্দ (ইসম)")
+        }
+
+        val affixesCount = prefixes.size + suffixes.size
+        val noteEn = buildString {
+            append("Stem \"$stemArabic\" (${countArabicBaseLetters(stemArabic)} base letters).")
+            if (affixesCount > 0) {
+                append(" Built with ${prefixes.size} prefix(es) and ${suffixes.size} suffix(es).")
+            } else {
+                append(" Unaffixed standalone word form.")
+            }
+            if (rootArabic.isNotBlank()) {
+                append(" Derived from verified root [$rootArabic].")
+            }
+        }
+        val noteBn = buildString {
+            append("মূল কাণ্ড «$stemArabic» (${BidiUtils.formatNumber(countArabicBaseLetters(stemArabic), "bn")}টি মূল বর্ণ)।")
+            if (affixesCount > 0) {
+                append(" এতে ${BidiUtils.formatNumber(prefixes.size, "bn")}টি পূর্বপ্রত্যয় ও ${BidiUtils.formatNumber(suffixes.size, "bn")}টি পরপ্রত্যয় যুক্ত হয়েছে।")
+            } else {
+                append(" কোনো বাড়তি উপসর্গ/প্রত্যয় ছাড়াই স্বতন্ত্র রূপ।")
+            }
+            if (rootArabic.isNotBlank()) {
+                append(" স্বীকৃত ধাতুমূল: [$rootArabic]।")
+            }
+        }
+
+        return SarfDetails(patEn, patAr, patBn, noteEn, noteBn)
+    }
+
+    private fun deriveNahwInfo(
+        posEn: String,
+        posAr: String,
+        caseEn: String,
+        hasPrepPrefix: Boolean,
+        hasDefiniteArticle: Boolean,
+        hasSuffix: Boolean,
+        bareWord: String
+    ): NahwDetails {
+        val isVerb = posAr.contains("فعل")
+        val isParticle = posEn.startsWith("Particle") || (posEn.startsWith("Preposition") && bareWord in KNOWN_FUNCTION_WORDS)
+
+        val (defEn, defBn) = when {
+            isVerb -> "Verbal Clause Head (فعل)" to "ক্রিয়াপদ (ফেল)"
+            isParticle -> "Invariant Particle (حرف)" to "অপরিবর্তনীয় অব্যয়"
+            hasDefiniteArticle || bareWord == "الله" || bareWord == "لله" || posEn.contains("Proper Noun") || posEn.contains("Pronoun") ->
+                "Definite (معرفة / Ma'rifah)" to "নির্দিষ্ট পদ (মা‘রিফাহ)"
+            hasSuffix -> "Definite by Annexation (مضاف إلى ضمير)" to "সর্বনাম যুক্ত হওয়ায় নির্দিষ্ট (মুদাফ)"
+            else -> "Indefinite / Context-Defined (نكرة أو مضاف)" to "অনির্দিষ্ট বা সম্বন্ধযুক্ত (নাকিরাহ/মুদাফ)"
+        }
+
+        val (roleEn, roleBn) = when {
+            hasPrepPrefix ->
+                "Prepositional Phrase (جار ومجرور): preposition governs genitive state." to
+                    "জার ও মাজরুর (অব্যয় + সম্বন্ধ পদ): পূর্ববর্তী অব্যয়ের কারণে জের (কাসরাহ) হয়।"
+            caseEn.contains("Nominative") && isVerb ->
+                "Indicative Verb (مرفوع): expresses ongoing or habitual action." to
+                    "মারফু ক্রিয়া: বর্তমান বা অভ্যস্ত ক্রিয়া প্রকাশ করে।"
+            caseEn.contains("Nominative") ->
+                "Nominative Role (مرفوع): subject (Fa'il), topic (Mubtada), or predicate (Khabar)." to
+                    "মারফু পদ: বাক্যে কর্তা (ফা‘ইল), উদ্দেশ্য (মুবতাদা) বা বিধেয় (খবর) রূপে ব্যবহৃত।"
+            caseEn.contains("Accusative") && !isVerb ->
+                "Accusative Role (منصوب): direct object (Maf'ul), state (Hal), or governed by Inna." to
+                    "মানসুব পদ: কর্মকারক (মাফ‘উল), অবস্থা (হাল) বা ইন্না-র ইসম রূপে ব্যবহৃত।"
+            caseEn.contains("Subjunctive") ->
+                "Subjunctive Verb (فعل منصوب): governed by particle such as أن / لن." to
+                    "মানসুব ক্রিয়া: মানসুবকারক অব্যয়ের প্রভাবে শেষ বর্ণে যবর (ফাতহাহ) হয়েছে।"
+            caseEn.contains("Jussive") ->
+                "Jussive / Imperative (مجزوم / أمر): governed by لم or command form." to
+                    "মাজযুম / আমর ক্রিয়া: সুকুন বা জযমযুক্ত আদেশ/না-বোধক অবস্থা।"
+            caseEn.contains("Genitive") ->
+                "Genitive Role (مجرور): governed by preposition or second term of Idafah." to
+                    "মাজরুর পদ: হরফে জার বা ইদাফাত (সম্বন্ধ পদের) কারণে জেরযুক্ত অবস্থা।"
+            else ->
+                "Syntactic position (محل إعرابي) determined by surrounding clause." to
+                    "বাক্যের পূর্বাপর গঠন অনুযায়ী ই‘রাব ও অবস্থান নির্ধারিত।"
+        }
+
+        return NahwDetails(roleEn, roleBn, defEn, defBn)
     }
 
     private fun stripDiacriticsAndAlefWasla(text: String): String {

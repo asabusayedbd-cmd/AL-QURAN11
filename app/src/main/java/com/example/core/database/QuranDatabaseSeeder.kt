@@ -41,7 +41,7 @@ class QuranDatabaseSeeder(
 
     companion object {
         private const val KEY_SEED_VERSION = "seed_version"
-        private const val CURRENT_SEED_VERSION = 6
+        private const val CURRENT_SEED_VERSION = 7
         private const val EXPECTED_TOTAL_AYAHS = 6236
         // Keep cold Stage 1 tiny (17 Ayahs total) so Home & first frame render immediately
         private val PRIORITY_SURAH_IDS = listOf(1, 112, 113, 114)
@@ -250,6 +250,24 @@ class QuranDatabaseSeeder(
                             rawTafsirSources = catalogs.tafsirSources,
                             reciters = catalogs.reciters
                         )
+                    }
+
+                    // Backfill normalizedText on any legacy words from v1/v2 migrations
+                    if (quranDao.countWordsWithoutNormalized() > 0) {
+                        var batchesRemaining = 80
+                        while (batchesRemaining > 0) {
+                            batchesRemaining--
+                            val missing = quranDao.getWordsWithoutNormalizedBatch(1500)
+                            if (missing.isEmpty()) break
+                            val fixed = missing.map { w ->
+                                val norm = BidiUtils.normalizeArabicForSearch(w.textUthmani).ifBlank { w.textUthmani }
+                                w.copy(normalizedText = norm)
+                            }
+                            database.withTransaction {
+                                quranDao.insertWords(fixed)
+                            }
+                            if (interSurahYieldMs > 0L) delay(interSurahYieldMs) else yield()
+                        }
                     }
 
                     // Persist seed completion version only after full dataset validation
@@ -595,7 +613,8 @@ class QuranDatabaseSeeder(
                                     rootArabic = "",
                                     lemmaArabic = "",
                                     grammarTagJson = "",
-                                    audioUrl = "https://audio.qurancdn.com/wbw/${surahPadded}_${ayahPadded}_${posPadded}.mp3"
+                                    audioUrl = "https://audio.qurancdn.com/wbw/${surahPadded}_${ayahPadded}_${posPadded}.mp3",
+                                    normalizedText = BidiUtils.normalizeArabicForSearch(w.textUthmani)
                                 )
                             )
                             if (w.enMeaning.isNotBlank()) {
@@ -615,7 +634,7 @@ class QuranDatabaseSeeder(
                                     sourceId = 20,
                                     ayahId = id,
                                     languageCode = "en",
-                                    translatorName = "Saheeh International",
+                                    translatorName = "Saheeh International Translation",
                                     translatedText = trEn
                                 )
                             )
@@ -810,7 +829,10 @@ class QuranDatabaseSeeder(
                             canonicalWord.copy(
                                 rootArabic = wObj.rootArabic.ifBlank { canonicalWord.rootArabic },
                                 lemmaArabic = wObj.lemmaArabic.ifBlank { canonicalWord.lemmaArabic },
-                                grammarTagJson = wObj.grammarTag.ifBlank { canonicalWord.grammarTagJson }
+                                grammarTagJson = wObj.grammarTag.ifBlank { canonicalWord.grammarTagJson },
+                                normalizedText = canonicalWord.normalizedText.ifBlank {
+                                    BidiUtils.normalizeArabicForSearch(canonicalWord.textUthmani)
+                                }
                             )
                         )
                     }

@@ -223,7 +223,7 @@ fun ReaderScreen(
                     .let { if (it >= 0) it + headerOffset else -1 }
             }
             if (foundPageIndex >= 0) {
-                listState.animateScrollToItem(foundPageIndex)
+                listState.scrollToItem(foundPageIndex)
                 pendingTargetPage = 0
                 pendingTargetAyah = 1
                 return@LaunchedEffect
@@ -242,7 +242,7 @@ fun ReaderScreen(
         }
 
         if (effectiveTarget > 1 && foundIndex >= 0) {
-            listState.animateScrollToItem(foundIndex)
+            listState.scrollToItem(foundIndex)
             pendingTargetAyah = 1
         } else if (surahChanged && effectiveTarget <= 1 && effectivePage <= 0) {
             listState.scrollToItem(0)
@@ -263,7 +263,11 @@ fun ReaderScreen(
                 if (aIdx >= 0) aIdx + headerOffset else -1
             }
             if (listIndex >= 0) {
-                listState.animateScrollToItem(listIndex)
+                if (kotlin.math.abs(listIndex - listState.firstVisibleItemIndex) > 3) {
+                    listState.scrollToItem(listIndex)
+                } else {
+                    listState.animateScrollToItem(listIndex)
+                }
             }
         }
     }
@@ -851,7 +855,6 @@ fun ReaderScreen(
                                     cardStyle = state.preferences.readerCardStyle,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .animateItem()
                                         .testTag("ayah_card_${bundle.ayah.verseKey}")
                                 ) {
                                     Column(
