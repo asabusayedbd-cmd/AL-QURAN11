@@ -71,6 +71,14 @@
     <string name="theme_sepia">نرم سیپیا</string>
     <string name="theme_slate_dark">گہرا سلیٹ ٹیل</string>
     <string name="theme_amoled">خالص AMOLED نائٹ</string>
+    <string name="theme_madinah_gold">مدینہ گولڈ اور آئیوری</string>
+    <string name="theme_andalusian_rose">اندلسی روز</string>
+    <string name="theme_midnight_indigo">مڈنائٹ انڈیگو</string>
+    <string name="theme_desert_dusk">صحرائی شفق امبر</string>
+    <string name="card_style_title">آیت کارڈ اسٹائل</string>
+    <string name="card_style_classic">کلاسک</string>
+    <string name="card_style_outlined">بارڈر والا</string>
+    <string name="card_style_minimal">سادہ کاغذ</string>
 
     <string name="cloud_sync_title">کلاؤڈ بیک اپ اور سنک</string>
     <string name="guest_mode_desc">آف لائن گیسٹ موڈ میں پڑھ رہے ہیں۔ بک مارکس اور نوٹس سنک کرنے کے لیے Google سے سائن ان کریں۔</string>

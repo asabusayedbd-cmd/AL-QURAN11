@@ -8,18 +8,23 @@ import com.example.core.database.AyahTafsirEntity
 import com.example.core.database.AyahTranslationEntity
 import com.example.core.database.AudioSegmentEntity
 import com.example.core.database.NoorDatabase
+import com.example.core.database.TranslationSourceEntity
 import com.example.core.database.WordEntity
 import com.example.core.database.WordTranslationEntity
 import com.example.core.localization.BidiUtils
+import com.example.core.localization.LineTranslator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 class QuranSyncRepository(
     private val database: NoorDatabase,
@@ -27,6 +32,8 @@ class QuranSyncRepository(
     private val context: Context? = null
 ) {
     private val quranDao = database.quranDao()
+    private val wbwSyncMutexes = ConcurrentHashMap<String, Mutex>()
+    private val trSyncMutexes = ConcurrentHashMap<String, Mutex>()
 
     suspend fun downloadSurahForOffline(
         surahId: Int,
@@ -326,19 +333,319 @@ class QuranSyncRepository(
         }
     }
 
-    suspend fun downloadTranslationPack(sourceId: Int): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val targetSurahs = quranDao.getDownloadedSurahIds()
-                .ifEmpty { listOf(1, 103, 108, 112, 113, 114) }
-            for (surahId in targetSurahs) {
-                downloadSurahForOffline(
-                    surahId = surahId,
-                    translationIds = listOf(sourceId)
-                )
+    suspend fun ensureWbwForSurah(
+        surahId: Int,
+        wbwLanguageCode: String,
+        lineTranslator: LineTranslator? = null
+    ): Result<Int> = withContext(Dispatchers.IO) {
+        val lang = wbwLanguageCode.trim().lowercase()
+        if (lang.isBlank() || lang == "en") return@withContext Result.success(0)
+
+        val mutex = wbwSyncMutexes.computeIfAbsent("$surahId:$lang") { Mutex() }
+        mutex.withLock {
+            try {
+                val surah = quranDao.getSurah(surahId) ?: return@withLock Result.success(0)
+                val totalWords = quranDao.countWordsInSurah(surahId)
+                if (totalWords == 0) return@withLock Result.success(0)
+                val existingLangCount = quranDao.countWordTranslationsForSurah(surahId, lang)
+                if (existingLangCount >= (totalWords * 0.92f).toInt()) {
+                    return@withLock Result.success(0)
+                }
+
+                val ayahs = quranDao.getAyahsBySurah(surahId)
+                val ayahIds = ayahs.map { it.id }
+                val ayahByVerseKey = ayahs.associateBy { it.verseKey }
+                val localWords = ayahIds.chunked(500).flatMap { quranDao.getWordsForAyahs(it) }
+                if (localWords.isEmpty()) return@withLock Result.success(0)
+                val wordByAyahPos = localWords.associateBy { it.ayahId to it.position }
+
+                var insertedCount = 0
+                val totalPages = ((surah.ayahCount - 1) / 50) + 1
+                val apiMeanings = ArrayList<WordTranslationEntity>(localWords.size)
+
+                runCatching {
+                    val pages = coroutineScope {
+                        (1..totalPages).chunked(3).flatMap { batch ->
+                            batch.map { page ->
+                                async {
+                                    apiService.getVersesByChapter(
+                                        chapterNumber = surahId,
+                                        language = lang,
+                                        words = true,
+                                        translations = "",
+                                        audio = 0,
+                                        page = page,
+                                        perPage = 50
+                                    )
+                                }
+                            }.awaitAll()
+                        }
+                    }
+                    for (resp in pages) {
+                        for (v in resp.verses) {
+                            val localAyah = ayahByVerseKey[v.verseKey] ?: continue
+                            for (w in v.words) {
+                                val meaning = cleanHtml(w.translation?.text.orEmpty())
+                                if (meaning.isBlank()) continue
+                                val matchedWord = wordByAyahPos[localAyah.id to w.position] ?: continue
+                                apiMeanings.add(
+                                    WordTranslationEntity(
+                                        wordId = matchedWord.id,
+                                        languageCode = lang,
+                                        meaningText = meaning
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                if (apiMeanings.isNotEmpty()) {
+                    quranDao.insertWordTranslations(apiMeanings)
+                    insertedCount += apiMeanings.size
+                }
+
+                // Fill any remaining words without this WBW language via batch LineTranslator from English
+                if (lineTranslator != null) {
+                    val allWordTrs = localWords.map { it.id }
+                        .chunked(500)
+                        .flatMap { quranDao.getWordTranslationsForWords(it) }
+                        .groupBy { it.wordId }
+
+                    val missingWordToEnglish = ArrayList<Pair<Long, String>>()
+                    for (w in localWords) {
+                        val trs = allWordTrs[w.id].orEmpty()
+                        val hasLang = trs.any { it.languageCode.equals(lang, ignoreCase = true) && it.meaningText.isNotBlank() }
+                        if (!hasLang) {
+                            val enMeaning = trs.firstOrNull { it.languageCode.equals("en", ignoreCase = true) }?.meaningText
+                                ?: w.transliteration
+                            if (enMeaning.isNotBlank()) {
+                                missingWordToEnglish.add(w.id to enMeaning.trim())
+                            }
+                        }
+                    }
+
+                    if (missingWordToEnglish.isNotEmpty()) {
+                        val distinctEn = missingWordToEnglish.map { it.second }.distinct()
+                        val translatedMap = HashMap<String, String>(distinctEn.size)
+                        for (chunk in distinctEn.chunked(40)) {
+                            val res = lineTranslator.translateLinesJoined(chunk, lang)
+                            if (res.isSuccess) {
+                                val out = res.getOrThrow()
+                                chunk.forEachIndexed { idx, srcText ->
+                                    val tr = out.getOrNull(idx).orEmpty().trim()
+                                    if (tr.isNotBlank()) translatedMap[srcText] = tr
+                                }
+                            }
+                        }
+                        if (translatedMap.isNotEmpty()) {
+                            val fallbackEntities = missingWordToEnglish.mapNotNull { (wordId, enText) ->
+                                translatedMap[enText]?.let { trText ->
+                                    WordTranslationEntity(
+                                        wordId = wordId,
+                                        languageCode = lang,
+                                        meaningText = trText
+                                    )
+                                }
+                            }
+                            if (fallbackEntities.isNotEmpty()) {
+                                quranDao.insertWordTranslations(fallbackEntities)
+                                insertedCount += fallbackEntities.size
+                            }
+                        }
+                    }
+                }
+
+                Result.success(insertedCount)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("QuranSync", "Failed ensuring WBW '$lang' for Surah $surahId", e)
+                Result.failure(e)
             }
-            quranDao.setTranslationDownloaded(sourceId, true)
-            quranDao.setTranslationEnabled(sourceId, true)
-            Result.success(Unit)
+        }
+    }
+
+    suspend fun ensureTranslationsForSurah(
+        surahId: Int,
+        enabledSources: List<TranslationSourceEntity>,
+        lineTranslator: LineTranslator? = null
+    ) = withContext(Dispatchers.IO) {
+        val surah = quranDao.getSurah(surahId) ?: return@withContext
+        val targets = enabledSources.filter { it.id != 20 }
+        if (targets.isEmpty()) return@withContext
+
+        for (source in targets) {
+            val mutex = trSyncMutexes.computeIfAbsent("$surahId:${source.id}") { Mutex() }
+            mutex.withLock {
+                try {
+                    val existingCount = quranDao.countTranslationsForSurahBySource(surahId, source.id)
+                    if (existingCount >= surah.ayahCount) return@withLock
+
+                    syncSurahTranslationSource(surahId, surah.ayahCount, source, lineTranslator)
+                    if (quranDao.countTranslationsForSource(source.id) >= 6000) {
+                        quranDao.setTranslationDownloaded(source.id, true)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w("QuranSync", "Failed ensuring translation ${source.id} for Surah $surahId", e)
+                }
+            }
+        }
+    }
+
+    private suspend fun syncSurahTranslationSource(
+        surahId: Int,
+        ayahCount: Int,
+        source: TranslationSourceEntity,
+        lineTranslator: LineTranslator?
+    ): Int {
+        val ayahs = quranDao.getAyahsBySurah(surahId)
+        if (ayahs.isEmpty()) return 0
+        val ayahByVerseKey = ayahs.associateBy { it.verseKey }
+        val totalPages = ((ayahCount - 1) / 50) + 1
+        var saved = 0
+
+        val apiEntities = ArrayList<AyahTranslationEntity>(ayahCount)
+        runCatching {
+            val pages = coroutineScope {
+                (1..totalPages).chunked(3).flatMap { batch ->
+                    batch.map { page ->
+                        async {
+                            apiService.getVersesByChapter(
+                                chapterNumber = surahId,
+                                language = source.languageCode,
+                                words = false,
+                                fields = "verse_key",
+                                translations = source.id.toString(),
+                                audio = 0,
+                                page = page,
+                                perPage = 50
+                            )
+                        }
+                    }.awaitAll()
+                }
+            }
+            for (resp in pages) {
+                for (v in resp.verses) {
+                    val localAyah = ayahByVerseKey[v.verseKey] ?: continue
+                    val tr = v.translations.firstOrNull { it.resourceId == source.id }
+                        ?: v.translations.firstOrNull()
+                        ?: continue
+                    val cleanText = cleanHtml(tr.text)
+                    if (cleanText.isNotBlank()) {
+                        apiEntities.add(
+                            AyahTranslationEntity(
+                                sourceId = source.id,
+                                ayahId = localAyah.id,
+                                languageCode = source.languageCode,
+                                translatorName = tr.resourceName?.takeIf { it.isNotBlank() } ?: source.translatorName,
+                                translatedText = cleanText
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (apiEntities.isNotEmpty()) {
+            quranDao.insertAyahTranslations(apiEntities)
+            saved += apiEntities.size
+        }
+
+        // Fallback to translating from bundled English (sourceId = 20) if API was unreachable or returned partial verses
+        if (lineTranslator != null) {
+            val allTrsForSurah = ayahs.map { it.id }
+                .chunked(500)
+                .flatMap { quranDao.getTranslationsForAyahs(it) }
+                .groupBy { it.ayahId }
+
+            val missingPairs = ArrayList<Pair<Int, String>>()
+            for (ayah in ayahs) {
+                val trs = allTrsForSurah[ayah.id].orEmpty()
+                val alreadyHasTarget = trs.any { it.sourceId == source.id && it.translatedText.isNotBlank() }
+                if (!alreadyHasTarget) {
+                    val enText = trs.firstOrNull { it.sourceId == 20 }?.translatedText
+                        ?: trs.firstOrNull { it.languageCode.equals("en", ignoreCase = true) }?.translatedText
+                    if (!enText.isNullOrBlank()) {
+                        missingPairs.add(ayah.id to enText)
+                    }
+                }
+            }
+
+            if (missingPairs.isNotEmpty()) {
+                val targetLang = source.languageCode.ifBlank { inferTranslationLang(source.id) }
+                val translatedEntities = ArrayList<AyahTranslationEntity>(missingPairs.size)
+                for (chunk in missingPairs.chunked(12)) {
+                    val res = lineTranslator.translateLinesJoined(chunk.map { it.second }, targetLang)
+                    if (res.isSuccess) {
+                        val out = res.getOrThrow()
+                        chunk.forEachIndexed { idx, (ayahId, _) ->
+                            val trText = out.getOrNull(idx).orEmpty().trim()
+                            if (trText.isNotBlank()) {
+                                translatedEntities.add(
+                                    AyahTranslationEntity(
+                                        sourceId = source.id,
+                                        ayahId = ayahId,
+                                        languageCode = targetLang,
+                                        translatorName = source.translatorName,
+                                        translatedText = trText
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+                if (translatedEntities.isNotEmpty()) {
+                    quranDao.insertAyahTranslations(translatedEntities)
+                    saved += translatedEntities.size
+                }
+            }
+        }
+        return saved
+    }
+
+    suspend fun downloadTranslationPack(
+        sourceId: Int,
+        lineTranslator: LineTranslator? = null
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            if (sourceId == 20) {
+                quranDao.setTranslationDownloaded(20, true)
+                quranDao.setTranslationEnabled(20, true)
+                return@withContext Result.success(Unit)
+            }
+            val source = quranDao.getAllTranslationSources().firstOrNull { it.id == sourceId }
+                ?: TranslationSourceEntity(
+                    id = sourceId,
+                    languageCode = inferTranslationLang(sourceId),
+                    languageName = inferTranslationLang(sourceId).uppercase(),
+                    translatorName = "Quran Translation",
+                    isDownloaded = false,
+                    isEnabled = true,
+                    fileSizeKb = 1500
+                )
+
+            var syncedAyahs = 0
+            for (surahId in 1..114) {
+                val surah = quranDao.getSurah(surahId) ?: continue
+                if (quranDao.countAyahsInSurah(surahId) == 0) continue
+                val existing = quranDao.countTranslationsForSurahBySource(surahId, sourceId)
+                if (existing >= surah.ayahCount) continue
+                syncedAyahs += syncSurahTranslationSource(surahId, surah.ayahCount, source, lineTranslator)
+            }
+
+            val totalCount = quranDao.countTranslationsForSource(sourceId)
+            val isComplete = totalCount >= 6000
+            quranDao.setTranslationDownloaded(sourceId, isComplete)
+
+            if (isComplete || syncedAyahs > 0 || totalCount > 0) {
+                quranDao.setTranslationEnabled(sourceId, true)
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalStateException("Could not download translation offline. Check connection."))
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {

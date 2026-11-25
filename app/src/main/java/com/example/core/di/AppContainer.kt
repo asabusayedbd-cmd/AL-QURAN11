@@ -72,7 +72,7 @@ class AppContainer(context: Context) {
             runCatching { preferencesRepository.preferencesFlow.first() }
         }
         warmScope.launch {
-            seeder.seedIfNeeded(deferBulkDelayMs = 1100L, interSurahYieldMs = 15L)
+            seeder.seedIfNeeded(deferBulkDelayMs = 300L, interSurahYieldMs = 0L)
         }
         warmScope.launch {
             kotlinx.coroutines.delay(1800L)

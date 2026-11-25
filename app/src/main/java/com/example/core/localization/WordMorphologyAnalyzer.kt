@@ -611,7 +611,7 @@ object WordMorphologyAnalyzer {
         val stemPart = segments.firstOrNull { it.roleType == SegmentRoleType.STEM }
         val suffixes = segments.filter { it.roleType == SegmentRoleType.SUFFIX }
 
-        val meaningLineEn = bnMeaning.ifBlank { enMeaning }.ifBlank { word.transliteration }
+        val meaningLineEn = enMeaning.ifBlank { word.transliteration }
         val segDescEn = buildString {
             append("\"$rawArabic\" (${word.transliteration}) functions as $posEn ($posAr).")
             if (prefixes.isNotEmpty() || suffixes.isNotEmpty()) {
@@ -646,19 +646,32 @@ object WordMorphologyAnalyzer {
             if (word.rootArabic.isNotBlank()) {
                 append(" মূল ধাতু (মাদ্দাহ): ${word.rootArabic}।")
             }
-            val displayMean = bnMeaning.ifBlank { enMeaning }
-            if (displayMean.isNotBlank()) {
-                append(" শাব্দিক অর্থ: «$displayMean»।")
+            if (bnMeaning.isNotBlank()) {
+                append(" শাব্দিক অর্থ: «$bnMeaning»।")
             }
             append(" ব্যাকরণগত অবস্থা: $caseBn; বচন ও লিঙ্গ: $numGenderBn।")
         }
+
+        val caseAr = when {
+            caseEn.contains("Genitive") -> "مجرور"
+            caseEn.contains("Nominative") -> "مرفوع"
+            caseEn.contains("Accusative") || caseEn.contains("Subjunctive") -> "منصوب"
+            caseEn.contains("Jussive") -> "مجزوم"
+            else -> "حسب السياق"
+        }
+        val numAr = when {
+            numGenderEn.contains("Plural") -> "جمع"
+            numGenderEn.contains("Dual") -> "مثنى"
+            else -> "مفرد"
+        }
+        val genderAr = if (numGenderEn.contains("Feminine")) "مؤنث" else "مذكر"
 
         val segDescAr = buildString {
             append("الكلمة «$rawArabic» هي $posAr.")
             if (word.rootArabic.isNotBlank()) {
                 append(" الجذر: ${word.rootArabic}.")
             }
-            append(" الإعراب والحالة: $caseEn • $numGenderEn.")
+            append(" الإعراب والحالة: $caseAr • $numAr • $genderAr.")
         }
 
         return Triple(segDescEn, segDescBn, segDescAr)

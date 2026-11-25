@@ -18,8 +18,12 @@ private val Context.noorDataStore by preferencesDataStore(name = "noor_al_quran_
 enum class NoorThemeMode {
     SERENE_EMERALD,
     SOFT_SEPIA,
+    MADINAH_GOLD_IVORY,
+    ANDALUSIAN_ROSE,
     SLATE_DARK,
-    AMOLED_BLACK
+    AMOLED_BLACK,
+    MIDNIGHT_INDIGO,
+    DESERT_DUSK
 }
 
 enum class QuranScriptType {
@@ -32,12 +36,19 @@ enum class ReaderViewMode {
     MUSHAF
 }
 
+enum class ReaderCardStyle {
+    CLASSIC_ELEVATED,
+    CRISP_OUTLINED,
+    MINIMAL_PAPER
+}
+
 data class UserPreferences(
     val uiLanguageCode: String = "en",
     val wbwLanguageCode: String = "en",
     val activeTafsirSourceId: Int = 164,
     val activeReciterId: Int = 7,
     val themeMode: NoorThemeMode = NoorThemeMode.SERENE_EMERALD,
+    val readerCardStyle: ReaderCardStyle = ReaderCardStyle.CLASSIC_ELEVATED,
     val scriptType: QuranScriptType = QuranScriptType.UTHMANI,
     val readerViewMode: ReaderViewMode = ReaderViewMode.WORD_BY_WORD,
     val tajweedColorsEnabled: Boolean = true,
@@ -66,6 +77,7 @@ class PreferencesRepository(private val context: Context) {
         val ACTIVE_TAFSIR_ID = intPreferencesKey("active_tafsir_id")
         val ACTIVE_RECITER_ID = intPreferencesKey("active_reciter_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
+        val READER_CARD_STYLE = stringPreferencesKey("reader_card_style")
         val SCRIPT_TYPE = stringPreferencesKey("script_type")
         val READER_VIEW_MODE = stringPreferencesKey("reader_view_mode")
         val TAJWEED_COLORS = booleanPreferencesKey("tajweed_colors")
@@ -94,6 +106,8 @@ class PreferencesRepository(private val context: Context) {
             activeReciterId = prefs[Keys.ACTIVE_RECITER_ID] ?: 7,
             themeMode = enumValues<NoorThemeMode>().firstOrNull { it.name == prefs[Keys.THEME_MODE] }
                 ?: NoorThemeMode.SERENE_EMERALD,
+            readerCardStyle = enumValues<ReaderCardStyle>().firstOrNull { it.name == prefs[Keys.READER_CARD_STYLE] }
+                ?: ReaderCardStyle.CLASSIC_ELEVATED,
             scriptType = enumValues<QuranScriptType>().firstOrNull { it.name == prefs[Keys.SCRIPT_TYPE] }
                 ?: QuranScriptType.UTHMANI,
             readerViewMode = enumValues<ReaderViewMode>().firstOrNull { it.name == prefs[Keys.READER_VIEW_MODE] }
@@ -137,6 +151,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setThemeMode(mode: NoorThemeMode) {
         context.noorDataStore.edit { it[Keys.THEME_MODE] = mode.name }
+    }
+
+    suspend fun setReaderCardStyle(style: ReaderCardStyle) {
+        context.noorDataStore.edit { it[Keys.READER_CARD_STYLE] = style.name }
     }
 
     suspend fun setScriptType(script: QuranScriptType) {

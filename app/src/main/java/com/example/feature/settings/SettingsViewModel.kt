@@ -9,9 +9,12 @@ import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.database.SurahEntity
 import com.example.core.database.TafsirSourceEntity
 import com.example.core.database.TranslationSourceEntity
+import com.example.core.localization.BidiUtils
+import com.example.core.localization.LineTranslator
 import com.example.core.localization.NoorThemeMode
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.QuranScriptType
+import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.UserPreferences
 import com.example.core.network.QuranSyncRepository
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +57,8 @@ class SettingsViewModel(
     private val preferencesRepository: PreferencesRepository,
     private val syncRepository: QuranSyncRepository,
     private val audioController: QuranAudioController? = null,
-    private val seeder: QuranDatabaseSeeder? = null
+    private val seeder: QuranDatabaseSeeder? = null,
+    private val lineTranslator: LineTranslator? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -65,6 +69,7 @@ class SettingsViewModel(
     private val _batchDownloadProgress = MutableStateFlow<BatchDownloadProgress?>(null)
     private val _downloadedAudioSurahIds = MutableStateFlow<Set<Int>>(emptySet())
     private var batchDownloadJob: Job? = null
+    private var wbwSyncJob: Job? = null
 
     private val fallbackAudioSummaryFlow = MutableStateFlow(0L to (null as Int?))
     private val audioSummaryFlow = (
@@ -150,12 +155,29 @@ class SettingsViewModel(
     fun setWbwLanguage(languageCode: String) {
         viewModelScope.launch {
             preferencesRepository.setWbwLanguage(languageCode)
+            _statusMessage.value = "Word-by-word language set to ${LineTranslator.languageLabel(languageCode)}"
+        }
+        if (!languageCode.equals("en", ignoreCase = true)) {
+            wbwSyncJob?.cancel()
+            wbwSyncJob = viewModelScope.launch(Dispatchers.IO) {
+                val lastSurah = database.userLibraryDao().getReadingProgress()?.lastSurahId ?: 1
+                val priority = listOf(lastSurah, 1, 112, 113, 114).distinct()
+                for (sid in priority) {
+                    syncRepository.ensureWbwForSurah(sid, languageCode, lineTranslator)
+                }
+            }
         }
     }
 
     fun setThemeMode(mode: NoorThemeMode) {
         viewModelScope.launch {
             preferencesRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setReaderCardStyle(style: ReaderCardStyle) {
+        viewModelScope.launch {
+            preferencesRepository.setReaderCardStyle(style)
         }
     }
 
@@ -167,10 +189,16 @@ class SettingsViewModel(
 
     fun toggleTranslationSource(source: TranslationSourceEntity, enabled: Boolean) {
         viewModelScope.launch {
-            if (!source.isDownloaded && enabled) {
-                downloadTranslationPack(source.id)
-            } else {
-                quranDao.setTranslationEnabled(source.id, enabled)
+            quranDao.setTranslationEnabled(source.id, enabled)
+            if (enabled && source.id != 20) {
+                val count = quranDao.countTranslationsForSource(source.id)
+                if (!source.isDownloaded || count < 6000) {
+                    downloadTranslationPack(source.id)
+                } else {
+                    _statusMessage.value = "${source.translatorName} enabled"
+                }
+            } else if (enabled) {
+                _statusMessage.value = "${source.translatorName} enabled"
             }
         }
     }
@@ -178,7 +206,7 @@ class SettingsViewModel(
     fun downloadTranslationPack(sourceId: Int) {
         viewModelScope.launch {
             _busySourceId.value = sourceId
-            val res = syncRepository.downloadTranslationPack(sourceId)
+            val res = syncRepository.downloadTranslationPack(sourceId, lineTranslator)
             _statusMessage.value = res.fold(
                 onSuccess = { "Translation pack downloaded and ready offline" },
                 onFailure = { "Download error: ${it.localizedMessage}" }
@@ -250,7 +278,11 @@ class SettingsViewModel(
                 _batchDownloadProgress.value = BatchDownloadProgress(
                     current = completed + 1,
                     total = total,
-                    surahName = surah.nameTransliteration
+                    surahName = BidiUtils.formatSurahTitle(
+                        surah.nameTransliteration,
+                        surah.localizedNamesJson,
+                        prefs.uiLanguageCode
+                    )
                 )
                 _busySurahId.value = surah.id
                 seeder?.ensureSurahLoadedFromAssets(surah.id, surah.ayahCount)

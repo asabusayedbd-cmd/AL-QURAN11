@@ -42,8 +42,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -115,6 +117,7 @@ fun ExplorerScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val searchFocusRequester = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(initialFocusSearch) {
         if (initialFocusSearch) {
@@ -207,10 +210,11 @@ fun ExplorerScreen(
                 ) {
                     if (state.matchedSurahs.isNotEmpty()) {
                         items(state.matchedSurahs, key = { "surah_${it.id}" }) { surah ->
-                            val title = BidiUtils.extractLocalizedSurahName(
+                            val title = BidiUtils.formatSurahTitle(
+                                surah.nameTransliteration,
                                 surah.localizedNamesJson,
                                 state.preferences.uiLanguageCode
-                            ).ifBlank { surah.nameTransliteration }
+                            )
                             OutlinedCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -299,11 +303,12 @@ fun ExplorerScreen(
                                 key = { it.id },
                                 contentType = { "surah_row" }
                             ) { surah ->
-                                val localizedName = remember(surah.localizedNamesJson, state.preferences.uiLanguageCode) {
-                                    BidiUtils.extractLocalizedSurahName(
+                                val localizedName = remember(surah.nameTransliteration, surah.localizedNamesJson, state.preferences.uiLanguageCode) {
+                                    BidiUtils.formatSurahTitle(
+                                        surah.nameTransliteration,
                                         surah.localizedNamesJson,
                                         state.preferences.uiLanguageCode
-                                    ).ifBlank { surah.nameTransliteration }
+                                    )
                                 }
                                 val isDownloading = state.downloadingSurahId == surah.id
 
@@ -452,15 +457,10 @@ fun ExplorerScreen(
                                 val page = idx + 1
                                 AssistChip(
                                     onClick = {
-                                        val resolvedSurah = state.surahs
-                                            .lastOrNull { it.startPage <= page }?.id
-                                            ?: when {
-                                                page == 1 -> 1
-                                                page <= 49 -> 2
-                                                page >= 604 -> 114
-                                                else -> ((page * 114) / 604).coerceIn(1, 114)
-                                            }
-                                        onOpenPage(resolvedSurah, page)
+                                        coroutineScope.launch {
+                                            val resolvedSurah = viewModel.resolvePageStartSurah(page)
+                                            onOpenPage(resolvedSurah, page)
+                                        }
                                     },
                                     label = { Text(stringResource(R.string.explorer_page_chip_fmt, page)) },
                                     modifier = Modifier.testTag("mushaf_page_$page")

@@ -71,6 +71,14 @@
     <string name="theme_sepia">নরম সেপিয়া</string>
     <string name="theme_slate_dark">গভীর স্লেট টিল</string>
     <string name="theme_amoled">অ্যামোলেড রাতের মোড</string>
+    <string name="theme_madinah_gold">মদীনা গোল্ড ও আইভরি</string>
+    <string name="theme_andalusian_rose">আন্দালুসিয়ান রোজ</string>
+    <string name="theme_midnight_indigo">মধ্যরাতের নীল</string>
+    <string name="theme_desert_dusk">মরু গোধূলি অ্যাম্বার</string>
+    <string name="card_style_title">আয়াত কার্ড স্টাইল</string>
+    <string name="card_style_classic">ক্লাসিক</string>
+    <string name="card_style_outlined">বর্ডারযুক্ত</string>
+    <string name="card_style_minimal">সাদামাটা কাগজ</string>
 
     <string name="cloud_sync_title">ক্লাউড ব্যাকআপ ও সিঙ্ক</string>
     <string name="guest_mode_desc">অফলাইন গেস্ট মোডে পড়ছেন। ডিভাইস জুড়ে বুকমার্ক, নোট ও স্ট্রিক সিঙ্ক করতে Google দিয়ে সাইন ইন করুন।</string>

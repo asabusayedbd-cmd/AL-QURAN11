@@ -71,6 +71,14 @@
     <string name="theme_sepia">Yumuşak Sepya</string>
     <string name="theme_slate_dark">Koyu Arduvaz Turkuaz</string>
     <string name="theme_amoled">Saf AMOLED Gece</string>
+    <string name="theme_madinah_gold">Medine Altın ve Fildişi</string>
+    <string name="theme_andalusian_rose">Endülüs Gülü</string>
+    <string name="theme_midnight_indigo">Gece İndigo</string>
+    <string name="theme_desert_dusk">Çöl Alacakaranlığı</string>
+    <string name="card_style_title">Ayet Kartı Stili</string>
+    <string name="card_style_classic">Klasik</string>
+    <string name="card_style_outlined">Çerçeveli</string>
+    <string name="card_style_minimal">Sade Kağıt</string>
 
     <string name="cloud_sync_title">Bulut Yedekleme ve Eşitleme</string>
     <string name="guest_mode_desc">Misafir modunda çevrimdışı okuma. Yer imlerini ve notları eşitlemek için Google ile giriş yapın.</string>

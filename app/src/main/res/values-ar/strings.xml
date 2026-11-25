@@ -71,6 +71,14 @@
     <string name="theme_sepia">بني دافئ للقراءة</string>
     <string name="theme_slate_dark">داكن زمردي</string>
     <string name="theme_amoled">أسود ليلي AMOLED</string>
+    <string name="theme_madinah_gold">ذهبي المدينة والعاج</string>
+    <string name="theme_andalusian_rose">وردي أندلسي</string>
+    <string name="theme_midnight_indigo">نيلي منتصف الليل</string>
+    <string name="theme_desert_dusk">غسق الصحراء الكهرماني</string>
+    <string name="card_style_title">نمط بطاقة الآية</string>
+    <string name="card_style_classic">كلاسيكي بارز</string>
+    <string name="card_style_outlined">محدد بإطار</string>
+    <string name="card_style_minimal">ورق بسيط</string>
 
     <string name="cloud_sync_title">المزامنة السحابية</string>
     <string name="guest_mode_desc">أنت تقرأ في الوضع المحلي. سجّل الدخول عبر Google لمزامنة الإشارات والملاحظات.</string>

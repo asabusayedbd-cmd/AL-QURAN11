@@ -160,6 +160,17 @@ class ExplorerViewModel(
         }
     }
 
+    suspend fun resolvePageStartSurah(page: Int): Int {
+        return quranDao.getFirstAyahOnPage(page)?.surahId
+            ?: uiState.value.surahs.lastOrNull { it.startPage <= page }?.id
+            ?: when {
+                page == 1 -> 1
+                page <= 49 -> 2
+                page >= 604 -> 114
+                else -> ((page * 114) / 604).coerceIn(1, 114)
+            }
+    }
+
     fun clearMessage() {
         _downloadMessage.value = null
     }
@@ -179,8 +190,7 @@ class ExplorerViewModel(
         val mapped = ayahs.map { ayah ->
             val surah = surahsMap[ayah.surahId]
             val surahName = surah?.let {
-                BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, prefs.uiLanguageCode)
-                    .ifBlank { it.nameTransliteration }
+                BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
             } ?: "Surah ${ayah.surahId}"
             val trs = trsByAyahId[ayah.id].orEmpty()
             val bestTr = trs.firstOrNull { it.languageCode == prefs.uiLanguageCode }

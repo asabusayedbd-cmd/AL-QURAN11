@@ -41,6 +41,9 @@ interface QuranDao {
     @Query("SELECT * FROM ayahs WHERE pageNumber = :pageNumber ORDER BY surahId ASC, ayahNumber ASC")
     suspend fun getAyahsByPage(pageNumber: Int): List<AyahEntity>
 
+    @Query("SELECT * FROM ayahs WHERE pageNumber = :pageNumber ORDER BY surahId ASC, ayahNumber ASC LIMIT 1")
+    suspend fun getFirstAyahOnPage(pageNumber: Int): AyahEntity?
+
     @Query("SELECT * FROM ayahs WHERE verseKey = :verseKey LIMIT 1")
     suspend fun getAyahByKey(verseKey: String): AyahEntity?
 
@@ -288,6 +291,24 @@ interface QuranDao {
 
     @Query("SELECT COUNT(*) FROM ayah_translations WHERE sourceId = :sourceId")
     suspend fun countTranslationsForSource(sourceId: Int): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM ayah_translations t
+        INNER JOIN ayahs a ON a.id = t.ayahId
+        WHERE a.surahId = :surahId AND t.sourceId = :sourceId
+        """
+    )
+    suspend fun countTranslationsForSurahBySource(surahId: Int, sourceId: Int): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId
+        """
+    )
+    suspend fun countWordsInSurah(surahId: Int): Int
 
     @Query("SELECT COUNT(*) FROM ayah_tafsirs WHERE sourceId = :sourceId")
     suspend fun countTafsirsForSource(sourceId: Int): Int

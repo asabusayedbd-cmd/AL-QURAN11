@@ -1,12 +1,15 @@
 package com.example.ui.theme
 
 import android.app.Activity
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalView
@@ -30,8 +33,41 @@ fun NoorAlQuranTheme(
     uiLanguageCode: String = "en",
     content: @Composable () -> Unit
 ) {
-    val isDark = themeMode == NoorThemeMode.SLATE_DARK || themeMode == NoorThemeMode.AMOLED_BLACK
-    val colorScheme = remember(themeMode) { colorSchemeForTheme(themeMode) }
+    val isDark = isDarkTheme(themeMode)
+    val targetScheme = remember(themeMode) { colorSchemeForTheme(themeMode) }
+    val animSpec = remember { tween<androidx.compose.ui.graphics.Color>(durationMillis = 240) }
+    val animPrimary by animateColorAsState(targetScheme.primary, animSpec, label = "theme_primary")
+    val animPrimaryContainer by animateColorAsState(targetScheme.primaryContainer, animSpec, label = "theme_primary_cont")
+    val animSecondary by animateColorAsState(targetScheme.secondary, animSpec, label = "theme_secondary")
+    val animBackground by animateColorAsState(targetScheme.background, animSpec, label = "theme_bg")
+    val animSurface by animateColorAsState(targetScheme.surface, animSpec, label = "theme_surface")
+    val animSurfaceVariant by animateColorAsState(targetScheme.surfaceVariant, animSpec, label = "theme_surface_var")
+    val animOnBg by animateColorAsState(targetScheme.onBackground, animSpec, label = "theme_on_bg")
+    val animOnSurface by animateColorAsState(targetScheme.onSurface, animSpec, label = "theme_on_surface")
+
+    val colorScheme = remember(
+        targetScheme,
+        animPrimary,
+        animPrimaryContainer,
+        animSecondary,
+        animBackground,
+        animSurface,
+        animSurfaceVariant,
+        animOnBg,
+        animOnSurface
+    ) {
+        targetScheme.copy(
+            primary = animPrimary,
+            primaryContainer = animPrimaryContainer,
+            secondary = animSecondary,
+            background = animBackground,
+            surface = animSurface,
+            surfaceVariant = animSurfaceVariant,
+            onBackground = animOnBg,
+            onSurface = animOnSurface
+        )
+    }
+
     val tajweedPalette = remember(isDark) { if (isDark) DarkTajweedPalette else LightTajweedPalette }
     val typography = remember(uiLanguageCode) { noorTypography(uiLanguageCode) }
 

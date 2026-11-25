@@ -75,6 +75,25 @@ val DarkTajweedPalette = TajweedPalette(
     silent = Color(0xFF7D8984)
 )
 
+fun isDarkTheme(mode: NoorThemeMode): Boolean = when (mode) {
+    NoorThemeMode.SLATE_DARK,
+    NoorThemeMode.AMOLED_BLACK,
+    NoorThemeMode.MIDNIGHT_INDIGO,
+    NoorThemeMode.DESERT_DUSK -> true
+    else -> false
+}
+
+fun themePreviewSwatches(mode: NoorThemeMode): Triple<Color, Color, Color> = when (mode) {
+    NoorThemeMode.SERENE_EMERALD -> Triple(CreamBackground, EmeraldPrimary, MutedGold)
+    NoorThemeMode.SOFT_SEPIA -> Triple(SepiaBackground, SepiaAccent, SepiaGold)
+    NoorThemeMode.MADINAH_GOLD_IVORY -> Triple(Color(0xFFFCF9F0), Color(0xFF7D5D14), Color(0xFF285943))
+    NoorThemeMode.ANDALUSIAN_ROSE -> Triple(Color(0xFFFDF6F6), Color(0xFF882947), Color(0xFFB87449))
+    NoorThemeMode.SLATE_DARK -> Triple(SlateBackground, SlateEmerald, SlateGold)
+    NoorThemeMode.AMOLED_BLACK -> Triple(AmoledBackground, AmoledEmerald, SlateGold)
+    NoorThemeMode.MIDNIGHT_INDIGO -> Triple(Color(0xFF0A1224), Color(0xFF7BB6FF), Color(0xFFE7C273))
+    NoorThemeMode.DESERT_DUSK -> Triple(Color(0xFF17120E), Color(0xFFE6A962), Color(0xFF78B79D))
+}
+
 fun colorSchemeForTheme(mode: NoorThemeMode): ColorScheme = when (mode) {
     NoorThemeMode.SERENE_EMERALD -> lightColorScheme(
         primary = EmeraldPrimary,
@@ -118,6 +137,48 @@ fun colorSchemeForTheme(mode: NoorThemeMode): ColorScheme = when (mode) {
         outlineVariant = Color(0xFFDDD0B9)
     )
 
+    NoorThemeMode.MADINAH_GOLD_IVORY -> lightColorScheme(
+        primary = Color(0xFF7D5D14),
+        onPrimary = Color.White,
+        primaryContainer = Color(0xFFF3E4BA),
+        onPrimaryContainer = Color(0xFF2B1E03),
+        secondary = Color(0xFF285943),
+        onSecondary = Color.White,
+        secondaryContainer = Color(0xFFD6EAE0),
+        onSecondaryContainer = Color(0xFF0A2B1C),
+        tertiary = Color(0xFF5D6A40),
+        onTertiary = Color.White,
+        background = Color(0xFFFCF9F0),
+        onBackground = Color(0xFF241F16),
+        surface = Color(0xFFF6F1E2),
+        onSurface = Color(0xFF241F16),
+        surfaceVariant = Color(0xFFECE4CE),
+        onSurfaceVariant = Color(0xFF5F5644),
+        outline = Color(0xFFD3C7AA),
+        outlineVariant = Color(0xFFE6DEC9)
+    )
+
+    NoorThemeMode.ANDALUSIAN_ROSE -> lightColorScheme(
+        primary = Color(0xFF882947),
+        onPrimary = Color.White,
+        primaryContainer = Color(0xFFF6D9E1),
+        onPrimaryContainer = Color(0xFF390818),
+        secondary = Color(0xFFA6663B),
+        onSecondary = Color.White,
+        secondaryContainer = Color(0xFFF6E2D4),
+        onSecondaryContainer = Color(0xFF381D0B),
+        tertiary = Color(0xFF356862),
+        onTertiary = Color.White,
+        background = Color(0xFFFDF6F6),
+        onBackground = Color(0xFF281C20),
+        surface = Color(0xFFF7ECEE),
+        onSurface = Color(0xFF281C20),
+        surfaceVariant = Color(0xFFEEE0E3),
+        onSurfaceVariant = Color(0xFF675258),
+        outline = Color(0xFFD9C2C8),
+        outlineVariant = Color(0xFFEAD9DD)
+    )
+
     NoorThemeMode.SLATE_DARK -> darkColorScheme(
         primary = SlateEmerald,
         onPrimary = Color(0xFF04261F),
@@ -158,5 +219,47 @@ fun colorSchemeForTheme(mode: NoorThemeMode): ColorScheme = when (mode) {
         onSurfaceVariant = Color(0xFF9EAFA9),
         outline = Color(0xFF2A3634),
         outlineVariant = Color(0xFF192220)
+    )
+
+    NoorThemeMode.MIDNIGHT_INDIGO -> darkColorScheme(
+        primary = Color(0xFF7BB6FF),
+        onPrimary = Color(0xFF062042),
+        primaryContainer = Color(0xFF173663),
+        onPrimaryContainer = Color(0xFFD6E6FF),
+        secondary = Color(0xFFE7C273),
+        onSecondary = Color(0xFF2B1F04),
+        secondaryContainer = Color(0xFF423415),
+        onSecondaryContainer = Color(0xFFFBE8BD),
+        tertiary = Color(0xFF6CD9C4),
+        onTertiary = Color(0xFF042922),
+        background = Color(0xFF0A1224),
+        onBackground = Color(0xFFE8EEF8),
+        surface = Color(0xFF111B33),
+        onSurface = Color(0xFFE8EEF8),
+        surfaceVariant = Color(0xFF1B2947),
+        onSurfaceVariant = Color(0xFFA2B3D1),
+        outline = Color(0xFF2E4169),
+        outlineVariant = Color(0xFF1F2D4D)
+    )
+
+    NoorThemeMode.DESERT_DUSK -> darkColorScheme(
+        primary = Color(0xFFE6A962),
+        onPrimary = Color(0xFF2C1903),
+        primaryContainer = Color(0xFF4A3114),
+        onPrimaryContainer = Color(0xFFFDE4C4),
+        secondary = Color(0xFF78B79D),
+        onSecondary = Color(0xFF07251A),
+        secondaryContainer = Color(0xFF1A4032),
+        onSecondaryContainer = Color(0xFFC8EFE0),
+        tertiary = Color(0xFFE39382),
+        onTertiary = Color(0xFF33110A),
+        background = Color(0xFF17120E),
+        onBackground = Color(0xFFF4ECE3),
+        surface = Color(0xFF211A14),
+        onSurface = Color(0xFFF4ECE3),
+        surfaceVariant = Color(0xFF2F251D),
+        onSurfaceVariant = Color(0xFFC1B09F),
+        outline = Color(0xFF4B3D30),
+        outlineVariant = Color(0xFF382D23)
     )
 }

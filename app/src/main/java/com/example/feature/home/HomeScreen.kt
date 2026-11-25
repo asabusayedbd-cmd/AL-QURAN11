@@ -215,7 +215,7 @@ fun HomeScreen(
                                 ) {
                                     AsyncImage(
                                         model = ImageRequest.Builder(context)
-                                            .data(R.drawable.ic_quran_logo_fg_1795445024163)
+                                            .data(R.drawable.quran_calligraphy_icon)
                                             .size(96, 96)
                                             .build(),
                                         contentDescription = "Al-Quran emblem",

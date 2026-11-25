@@ -564,8 +564,7 @@ private fun SurahDownloadRow(
     onDownloadAudio: () -> Unit,
     onDeleteAudio: () -> Unit
 ) {
-    val name = BidiUtils.extractLocalizedSurahName(surah.localizedNamesJson, uiLang)
-        .ifBlank { surah.nameTransliteration }
+    val name = BidiUtils.formatSurahTitle(surah.nameTransliteration, surah.localizedNamesJson, uiLang)
 
     Surface(
         shape = MaterialTheme.shapes.small,

@@ -71,6 +71,14 @@
     <string name="theme_sepia">Soft Sepia</string>
     <string name="theme_slate_dark">Deep Slate Teal</string>
     <string name="theme_amoled">Pure AMOLED Night</string>
+    <string name="theme_madinah_gold">Madinah Gold &amp; Ivory</string>
+    <string name="theme_andalusian_rose">Andalusian Rose Parchment</string>
+    <string name="theme_midnight_indigo">Midnight Indigo Sanctuary</string>
+    <string name="theme_desert_dusk">Desert Dusk Amber</string>
+    <string name="card_style_title">Ayah Card Style</string>
+    <string name="card_style_classic">Classic Elevated</string>
+    <string name="card_style_outlined">Crisp Outlined</string>
+    <string name="card_style_minimal">Minimal Paper</string>
 
     <string name="cloud_sync_title">Cloud Backup &amp; Sync</string>
     <string name="guest_mode_desc">Reading offline in Guest mode. Sign in with Google to sync bookmarks, notes, and streaks across devices.</string>

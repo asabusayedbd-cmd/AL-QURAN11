@@ -12,10 +12,15 @@ import com.example.core.ibadah.PrayerTimeCalculator
 import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
+import com.example.core.localization.NoorThemeMode
+import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.SegmentRoleType
 import com.example.core.localization.WordMorphologyAnalyzer
 import com.example.ui.components.TajweedTextFormatter
 import com.example.ui.theme.LightTajweedPalette
+import com.example.ui.theme.colorSchemeForTheme
+import com.example.ui.theme.isDarkTheme
+import com.example.ui.theme.themePreviewSwatches
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -277,6 +282,20 @@ class NoorUnitTests {
         // Verify Dua bookmark survives re-seeding
         container.database.duaDao().setDuaBookmarked(1, true)
         assertTrue(container.database.duaDao().getDua(1)?.isBookmarked == true)
+
+        // Verify Surah 44 (Ad-Dukhan) & Mushaf page lookup integrity
+        val dukhan = container.database.quranDao().getSurah(44)!!
+        assertEquals("Ad-Dukhan", dukhan.nameTransliteration)
+        assertEquals(59, dukhan.ayahCount)
+        assertEquals(59, container.database.quranDao().getAyahsBySurah(44).size)
+        val page496First = container.database.quranDao().getFirstAyahOnPage(496)
+        val page498First = container.database.quranDao().getFirstAyahOnPage(498)
+        assertEquals(44, page496First?.surahId)
+        assertEquals(44, page498First?.surahId)
+
+        // Verify non-bundled translation source 161 is not falsely marked fully downloaded offline
+        val tr161 = container.database.quranDao().getAllTranslationSources().firstOrNull { it.id == 161 }
+        assertFalse("Expected source 161 not falsely marked isDownloaded with partial rows", tr161?.isDownloaded == true)
     }
 
     // 7. 150+ Dua catalog, Room MIGRATION_1_2, and Hanafi vs Standard Asr timings
@@ -404,5 +423,60 @@ class NoorUnitTests {
         assertNull(LineTranslator.parseGoogleTranslateJson(""))
         assertNull(LineTranslator.parseGoogleTranslateJson("[]"))
         assertNull(LineTranslator.parseGoogleTranslateJson("invalid json text"))
+    }
+
+    // 10. Surah Title formatting, 8 Theme Modes + 3 Card Styles, and Strict Word Morphology Language Separation
+    @Test
+    fun testSurahTitleThemesAndMorphologyLanguageSeparation() {
+        val dukhanJson = """{"en":"The Smoke","bn":"আদ-দুখান","ar":"الدخان"}"""
+        assertEquals("Ad-Dukhan (The Smoke)", BidiUtils.formatSurahTitle("Ad-Dukhan", dukhanJson, "en"))
+        assertEquals("আদ-দুখান", BidiUtils.formatSurahTitle("Ad-Dukhan", dukhanJson, "bn"))
+
+        // All 8 themes & 3 card styles produce valid distinct color schemes & swatches
+        assertEquals(8, NoorThemeMode.entries.size)
+        assertEquals(3, ReaderCardStyle.entries.size)
+        val swatchSet = NoorThemeMode.entries.map { mode ->
+            val scheme = colorSchemeForTheme(mode)
+            assertTrue(scheme.primary != scheme.background)
+            val swatches = themePreviewSwatches(mode)
+            if (mode in setOf(NoorThemeMode.SLATE_DARK, NoorThemeMode.AMOLED_BLACK, NoorThemeMode.MIDNIGHT_INDIGO, NoorThemeMode.DESERT_DUSK)) {
+                assertTrue(isDarkTheme(mode))
+            } else {
+                assertFalse(isDarkTheme(mode))
+            }
+            swatches
+        }.toSet()
+        assertEquals(8, swatchSet.size)
+
+        // Strict separation: no Bangla in English explanation, no English meaning fallback in Bangla, no English words in Arabic
+        val sampleWord = WordEntity(
+            id = 999L,
+            ayahId = 1,
+            position = 1,
+            textUthmani = "ٱلْحَمْدُ",
+            textIndopak = "اَلْحَمْدُ",
+            transliteration = "al-hamdu",
+            rootArabic = "ح م د",
+            lemmaArabic = "حَمْد",
+            grammarTagJson = "Noun, Nominative",
+            audioUrl = ""
+        )
+        val enOnlyAnalysis = WordMorphologyAnalyzer.analyze(
+            sampleWord,
+            listOf(WordTranslationEntity(999L, "en", "All praise"))
+        )
+        assertFalse(
+            "English explanation must not contain Bangla characters",
+            enOnlyAnalysis.localizedExplanation("en").any { it in '\u0980'..'\u09FF' }
+        )
+        assertFalse(
+            "Bangla explanation must not leak raw English meaning when bnMeaning is missing",
+            enOnlyAnalysis.localizedExplanation("bn").contains("All praise")
+        )
+        assertFalse(
+            "Arabic explanation must not contain Latin English grammar terms",
+            enOnlyAnalysis.localizedExplanation("ar").contains("Nominative") ||
+                enOnlyAnalysis.localizedExplanation("ar").contains("Singular")
+        )
     }
 }

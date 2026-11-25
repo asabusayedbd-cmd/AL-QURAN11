@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
@@ -87,14 +88,19 @@ class HomeViewModel(
         }
     }
 
+    private val lastSurahFlow = userLibraryDao.observeReadingProgress()
+        .map { it?.lastSurahId ?: 1 }
+        .distinctUntilChanged()
+        .flatMapLatest { quranDao.observeSurah(it) }
+
     private val coreHomeFlow = combine(
-        preferencesRepository.preferencesFlow,
-        userLibraryDao.observeReadingProgress(),
-        userLibraryDao.observeRecentStreaks(),
-        quranDao.observeAllSurahs(),
-        userLibraryDao.observeBookmarks()
-    ) { prefs, progress, streaks, surahs, bookmarks ->
-        Triple(prefs, progress, Triple(streaks, surahs, bookmarks))
+        preferencesRepository.preferencesFlow.distinctUntilChanged(),
+        userLibraryDao.observeReadingProgress().distinctUntilChanged(),
+        userLibraryDao.observeRecentStreaks().distinctUntilChanged(),
+        lastSurahFlow.distinctUntilChanged(),
+        userLibraryDao.observeBookmarks().distinctUntilChanged()
+    ) { prefs, progress, streaks, lastSurah, bookmarks ->
+        Triple(prefs, progress, Triple(streaks, lastSurah, bookmarks))
     }
 
     val uiState: StateFlow<HomeUiState> = combine(
@@ -104,23 +110,20 @@ class HomeViewModel(
     ) { core, votdTriple, phraseIdx ->
         val prefs = core.first
         val progress = core.second ?: ReadingProgressEntity()
-        val (streaks, surahs, bookmarks) = core.third
+        val (streaks, lastSurah, bookmarks) = core.third
 
         val todayKey = StreakCalculator.todayDateKey()
         val todayStreak = streaks.firstOrNull { it.dateKey == todayKey }
         val streakDays = StreakCalculator.calculateCurrentStreak(streaks, todayKey)
 
-        val lastSurah = surahs.firstOrNull { it.id == progress.lastSurahId }
         val lastSurahName = lastSurah?.let {
-            BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, prefs.uiLanguageCode)
-                .ifBlank { it.nameTransliteration }
+            BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
         } ?: "Al-Fatihah"
 
         val bookmarkedKeys = bookmarks.map { it.verseKey }.toSet()
         val votdItem = votdTriple?.let { (ayah, surah, translations) ->
             val sName = surah?.let {
-                BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, prefs.uiLanguageCode)
-                    .ifBlank { it.nameTransliteration }
+                BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
             } ?: "Surah ${ayah.surahId}"
             val preferredTr = translations.firstOrNull { it.languageCode == prefs.uiLanguageCode }
                 ?: translations.firstOrNull { it.languageCode == "bn" }

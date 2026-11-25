@@ -55,6 +55,7 @@ import com.example.R
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
+import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.SegmentRoleType
 import com.example.core.localization.UserPreferences
 import com.example.ui.theme.arabicScriptFont
@@ -215,32 +216,30 @@ fun WordMorphologySheet(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(
+                    Text(
+                        text = stringResource(R.string.word_explanation_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = stringResource(R.string.word_explanation_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilledTonalButton(
-                                onClick = { onTranslateWord("bn") },
-                                modifier = Modifier.testTag("translate_word_bn_button")
-                            ) {
-                                Text(stringResource(R.string.translate_all_bangla))
-                            }
-                            androidx.compose.material3.OutlinedButton(
-                                onClick = { showLangPicker = true },
-                                modifier = Modifier.testTag("translate_word_picker_button")
-                            ) {
-                                Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(stringResource(R.string.translate_any_language))
-                            }
+                        FilledTonalButton(
+                            onClick = { onTranslateWord("bn") },
+                            modifier = Modifier.testTag("translate_word_bn_button")
+                        ) {
+                            Text(stringResource(R.string.translate_all_bangla))
+                        }
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { showLangPicker = true },
+                            modifier = Modifier.testTag("translate_word_picker_button")
+                        ) {
+                            Icon(Icons.Default.Translate, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(stringResource(R.string.translate_any_language))
                         }
                     }
 
@@ -578,11 +577,12 @@ private fun MorphologyRow(label: String, value: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReaderDisplaySettingsSheet(
     preferences: UserPreferences,
     onSelectScript: (QuranScriptType) -> Unit,
+    onSelectCardStyle: (ReaderCardStyle) -> Unit = {},
     onToggleTajweed: (Boolean) -> Unit,
     onToggleTransliteration: (Boolean) -> Unit,
     onArabicSizeChange: (Float) -> Unit,
@@ -594,6 +594,7 @@ fun ReaderDisplaySettingsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -612,6 +613,25 @@ fun ReaderDisplaySettingsSheet(
                     label = { Text(stringResource(R.string.script_indopak)) },
                     modifier = Modifier.testTag("script_chip_indopak")
                 )
+            }
+
+            Text(stringResource(R.string.card_style_title), style = MaterialTheme.typography.labelLarge)
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    ReaderCardStyle.CLASSIC_ELEVATED to stringResource(R.string.card_style_classic),
+                    ReaderCardStyle.CRISP_OUTLINED to stringResource(R.string.card_style_outlined),
+                    ReaderCardStyle.MINIMAL_PAPER to stringResource(R.string.card_style_minimal)
+                ).forEach { (style, label) ->
+                    FilterChip(
+                        selected = preferences.readerCardStyle == style,
+                        onClick = { onSelectCardStyle(style) },
+                        label = { Text(label) },
+                        modifier = Modifier.testTag("reader_card_style_${style.name}")
+                    )
+                }
             }
 
             Row(

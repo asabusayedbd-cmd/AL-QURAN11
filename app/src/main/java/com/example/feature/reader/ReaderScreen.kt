@@ -59,6 +59,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -103,6 +104,7 @@ import androidx.compose.material.icons.filled.Translate
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
+import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.ReaderViewMode
 import com.example.feature.tafsir.TafsirSheet
 import com.example.ui.components.AudioHifzBar
@@ -266,15 +268,20 @@ fun ReaderScreen(
         }
     }
 
-    // Sync ReaderScreen if auto-advance transitions to the following Surah during active playback
+    // Sync ReaderScreen ONLY if active Surah playback auto-advances to the next Surah
     LaunchedEffect(playbackCursor.isVisible, playbackCursor.isPlaying, playbackCursor.surahId) {
         val pbSurah = playbackCursor.surahId
-        if (playbackCursor.isVisible && playbackCursor.isPlaying && pbSurah != lastObservedPlaybackSurahId) {
+        if (playbackCursor.isVisible &&
+            playbackCursor.isPlaying &&
+            lastObservedPlaybackSurahId == activeSurahId &&
+            pbSurah != activeSurahId &&
+            pbSurah in 1..114
+        ) {
             lastObservedPlaybackSurahId = pbSurah
-            if (pbSurah != activeSurahId) {
-                pendingTargetAyah = 1
-                viewModel.loadSurah(pbSurah)
-            }
+            pendingTargetAyah = 1
+            pendingTargetPage = 0
+            selectedMushafAyah = null
+            viewModel.loadSurah(pbSurah)
         } else {
             lastObservedPlaybackSurahId = pbSurah
         }
@@ -840,10 +847,11 @@ fun ReaderScreen(
                                     remember { mutableStateOf<Int?>(null) }
                                 }
 
-                                ElevatedCard(
-                                    shape = MaterialTheme.shapes.large,
+                                AyahStyleContainer(
+                                    cardStyle = state.preferences.readerCardStyle,
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .animateItem()
                                         .testTag("ayah_card_${bundle.ayah.verseKey}")
                                 ) {
                                     Column(
@@ -1091,6 +1099,8 @@ fun ReaderScreen(
                                     OutlinedButton(
                                         onClick = {
                                             pendingTargetAyah = 1
+                                            pendingTargetPage = 0
+                                            selectedMushafAyah = null
                                             viewModel.loadSurah(activeSurahId - 1)
                                         },
                                         modifier = Modifier
@@ -1106,6 +1116,8 @@ fun ReaderScreen(
                                     FilledTonalButton(
                                         onClick = {
                                             pendingTargetAyah = 1
+                                            pendingTargetPage = 0
+                                            selectedMushafAyah = null
                                             viewModel.loadSurah(activeSurahId + 1)
                                         },
                                         modifier = Modifier
@@ -1331,10 +1343,11 @@ fun ReaderScreen(
                 ) {
                     items(state.allSurahs, key = { it.id }) { itemSurah ->
                         val isCurrent = itemSurah.id == activeSurahId
-                        val title = BidiUtils.extractLocalizedSurahName(
+                        val title = BidiUtils.formatSurahTitle(
+                            itemSurah.nameTransliteration,
                             itemSurah.localizedNamesJson,
                             state.preferences.uiLanguageCode
-                        ).ifBlank { itemSurah.nameTransliteration }
+                        )
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer
@@ -1343,6 +1356,8 @@ fun ReaderScreen(
                                 .fillMaxWidth()
                                 .clickable {
                                     pendingTargetAyah = 1
+                                    pendingTargetPage = 0
+                                    selectedMushafAyah = null
                                     viewModel.loadSurah(itemSurah.id)
                                     showSurahSwitcher = false
                                 }
@@ -1377,6 +1392,7 @@ fun ReaderScreen(
         ReaderDisplaySettingsSheet(
             preferences = state.preferences,
             onSelectScript = viewModel::setScriptType,
+            onSelectCardStyle = viewModel::setReaderCardStyle,
             onToggleTajweed = viewModel::setTajweedEnabled,
             onToggleTransliteration = viewModel::setShowTransliteration,
             onArabicSizeChange = viewModel::setArabicFontSize,
@@ -1480,5 +1496,43 @@ fun ReaderScreen(
             },
             onDismiss = viewModel::closeTafsir
         )
+    }
+}
+
+@Composable
+private fun AyahStyleContainer(
+    cardStyle: ReaderCardStyle,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    when (cardStyle) {
+        ReaderCardStyle.CLASSIC_ELEVATED -> {
+            ElevatedCard(
+                shape = MaterialTheme.shapes.large,
+                modifier = modifier
+            ) {
+                content()
+            }
+        }
+        ReaderCardStyle.CRISP_OUTLINED -> {
+            OutlinedCard(
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                modifier = modifier
+            ) {
+                content()
+            }
+        }
+        ReaderCardStyle.MINIMAL_PAPER -> {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+                tonalElevation = 0.dp,
+                modifier = modifier
+            ) {
+                content()
+            }
+        }
     }
 }

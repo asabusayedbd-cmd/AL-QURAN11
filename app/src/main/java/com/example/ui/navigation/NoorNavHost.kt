@@ -1,5 +1,8 @@
 package com.example.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -164,7 +167,11 @@ fun NoorAppRoot(
                     Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         NavHost(
                             navController = navController,
-                            startDestination = ROUTE_HOME
+                            startDestination = ROUTE_HOME,
+                            enterTransition = { fadeIn(animationSpec = tween(200)) },
+                            exitTransition = { fadeOut(animationSpec = tween(180)) },
+                            popEnterTransition = { fadeIn(animationSpec = tween(200)) },
+                            popExitTransition = { fadeOut(animationSpec = tween(180)) }
                         ) {
                             composable(ROUTE_HOME) {
                                 val vm: HomeViewModel = viewModel(
@@ -277,7 +284,8 @@ fun NoorAppRoot(
                                                 preferencesRepository = appContainer.preferencesRepository,
                                                 syncRepository = appContainer.quranSyncRepository,
                                                 audioController = appContainer.audioController,
-                                                seeder = appContainer.seeder
+                                                seeder = appContainer.seeder,
+                                                lineTranslator = appContainer.lineTranslator
                                             )
                                         }
                                     }

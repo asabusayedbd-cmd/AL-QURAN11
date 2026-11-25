@@ -71,6 +71,14 @@
     <string name="theme_sepia">Sepia Lembut</string>
     <string name="theme_slate_dark">Slate Teal Gelap</string>
     <string name="theme_amoled">Malam AMOLED Murni</string>
+    <string name="theme_madinah_gold">Emas &amp; Gading Madinah</string>
+    <string name="theme_andalusian_rose">Mawar Andalusia</string>
+    <string name="theme_midnight_indigo">Indigo Tengah Malam</string>
+    <string name="theme_desert_dusk">Senja Gurun Amber</string>
+    <string name="card_style_title">Gaya Kartu Ayat</string>
+    <string name="card_style_classic">Klasik</string>
+    <string name="card_style_outlined">Bergaris Tepi</string>
+    <string name="card_style_minimal">Kertas Minimalis</string>
 
     <string name="cloud_sync_title">Cadangan &amp; Sinkronisasi Cloud</string>
     <string name="guest_mode_desc">Membaca offline dalam mode Tamu. Masuk dengan Google untuk menyinkronkan penanda dan catatan.</string>

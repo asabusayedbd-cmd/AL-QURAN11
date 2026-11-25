@@ -104,6 +104,25 @@ object BidiUtils {
         return resolved
     }
 
+    fun formatSurahTitle(
+        nameTransliteration: String,
+        localizedNamesJson: String,
+        languageCode: String
+    ): String {
+        val localized = extractLocalizedSurahName(localizedNamesJson, languageCode)
+        return when {
+            languageCode.equals("en", ignoreCase = true) -> {
+                if (localized.isNotBlank() && !localized.equals(nameTransliteration, ignoreCase = true)) {
+                    "$nameTransliteration ($localized)"
+                } else {
+                    nameTransliteration.ifBlank { localized }
+                }
+            }
+            localized.isNotBlank() -> localized
+            else -> nameTransliteration
+        }
+    }
+
     fun formatGregorianAndHijriDate(languageCode: String): Pair<String, String> {
         val dayStamp = System.currentTimeMillis() / 3_600_000L
         val cacheKey = "$dayStamp|$languageCode"

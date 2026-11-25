@@ -2,6 +2,8 @@ package com.example.feature.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +25,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -69,6 +72,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -81,7 +85,10 @@ import com.example.R
 import com.example.core.database.TafsirSourceEntity
 import com.example.core.database.TranslationSourceEntity
 import com.example.core.localization.NoorThemeMode
+import com.example.core.localization.ReaderCardStyle
 import com.example.ui.components.QariPickerModalSheet
+import com.example.ui.theme.isDarkTheme
+import com.example.ui.theme.themePreviewSwatches
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -148,8 +155,17 @@ fun SettingsScreen(
     val themeLabel = when (state.preferences.themeMode) {
         NoorThemeMode.SERENE_EMERALD -> stringResource(R.string.theme_serene_emerald)
         NoorThemeMode.SOFT_SEPIA -> stringResource(R.string.theme_sepia)
+        NoorThemeMode.MADINAH_GOLD_IVORY -> stringResource(R.string.theme_madinah_gold)
+        NoorThemeMode.ANDALUSIAN_ROSE -> stringResource(R.string.theme_andalusian_rose)
         NoorThemeMode.SLATE_DARK -> stringResource(R.string.theme_slate_dark)
         NoorThemeMode.AMOLED_BLACK -> stringResource(R.string.theme_amoled)
+        NoorThemeMode.MIDNIGHT_INDIGO -> stringResource(R.string.theme_midnight_indigo)
+        NoorThemeMode.DESERT_DUSK -> stringResource(R.string.theme_desert_dusk)
+    }
+    val cardStyleLabel = when (state.preferences.readerCardStyle) {
+        ReaderCardStyle.CLASSIC_ELEVATED -> stringResource(R.string.card_style_classic)
+        ReaderCardStyle.CRISP_OUTLINED -> stringResource(R.string.card_style_outlined)
+        ReaderCardStyle.MINIMAL_PAPER -> stringResource(R.string.card_style_minimal)
     }
     val cacheMb = state.offlineCacheSizeBytes / (1024f * 1024f)
 
@@ -309,7 +325,7 @@ fun SettingsScreen(
                     SettingsActionRow(
                         icon = Icons.Default.Palette,
                         title = stringResource(R.string.theme_title),
-                        subtitle = themeLabel,
+                        subtitle = "$themeLabel • $cardStyleLabel",
                         onClick = { showThemeSheet = true },
                         testTag = "settings_theme_button"
                     )
@@ -422,10 +438,12 @@ fun SettingsScreen(
     if (showThemeSheet) {
         ThemePickerModalSheet(
             activeTheme = state.preferences.themeMode,
+            activeCardStyle = state.preferences.readerCardStyle,
             onSelectTheme = { mode ->
                 viewModel.setThemeMode(mode)
                 showThemeSheet = false
             },
+            onSelectCardStyle = viewModel::setReaderCardStyle,
             onDismiss = { showThemeSheet = false }
         )
     }
@@ -754,28 +772,60 @@ private fun LanguagePickerModalSheet(
 @Composable
 private fun ThemePickerModalSheet(
     activeTheme: NoorThemeMode,
+    activeCardStyle: ReaderCardStyle,
     onSelectTheme: (NoorThemeMode) -> Unit,
+    onSelectCardStyle: (ReaderCardStyle) -> Unit,
     onDismiss: () -> Unit
 ) {
     val options = listOf(
         NoorThemeMode.SERENE_EMERALD to stringResource(R.string.theme_serene_emerald),
         NoorThemeMode.SOFT_SEPIA to stringResource(R.string.theme_sepia),
+        NoorThemeMode.MADINAH_GOLD_IVORY to stringResource(R.string.theme_madinah_gold),
+        NoorThemeMode.ANDALUSIAN_ROSE to stringResource(R.string.theme_andalusian_rose),
         NoorThemeMode.SLATE_DARK to stringResource(R.string.theme_slate_dark),
-        NoorThemeMode.AMOLED_BLACK to stringResource(R.string.theme_amoled)
+        NoorThemeMode.AMOLED_BLACK to stringResource(R.string.theme_amoled),
+        NoorThemeMode.MIDNIGHT_INDIGO to stringResource(R.string.theme_midnight_indigo),
+        NoorThemeMode.DESERT_DUSK to stringResource(R.string.theme_desert_dusk)
+    )
+    val cardStyles = listOf(
+        ReaderCardStyle.CLASSIC_ELEVATED to stringResource(R.string.card_style_classic),
+        ReaderCardStyle.CRISP_OUTLINED to stringResource(R.string.card_style_outlined),
+        ReaderCardStyle.MINIMAL_PAPER to stringResource(R.string.card_style_minimal)
     )
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 560.dp)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            Text(stringResource(R.string.card_style_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                cardStyles.forEachIndexed { idx, (style, label) ->
+                    SegmentedButton(
+                        selected = activeCardStyle == style,
+                        onClick = { onSelectCardStyle(style) },
+                        shape = SegmentedButtonDefaults.itemShape(idx, cardStyles.size),
+                        modifier = Modifier.testTag("card_style_${style.name}")
+                    ) {
+                        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+
             Text(stringResource(R.string.theme_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             options.forEach { (mode, label) ->
                 val selected = activeTheme == mode
+                val (bgSwatch, primarySwatch, accentSwatch) = themePreviewSwatches(mode)
+                val darkBadge = if (isDarkTheme(mode)) "Dark" else "Light"
                 Surface(
                     shape = MaterialTheme.shapes.medium,
                     color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    border = if (selected) BorderStroke(1.2.dp, MaterialTheme.colorScheme.primary) else null,
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("theme_chip_${mode.name}")
@@ -784,11 +834,30 @@ private fun ThemePickerModalSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                listOf(bgSwatch, primarySwatch, accentSwatch).forEach { swatch ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(CircleShape)
+                                            .background(swatch)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                                Text(darkBadge, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
                         if (selected) {
                             Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         }

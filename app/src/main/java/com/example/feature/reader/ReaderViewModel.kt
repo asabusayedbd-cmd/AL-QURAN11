@@ -19,12 +19,14 @@ import com.example.core.database.UserBookmarkEntity
 import com.example.core.database.UserNoteEntity
 import com.example.core.database.WordEntity
 import com.example.core.database.WordOccurrenceProjection
+import com.example.core.database.WordTranslationEntity
 import com.example.core.ibadah.StreakCalculator
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.DetailedWordAnalysis
 import com.example.core.localization.LineTranslator
 import com.example.core.localization.PreferencesRepository
 import com.example.core.localization.QuranScriptType
+import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.ReaderViewMode
 import com.example.core.localization.UserPreferences
 import com.example.core.localization.WordMorphologyAnalyzer
@@ -32,9 +34,11 @@ import com.example.core.network.QuranSyncRepository
 import com.example.ui.components.WordDisplayItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -129,9 +133,36 @@ class ReaderViewModel(
     private val _inspectedWord = MutableStateFlow<WordInspectorState?>(null)
     private val _lineTranslationState = MutableStateFlow(LineTranslationUiState())
     val lineTranslationState: StateFlow<LineTranslationUiState> = _lineTranslationState
-    private var downloadJob: kotlinx.coroutines.Job? = null
-    private var assetLoadJob: kotlinx.coroutines.Job? = null
-    private var batchTranslateJob: kotlinx.coroutines.Job? = null
+    private var downloadJob: Job? = null
+    private var assetLoadJob: Job? = null
+    private var batchTranslateJob: Job? = null
+    @Volatile
+    private var explicitlyDeletedSurahId: Int? = null
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            combine(
+                _surahId,
+                preferencesRepository.preferencesFlow.map { it.wbwLanguageCode }.distinctUntilChanged(),
+                quranDao.observeEnabledTranslationSources()
+            ) { sid, wbwLang, enabledSources ->
+                Triple(sid, wbwLang, enabledSources)
+            }.collectLatest { (sid, wbwLang, enabledSources) ->
+                if (explicitlyDeletedSurahId == sid) return@collectLatest
+                val surah = quranDao.getSurah(sid)
+                val existingCount = quranDao.countAyahsInSurah(sid)
+                if (surah == null || existingCount < surah.ayahCount) {
+                    seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount)
+                }
+                if (!wbwLang.equals("en", ignoreCase = true)) {
+                    syncRepository.ensureWbwForSurah(sid, wbwLang, lineTranslator)
+                }
+                if (enabledSources.any { it.id != 20 }) {
+                    syncRepository.ensureTranslationsForSurah(sid, enabledSources, lineTranslator)
+                }
+            }
+        }
+    }
 
     val playbackState: StateFlow<AudioPlaybackState> = audioController.state
     val playbackCursor: StateFlow<ActivePlaybackCursor> = audioController.state
@@ -257,8 +288,7 @@ class ReaderViewModel(
         val (downloadingSurah, dlErr) = downloadStatus
 
         val localizedName = surah?.let {
-            BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, prefs.uiLanguageCode)
-                .ifBlank { it.nameTransliteration }
+            BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
         } ?: "Surah ${_surahId.value}"
 
         val isIncomplete = surah != null && bundles.size < surah.ayahCount
@@ -293,6 +323,7 @@ class ReaderViewModel(
     fun loadSurah(surahId: Int) {
         val targetId = surahId.coerceIn(1, 114)
         if (_surahId.value != targetId) {
+            explicitlyDeletedSurahId = null
             batchTranslateJob?.cancel()
             _lineTranslationState.value = LineTranslationUiState()
         }
@@ -306,7 +337,8 @@ class ReaderViewModel(
         assetLoadJob = viewModelScope.launch {
             val surah = quranDao.getSurah(surahId)
             val existingCount = quranDao.countAyahsInSurah(surahId)
-            val isMissingLocally = surah == null || (surah.isDownloaded && existingCount < surah.ayahCount)
+            val isMissingLocally = surah == null ||
+                (existingCount < surah.ayahCount && explicitlyDeletedSurahId != surahId)
             if (isMissingLocally) {
                 seeder?.ensureSurahLoadedFromAssets(surahId, surah?.ayahCount)
             }
@@ -444,36 +476,46 @@ class ReaderViewModel(
         val current = _inspectedWord.value ?: return
         val translator = lineTranslator ?: return
         val wordId = current.word.id
+        val normalizedTarget = targetLang.trim().lowercase()
         _inspectedWord.update {
             if (it?.word?.id == wordId) {
                 it.copy(isTranslatingWord = true, wordTranslationError = null)
             } else it
         }
         viewModelScope.launch {
-            val srcMeaning = current.localizedMeaning.ifBlank { current.word.transliteration }
-            val srcExplanation = current.analysis.localizedExplanation(targetLang)
+            val englishMeaning = current.analysis.allMeanings
+                .firstOrNull { it.first.contains("English", ignoreCase = true) }
+                ?.second
+                ?.takeIf { it.isNotBlank() }
+            val srcMeaning = englishMeaning
+                ?: current.localizedMeaning.ifBlank { current.word.transliteration }
+
             val existingByLang = current.analysis.allMeanings.firstOrNull { (label, _) ->
-                when (targetLang.lowercase()) {
+                when (normalizedTarget) {
                     "bn" -> label.contains("Bangla", ignoreCase = true) || label.contains("বাংলা")
                     "en" -> label.contains("English", ignoreCase = true)
                     "ur" -> label.contains("Urdu", ignoreCase = true) || label.contains("اردو")
                     "id" -> label.contains("Indonesian", ignoreCase = true)
                     "tr" -> label.contains("Turkish", ignoreCase = true) || label.contains("Türkçe")
-                    else -> false
+                    "ar" -> label.contains("Arabic", ignoreCase = true) || label.contains("العربية")
+                    else -> label.equals(normalizedTarget, ignoreCase = true)
                 }
-            }?.second
+            }?.second?.takeIf { it.isNotBlank() }
 
-            val needExplainTranslation = !targetLang.equals("en", true) &&
-                !targetLang.equals("bn", true) &&
-                !targetLang.equals("ar", true)
+            val hasNativeGrammarExplain = normalizedTarget in setOf("en", "bn", "ar")
+            val nativeExplanation = if (hasNativeGrammarExplain) {
+                current.analysis.localizedExplanation(normalizedTarget)
+            } else {
+                current.analysis.explanationEn
+            }
 
-            if (existingByLang != null && !needExplainTranslation) {
+            if (existingByLang != null && hasNativeGrammarExplain) {
                 _inspectedWord.update {
                     if (it?.word?.id == wordId) {
                         it.copy(
-                            translatedTargetLang = targetLang,
+                            translatedTargetLang = normalizedTarget,
                             translatedMeaning = existingByLang,
-                            translatedExplanation = srcExplanation,
+                            translatedExplanation = nativeExplanation,
                             isTranslatingWord = false,
                             wordTranslationError = null
                         )
@@ -482,20 +524,44 @@ class ReaderViewModel(
                 return@launch
             }
 
-            val result = translator.translateLinesJoined(listOf(srcMeaning, srcExplanation), targetLang)
+            val payload = when {
+                existingByLang == null && !hasNativeGrammarExplain -> listOf(srcMeaning, nativeExplanation)
+                existingByLang == null -> listOf(srcMeaning)
+                else -> listOf(nativeExplanation)
+            }
+
+            val result = translator.translateLinesJoined(payload, targetLang)
             result.onSuccess { parts ->
                 val trMeaning = existingByLang ?: parts.getOrNull(0).orEmpty().ifBlank { srcMeaning }
-                val trExplain = if (needExplainTranslation) {
-                    parts.getOrNull(1).orEmpty().ifBlank { srcExplanation }
-                } else {
-                    srcExplanation
+                val trExplain = when {
+                    hasNativeGrammarExplain -> nativeExplanation
+                    existingByLang == null -> parts.getOrNull(1).orEmpty().ifBlank { nativeExplanation }
+                    else -> parts.getOrNull(0).orEmpty().ifBlank { nativeExplanation }
                 }
+
+                val updatedAnalysis = if (existingByLang == null && trMeaning.isNotBlank()) {
+                    quranDao.insertWordTranslations(
+                        listOf(WordTranslationEntity(wordId = wordId, languageCode = normalizedTarget, meaningText = trMeaning))
+                    )
+                    val refreshed = quranDao.getWordTranslations(wordId)
+                    WordMorphologyAnalyzer.analyze(current.word, refreshed)
+                } else {
+                    current.analysis
+                }
+
+                val finalExplain = if (hasNativeGrammarExplain) {
+                    updatedAnalysis.localizedExplanation(normalizedTarget)
+                } else {
+                    trExplain
+                }
+
                 _inspectedWord.update {
                     if (it?.word?.id == wordId) {
                         it.copy(
+                            analysis = updatedAnalysis,
                             translatedTargetLang = targetLang,
                             translatedMeaning = trMeaning,
-                            translatedExplanation = trExplain,
+                            translatedExplanation = finalExplain,
                             isTranslatingWord = false,
                             wordTranslationError = null
                         )
@@ -773,6 +839,10 @@ class ReaderViewModel(
         preferencesRepository.setScriptType(script)
     }
 
+    fun setReaderCardStyle(style: ReaderCardStyle) = viewModelScope.launch {
+        preferencesRepository.setReaderCardStyle(style)
+    }
+
     fun setTajweedEnabled(enabled: Boolean) = viewModelScope.launch {
         preferencesRepository.setTajweedEnabled(enabled)
     }
@@ -805,6 +875,7 @@ class ReaderViewModel(
     fun clearAudioCache() = audioController.clearOfflineAudioCache()
     fun deleteCurrentSurah() {
         val sid = _surahId.value
+        explicitlyDeletedSurahId = sid
         downloadJob?.cancel()
         downloadJob = viewModelScope.launch {
             _isDownloadingSurah.value = true
