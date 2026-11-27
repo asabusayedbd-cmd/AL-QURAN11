@@ -10,12 +10,14 @@ import coil.disk.DiskCache
 import coil.memory.MemoryCache
 import com.example.core.di.AppContainer
 import com.example.core.localization.BidiUtils
+import com.example.core.perf.PerfTracker
 
 class NoorApplication : Application(), ImageLoaderFactory {
 
     private var cachedImageLoader: ImageLoader? = null
 
     override fun onCreate() {
+        PerfTracker.markAppStart()
         super.onCreate()
         AppContainer.getInstance(this).warmUpAsync()
     }

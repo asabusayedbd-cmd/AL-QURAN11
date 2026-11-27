@@ -1,5 +1,6 @@
 package com.example.ui.navigation
 
+import androidx.activity.compose.ReportDrawn
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,6 +27,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -47,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.R
 import com.example.core.di.AppContainer
+import com.example.core.perf.PerfTracker
 import com.example.feature.dua.DuaScreen
 import com.example.feature.dua.DuaViewModel
 import com.example.feature.explorer.ExplorerScreen
@@ -59,6 +64,7 @@ import com.example.feature.reader.ReaderScreen
 import com.example.feature.reader.ReaderViewModel
 import com.example.feature.settings.SettingsScreen
 import com.example.feature.settings.SettingsViewModel
+import com.example.ui.components.StartupWelcomeOverlay
 
 const val ROUTE_HOME = "home"
 const val ROUTE_EXPLORER = "explorer"
@@ -84,9 +90,17 @@ fun NoorAppRoot(
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val pendingPlaybackJump by appContainer.pendingPlaybackJump.collectAsStateWithLifecycle()
+    var showLaunchWelcome by rememberSaveable { mutableStateOf(true) }
+
+    ReportDrawn()
+    LaunchedEffect(Unit) {
+        PerfTracker.markStartupFirstScreenReady()
+    }
 
     LaunchedEffect(pendingPlaybackJump) {
         pendingPlaybackJump?.let { (sid, ayahNum) ->
+            showLaunchWelcome = false
+            PerfTracker.markSurahTapped(sid)
             navController.navigate("reader/$sid/$ayahNum?page=0") {
                 launchSingleTop = true
             }
@@ -121,12 +135,16 @@ fun NoorAppRoot(
             }
 
             val openReader: (Int, Int) -> Unit = { surahId, ayahNumber ->
+                PerfTracker.markSurahTapped(surahId)
                 navController.navigate("reader/$surahId/$ayahNumber?page=0")
             }
 
             val openReaderAtPage: (Int, Int) -> Unit = { surahId, pageNumber ->
+                PerfTracker.markSurahTapped(surahId)
                 navController.navigate("reader/$surahId/1?page=$pageNumber")
             }
+
+            Box(modifier = Modifier.fillMaxSize()) {
 
             Scaffold(
                 bottomBar = {
@@ -180,10 +198,10 @@ fun NoorAppRoot(
                         NavHost(
                             navController = navController,
                             startDestination = ROUTE_HOME,
-                            enterTransition = { fadeIn(animationSpec = tween(200)) },
-                            exitTransition = { fadeOut(animationSpec = tween(180)) },
-                            popEnterTransition = { fadeIn(animationSpec = tween(200)) },
-                            popExitTransition = { fadeOut(animationSpec = tween(180)) }
+                            enterTransition = { fadeIn(animationSpec = tween(140)) },
+                            exitTransition = { fadeOut(animationSpec = tween(120)) },
+                            popEnterTransition = { fadeIn(animationSpec = tween(140)) },
+                            popExitTransition = { fadeOut(animationSpec = tween(120)) }
                         ) {
                             composable(ROUTE_HOME) {
                                 val vm: HomeViewModel = viewModel(
@@ -360,6 +378,13 @@ fun NoorAppRoot(
                         }
                     }
                 }
+            }
+
+            StartupWelcomeOverlay(
+                visible = showLaunchWelcome,
+                uiLanguageCode = uiLanguageCode,
+                onDismiss = { showLaunchWelcome = false }
+            )
             }
         }
     }

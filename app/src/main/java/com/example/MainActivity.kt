@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.audio.QuranPlaybackService
 import com.example.core.di.AppContainer
 import com.example.core.localization.UserPreferences
+import com.example.core.perf.PerfTracker
 import com.example.ui.navigation.NoorAppRoot
 import com.example.ui.theme.NoorAlQuranTheme
 
@@ -18,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appContainer: AppContainer
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        PerfTracker.markActivityCreated()
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()

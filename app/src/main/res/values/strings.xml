@@ -336,4 +336,9 @@
     <string name="prev_page">Prev Page</string>
     <string name="next_page">Next Page</string>
     <string name="reader_page_fmt">Page %1$s</string>
+
+    <string name="startup_subtitle">Noble Quran • Word-by-Word • Tafsir &amp; Adhkar</string>
+    <string name="startup_badge_quran">Quranic Inspiration</string>
+    <string name="startup_badge_hadith">Sahih Hadith</string>
+    <string name="startup_enter_app">Start Reading</string>
 </resources>

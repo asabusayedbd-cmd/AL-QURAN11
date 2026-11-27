@@ -336,4 +336,9 @@
     <string name="prev_page">আগের পৃষ্ঠা</string>
     <string name="next_page">পরের পৃষ্ঠা</string>
     <string name="reader_page_fmt">পৃষ্ঠা %1$s</string>
+
+    <string name="startup_subtitle">আল-কুরআন • শব্দে-শব্দে অর্থ • তাফসীর ও দোয়া</string>
+    <string name="startup_badge_quran">কুরআনের বাণী</string>
+    <string name="startup_badge_hadith">সহীহ হাদীস</string>
+    <string name="startup_enter_app">পড়া শুরু করুন</string>
 </resources>

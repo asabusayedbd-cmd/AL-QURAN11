@@ -79,6 +79,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -98,6 +99,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.R
 import com.example.core.database.AyahEntity
+import com.example.core.perf.PerfTracker
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Translate
@@ -158,6 +160,10 @@ fun ReaderScreen(
     targetPage: Int = 0,
     modifier: Modifier = Modifier
 ) {
+    remember(surahId) {
+        viewModel.onScreenAttached(surahId)
+        true
+    }
     LaunchedEffect(surahId) {
         viewModel.loadSurah(surahId)
     }
@@ -236,12 +242,17 @@ fun ReaderScreen(
         pendingTargetPage = targetPage
     }
 
-    val mushafPages = remember(state.ayahs) {
-        state.ayahs.groupBy { it.ayah.pageNumber }.entries.map { it.key to it.value }
+    val isMushafMode = state.preferences.readerViewMode == ReaderViewMode.MUSHAF
+    val mushafPages = remember(state.ayahs, isMushafMode) {
+        if (isMushafMode && state.ayahs.isNotEmpty()) {
+            state.ayahs.groupBy { it.ayah.pageNumber }.entries.map { it.key to it.value }
+        } else {
+            emptyList()
+        }
     }
 
     val activeSurahId = state.surah?.id ?: surahId
-    val showTopBismillah = state.preferences.readerViewMode == ReaderViewMode.WORD_BY_WORD && state.surah?.bismillahPre == true
+    val showTopBismillah = !isMushafMode && state.surah?.bismillahPre == true
     val headerOffset = if (showTopBismillah) 1 else 0
 
     // Scroll cleanly to targetPage, targetAyah, or reset to top when Surah changes (mode-aware for WBW vs Mushaf)
@@ -766,7 +777,14 @@ fun ReaderScreen(
                 } else {
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .onGloballyPositioned {
+                                viewModel.notifyFirstContentVisible(
+                                    surahId = activeSurahId,
+                                    mushafGroupingSkipped = !isMushafMode
+                                )
+                            },
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {

@@ -35,6 +35,7 @@ import com.example.core.localization.ReaderViewMode
 import com.example.core.localization.UserPreferences
 import com.example.core.localization.WordMorphologyAnalyzer
 import com.example.core.network.QuranSyncRepository
+import com.example.core.perf.PerfTracker
 import com.example.ui.components.WordDisplayItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +43,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +58,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 data class AyahDisplayBundle(
     val ayah: AyahEntity,
@@ -139,6 +142,8 @@ class ReaderViewModel(
     private val userLibraryDao = database.userLibraryDao()
 
     private val _surahId = MutableStateFlow(initialSurahId.coerceIn(1, 114))
+    private val _screenAttached = MutableStateFlow(false)
+    private val _firstVisibleSurahId = MutableStateFlow(0)
     private val _selectedTafsirAyah = MutableStateFlow<AyahEntity?>(null)
     private val _isFetchingTafsir = MutableStateFlow(false)
     private val _tafsirError = MutableStateFlow<String?>(null)
@@ -151,10 +156,23 @@ class ReaderViewModel(
     private val _lineTranslationState = MutableStateFlow(LineTranslationUiState())
     val lineTranslationState: StateFlow<LineTranslationUiState> = _lineTranslationState
     private var downloadJob: Job? = null
-    private var assetLoadJob: Job? = null
     private var batchTranslateJob: Job? = null
 
     init {
+        PerfTracker.markReaderEntered(initialSurahId.coerceIn(1, 114))
+
+        // Critical Path: Load local Quran text immediately without waiting for network or optional sync
+        viewModelScope.launch(Dispatchers.IO) {
+            _surahId.collectLatest { sid ->
+                val surah = quranDao.getSurah(sid)
+                val existingCount = quranDao.countAyahsInSurah(sid)
+                if (surah == null || existingCount < surah.ayahCount) {
+                    seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount)
+                }
+            }
+        }
+
+        // Deferred Optional Content: WBW non-English meanings & extra translations arrive AFTER first visible render
         viewModelScope.launch(Dispatchers.IO) {
             combine(
                 _surahId,
@@ -163,21 +181,26 @@ class ReaderViewModel(
             ) { sid, wbwLang, enabledSources ->
                 Triple(sid, wbwLang, enabledSources)
             }.collectLatest { (sid, wbwLang, enabledSources) ->
-                val surah = quranDao.getSurah(sid)
-                val existingCount = quranDao.countAyahsInSurah(sid)
-                if (surah == null || existingCount < surah.ayahCount) {
-                    seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount)
-                }
-                if (!wbwLang.equals("en", ignoreCase = true)) {
-                    syncRepository.ensureWbwForSurah(sid, wbwLang, lineTranslator)
-                }
-                if (enabledSources.any { it.id != 20 }) {
-                    syncRepository.ensureTranslationsForSurah(sid, enabledSources, lineTranslator)
+                val needsWbw = !wbwLang.equals("en", ignoreCase = true)
+                val needsExtraTranslations = enabledSources.any { it.id != 20 }
+                if (!needsWbw && !needsExtraTranslations) return@collectLatest
+
+                awaitFirstVisibleGate(sid)
+                PerfTracker.markOptionalSyncStarted(sid, "wbw=$wbwLang,tr=${enabledSources.size}")
+                try {
+                    if (needsWbw) {
+                        syncRepository.ensureWbwForSurah(sid, wbwLang, lineTranslator)
+                    }
+                    if (needsExtraTranslations) {
+                        syncRepository.ensureTranslationsForSurah(sid, enabledSources, lineTranslator)
+                    }
+                } finally {
+                    PerfTracker.markOptionalSyncCompleted(sid)
                 }
             }
         }
 
-        // Automatically fetch missing Tafsir entries for the active Surah whenever Inline Tafsir is enabled
+        // Deferred Optional Content: Inline Tafsir sync runs strictly AFTER initial reader content is visible
         viewModelScope.launch(Dispatchers.IO) {
             combine(
                 _surahId,
@@ -191,10 +214,12 @@ class ReaderViewModel(
                     _isLoadingInlineTafsirs.value = false
                     return@collectLatest
                 }
+                awaitFirstVisibleGate(sid)
                 val source = sources.firstOrNull { it.id == tafsirId }
                     ?: TafsirSourceEntity(tafsirId, "en", "English", "Tafsir", false, true, 0)
                 val ayahs = quranDao.getAyahsBySurah(sid)
                 if (ayahs.isEmpty()) return@collectLatest
+                PerfTracker.markOptionalSyncStarted(sid, "inline_tafsir=$tafsirId")
                 _isLoadingInlineTafsirs.value = true
                 try {
                     for (chunk in ayahs.chunked(4)) {
@@ -214,9 +239,36 @@ class ReaderViewModel(
                     }
                 } finally {
                     _isLoadingInlineTafsirs.value = false
+                    PerfTracker.markOptionalSyncCompleted(sid)
                 }
             }
         }
+    }
+
+    private suspend fun awaitFirstVisibleGate(sid: Int) {
+        // Ensure local Ayahs exist in Room first so optional writes never lock or race initial asset load
+        withTimeoutOrNull(4_000L) {
+            quranDao.observeAyahsBySurah(sid).first { it.isNotEmpty() }
+        }
+        // When UI screen is attached, wait until first visible reader content lays out before starting optional sync
+        val waitBudgetMs = if (_screenAttached.value) 5_000L else 250L
+        withTimeoutOrNull(waitBudgetMs) {
+            _firstVisibleSurahId.first { it == sid }
+        }
+        // Yield briefly so the first Compose frame commits smoothly before Room/network sync starts
+        delay(120L)
+    }
+
+    fun onScreenAttached(surahId: Int) {
+        _screenAttached.value = true
+        PerfTracker.markReaderEntered(surahId.coerceIn(1, 114))
+    }
+
+    fun notifyFirstContentVisible(surahId: Int, mushafGroupingSkipped: Boolean) {
+        if (_firstVisibleSurahId.value != surahId) {
+            _firstVisibleSurahId.value = surahId
+        }
+        PerfTracker.markFirstVisibleReaderContent(surahId, mushafGroupingSkipped)
     }
 
     val playbackState: StateFlow<AudioPlaybackState> = audioController.state
@@ -265,20 +317,25 @@ class ReaderViewModel(
             val bundles = if (ayahs.isEmpty()) {
                 emptyList()
             } else {
+                val needWordBundles = prefs.readerViewMode == ReaderViewMode.WORD_BY_WORD && prefs.showWordByWord
                 val enabledIds = enabledSources.map { it.id }.toSet()
                 val sourceTitleMap = enabledSources.associate { it.id to it.translatorName }
-                val wordsByAyah = allWords.groupBy { it.ayahId }
+                val wordsByAyah = if (needWordBundles) allWords.groupBy { it.ayahId } else emptyMap()
                 val trsByAyah = allTranslations.groupBy { it.ayahId }
-                val wordTrById = wordTrs.groupBy { it.wordId }
+                val wordTrById = if (needWordBundles) wordTrs.groupBy { it.wordId } else emptyMap()
 
                 ayahs.map { ayah ->
-                    val wList = wordsByAyah[ayah.id].orEmpty().map { w ->
-                        val wTrs = wordTrById[w.id].orEmpty()
-                        val meaning = wTrs.firstOrNull { it.languageCode == prefs.wbwLanguageCode }?.meaningText
-                            ?: wTrs.firstOrNull { it.languageCode == "en" }?.meaningText
-                            ?: wTrs.firstOrNull()?.meaningText
-                            ?: ""
-                        WordDisplayItem(w, meaning)
+                    val wList = if (needWordBundles) {
+                        wordsByAyah[ayah.id].orEmpty().map { w ->
+                            val wTrs = wordTrById[w.id].orEmpty()
+                            val meaning = wTrs.firstOrNull { it.languageCode == prefs.wbwLanguageCode }?.meaningText
+                                ?: wTrs.firstOrNull { it.languageCode == "en" }?.meaningText
+                                ?: wTrs.firstOrNull()?.meaningText
+                                ?: ""
+                            WordDisplayItem(w, meaning)
+                        }
+                    } else {
+                        emptyList()
                     }
                     val rawTrs = trsByAyah[ayah.id].orEmpty()
                     val ayahTrs = rawTrs
@@ -300,6 +357,9 @@ class ReaderViewModel(
                         hasNote = ayah.verseKey in noteKeys
                     )
                 }
+            }
+            if (bundles.isNotEmpty()) {
+                PerfTracker.markLocalDataReady(sid, bundles.size)
             }
             Triple(surah, bundles, prefs)
         }
@@ -399,6 +459,8 @@ class ReaderViewModel(
 
         val isIncomplete = surah != null && bundles.size < surah.ayahCount
 
+        PerfTracker.recordReaderStateEmission(_surahId.value, bundles.isNotEmpty())
+
         ReaderUiState(
             surah = surah,
             allSurahs = allSurahs,
@@ -433,24 +495,13 @@ class ReaderViewModel(
     fun loadSurah(surahId: Int) {
         val targetId = surahId.coerceIn(1, 114)
         if (_surahId.value != targetId) {
+            PerfTracker.markReaderEntered(targetId)
             batchTranslateJob?.cancel()
             _lineTranslationState.value = LineTranslationUiState()
+            _firstVisibleSurahId.value = 0
+            _surahId.value = targetId
         }
-        _surahId.value = targetId
         _downloadError.value = null
-        ensureLocalSurahLoaded(targetId)
-    }
-
-    private fun ensureLocalSurahLoaded(surahId: Int) {
-        assetLoadJob?.cancel()
-        assetLoadJob = viewModelScope.launch {
-            val surah = quranDao.getSurah(surahId)
-            val existingCount = quranDao.countAyahsInSurah(surahId)
-            val isMissingLocally = surah == null || existingCount < surah.ayahCount
-            if (isMissingLocally) {
-                seeder?.ensureSurahLoadedFromAssets(surahId, surah?.ayahCount)
-            }
-        }
     }
 
     fun recordAyahRead(ayah: AyahEntity) {

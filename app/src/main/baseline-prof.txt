@@ -1,0 +1,17 @@
+# ART Baseline Profile rules for Al-Quran cold launch, Home, and Surah Reader hot paths
+Lcom/example/NoorApplication;->**(**)**
+Lcom/example/MainActivity;->**(**)**
+Lcom/example/core/di/AppContainer;->**(**)**
+Lcom/example/core/perf/PerfTracker;->**(**)**
+Lcom/example/core/database/NoorDatabase;->**(**)**
+Lcom/example/core/database/QuranDatabaseSeeder;->**(**)**
+Lcom/example/core/localization/BidiUtils;->**(**)**
+Lcom/example/core/localization/PreferencesRepository;->**(**)**
+Lcom/example/ui/navigation/NoorNavHostKt;->**(**)**
+Lcom/example/ui/components/StartupWelcomeOverlayKt;->**(**)**
+Lcom/example/feature/home/HomeViewModel;->**(**)**
+Lcom/example/feature/home/HomeScreenKt;->**(**)**
+Lcom/example/feature/reader/ReaderViewModel;->**(**)**
+Lcom/example/feature/reader/ReaderScreenKt;->**(**)**
+Lcom/example/feature/reader/MushafPageCanvasKt;->**(**)**
+Lcom/example/ui/components/TajweedTextFormatter;->**(**)**
