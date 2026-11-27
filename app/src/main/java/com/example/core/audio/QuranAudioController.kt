@@ -11,6 +11,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.example.R
 import com.example.core.database.NoorDatabase
 import com.example.core.database.WordEntity
 import com.example.core.localization.BidiUtils
@@ -102,6 +103,24 @@ class QuranAudioController(
     private var lastLoadedAyahId: Int = -1
     private var prefsInitialized: Boolean = false
     private var pendingResumeSeekMs: Long = 0L
+
+    private val cachedLogoArtworkBytes: ByteArray? by lazy {
+        try {
+            val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.quran_calligraphy_icon)
+                ?: androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
+            drawable?.let { dr ->
+                val bmp = android.graphics.Bitmap.createBitmap(192, 192, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                dr.setBounds(0, 0, canvas.width, canvas.height)
+                dr.draw(canvas)
+                val stream = java.io.ByteArrayOutputStream()
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, stream)
+                stream.toByteArray()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private val _state = MutableStateFlow(AudioPlaybackState())
     val state: StateFlow<AudioPlaybackState> = _state.asStateFlow()

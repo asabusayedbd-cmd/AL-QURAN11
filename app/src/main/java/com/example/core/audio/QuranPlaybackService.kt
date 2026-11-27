@@ -155,10 +155,10 @@ class QuranPlaybackService : MediaSessionService() {
                 val channel = NotificationChannel(
                     CHANNEL_ID,
                     getString(R.string.app_name),
-                    NotificationManager.IMPORTANCE_LOW
+                    NotificationManager.IMPORTANCE_DEFAULT
                 ).apply {
                     description = "Quran recitation background audio controls"
-                    setShowBadge(false)
+                    setShowBadge(true)
                 }
                 nm.createNotificationChannel(channel)
             }
