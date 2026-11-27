@@ -68,6 +68,7 @@ class DuaViewModel(
 
     private val _selectedCategory = MutableStateFlow<String?>(null)
     private val _searchQuery = MutableStateFlow("")
+    private val _expandedCategories = MutableStateFlow<Set<String>>(emptySet())
     private val _audioState = MutableStateFlow(DuaAudioUiState())
     private val _translationState = MutableStateFlow(DuaTranslationUiState())
     private var batchTranslateJob: kotlinx.coroutines.Job? = null
@@ -81,8 +82,6 @@ class DuaViewModel(
 
     val categories = flowOf(
         listOf(
-            "All",
-            "Bookmarked",
             "Morning & Evening",
             "Sleeping & Waking",
             "Ruqyah & Shifa",
@@ -94,14 +93,30 @@ class DuaViewModel(
             "Protection & Safety",
             "Provision & Debt",
             "Gratitude & Praise",
-            "Rabbana Quranic Duas"
+            "Rabbana Quranic Duas",
+            "Bookmarked"
         )
     )
 
     val selectedCategory: StateFlow<String?> = _selectedCategory.asStateFlow()
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val expandedCategories: StateFlow<Set<String>> = _expandedCategories.asStateFlow()
     val audioState: StateFlow<DuaAudioUiState> = _audioState.asStateFlow()
     val translationState: StateFlow<DuaTranslationUiState> = _translationState.asStateFlow()
+
+    fun toggleCategoryExpansion(category: String) {
+        _expandedCategories.update { current ->
+            if (category in current) current - category else current + category
+        }
+    }
+
+    fun expandAllCategories(cats: List<String>) {
+        _expandedCategories.value = cats.toSet()
+    }
+
+    fun collapseAllCategories() {
+        _expandedCategories.value = emptySet()
+    }
 
     val duas: StateFlow<List<DuaEntity>> = combine(
         duaDao.observeAllDuas(),
