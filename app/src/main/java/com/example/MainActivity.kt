@@ -6,13 +6,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.core.audio.QuranPlaybackService
 import com.example.core.di.AppContainer
-import com.example.core.localization.UserPreferences
+import com.example.core.localization.NoorThemeMode
 import com.example.core.perf.PerfTracker
 import com.example.ui.navigation.NoorAppRoot
 import com.example.ui.theme.NoorAlQuranTheme
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 class MainActivity : AppCompatActivity() {
 
@@ -28,16 +31,21 @@ class MainActivity : AppCompatActivity() {
         handlePlaybackNotificationIntent(intent)
 
         setContent {
-            val prefs by appContainer.preferencesRepository.preferencesFlow.collectAsStateWithLifecycle(
-                initialValue = UserPreferences()
+            val themeAndLangFlow = remember(appContainer) {
+                appContainer.preferencesRepository.preferencesFlow
+                    .map { it.themeMode to it.uiLanguageCode }
+                    .distinctUntilChanged()
+            }
+            val themeAndLang by themeAndLangFlow.collectAsStateWithLifecycle(
+                initialValue = NoorThemeMode.SERENE_EMERALD to "en"
             )
             NoorAlQuranTheme(
-                themeMode = prefs.themeMode,
-                uiLanguageCode = prefs.uiLanguageCode
+                themeMode = themeAndLang.first,
+                uiLanguageCode = themeAndLang.second
             ) {
                 NoorAppRoot(
                     appContainer = appContainer,
-                    uiLanguageCode = prefs.uiLanguageCode
+                    uiLanguageCode = themeAndLang.second
                 )
             }
         }

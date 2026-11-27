@@ -1,6 +1,7 @@
 package com.example.ui.components
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -20,6 +20,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontStyle
@@ -71,15 +72,27 @@ fun WordByWordFlowRow(
     val lineMult = remember(scriptType, arabicFontFamily) {
         maxOf(1.48f, arabicLineHeightMultiplier(scriptType, arabicFontFamily) * 0.92f)
     }
+    val arabicSizeSp = arabicFontSizeSp.sp
+    val arabicLineHeightSp = (arabicFontSizeSp * lineMult).sp
     val wordMeaningStyle = remember(wbwFontSizeSp, wbwLanguageCode) {
         banglaSafeBodyStyle(wbwFontSizeSp, wbwLanguageCode)
     }
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val activeContainerColor = MaterialTheme.colorScheme.primaryContainer
-    val primaryColor = MaterialTheme.colorScheme.primary
-    val outlineColor = MaterialTheme.colorScheme.outlineVariant
-    val activeBorder = remember(primaryColor) { BorderStroke(1.6.dp, primaryColor) }
-    val defaultBorder = remember(outlineColor) { BorderStroke(0.75.dp, outlineColor.copy(alpha = 0.7f)) }
+    val colorScheme = MaterialTheme.colorScheme
+    val tileShape = MaterialTheme.shapes.small
+    val surfaceColor = colorScheme.surface
+    val activeContainerColor = colorScheme.primaryContainer
+    val primaryColor = colorScheme.primary
+    val outlineBorderColor = remember(colorScheme.outlineVariant) { colorScheme.outlineVariant.copy(alpha = 0.7f) }
+    val onPrimaryContainerColor = colorScheme.onPrimaryContainer
+    val onSurfaceColor = colorScheme.onSurface
+    val onSurfaceVariantColor = colorScheme.onSurfaceVariant
+    val secondaryColor = colorScheme.secondary
+    val labelSmallStyle = MaterialTheme.typography.labelSmall
+    val italicTranslitStyle = remember(labelSmallStyle) { labelSmallStyle.copy(fontStyle = FontStyle.Italic) }
+    val markerBgColor = remember(colorScheme.secondaryContainer) { colorScheme.secondaryContainer.copy(alpha = 0.7f) }
+    val onSecondaryContainerColor = colorScheme.onSecondaryContainer
+    val isIndoPak = scriptType == QuranScriptType.INDOPAK
+    val ayahMarkerText = remember(ayahNumber) { BidiUtils.formatAyahMarker(ayahNumber, useArabicDigits = true) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         FlowRow(
@@ -91,76 +104,69 @@ fun WordByWordFlowRow(
                 key(item.word.id) {
                     val isActive = activeWordPosition != null && activeWordPosition == item.word.position
                     val containerColor = if (isActive) activeContainerColor else surfaceColor
-                    val border = if (isActive) activeBorder else defaultBorder
+                    val borderWidth = if (isActive) 1.6.dp else 0.75.dp
+                    val borderColor = if (isActive) primaryColor else outlineBorderColor
+                    val primaryTextColor = if (isActive) onPrimaryContainerColor else onSurfaceColor
+                    val secondaryTextColor = if (isActive) onPrimaryContainerColor else onSurfaceVariantColor
 
-                    Surface(
-                        color = containerColor,
-                        shape = MaterialTheme.shapes.small,
-                        border = border,
+                    val arabicWord = if (isIndoPak) {
+                        val rawIndoPak = item.word.textIndopak.ifBlank { item.word.textUthmani }
+                        BidiUtils.sanitizeIndoPakArabic(rawIndoPak)
+                    } else {
+                        item.word.textUthmani
+                    }
+
+                    Column(
                         modifier = Modifier
                             .widthIn(min = 56.dp, max = 152.dp)
+                            .clip(tileShape)
+                            .background(containerColor, tileShape)
+                            .border(borderWidth, borderColor, tileShape)
                             .testTag("wbw_word_${item.word.ayahId}_${item.word.position}")
                             .clickable { onWordClick(item) }
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            val arabicWord = if (scriptType == QuranScriptType.INDOPAK) {
-                                BidiUtils.sanitizeIndoPakArabic(item.word.textIndopak.ifBlank { item.word.textUthmani })
-                            } else {
-                                item.word.textUthmani
+                        Text(
+                            text = arabicWord,
+                            fontFamily = arabicFont,
+                            fontSize = arabicSizeSp,
+                            lineHeight = arabicLineHeightSp,
+                            color = primaryTextColor,
+                            textAlign = TextAlign.Center
+                        )
+
+                        if (showTransliteration && item.word.transliteration.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Text(
+                                    text = item.word.transliteration,
+                                    style = labelSmallStyle,
+                                    color = secondaryColor,
+                                    textAlign = TextAlign.Center
+                                )
                             }
+                        }
 
-                            Text(
-                                text = arabicWord,
-                                fontFamily = arabicFont,
-                                fontSize = arabicFontSizeSp.sp,
-                                lineHeight = (arabicFontSizeSp * lineMult).sp,
-                                color = if (isActive) {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                                textAlign = TextAlign.Center
-                            )
-
-                            if (showTransliteration && item.word.transliteration.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                                    Text(
-                                        text = item.word.transliteration,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
+                        if (item.localizedMeaning.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            CompositionLocalProvider(LocalLayoutDirection provides meaningDirection) {
+                                Text(
+                                    text = item.localizedMeaning,
+                                    style = wordMeaningStyle,
+                                    color = secondaryTextColor,
+                                    textAlign = TextAlign.Center
+                                )
                             }
-
-                            if (item.localizedMeaning.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(3.dp))
-                                CompositionLocalProvider(LocalLayoutDirection provides meaningDirection) {
-                                    Text(
-                                        text = item.localizedMeaning,
-                                        style = wordMeaningStyle,
-                                        color = if (isActive) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            } else if (!showTransliteration && item.word.transliteration.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(3.dp))
-                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                                    Text(
-                                        text = item.word.transliteration,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontStyle = FontStyle.Italic),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
+                        } else if (!showTransliteration && item.word.transliteration.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(3.dp))
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Text(
+                                    text = item.word.transliteration,
+                                    style = italicTranslitStyle,
+                                    color = onSurfaceVariantColor,
+                                    textAlign = TextAlign.Center
+                                )
                             }
                         }
                     }
@@ -168,19 +174,17 @@ fun WordByWordFlowRow(
             }
 
             // Ornate Ayah End Marker placed at the left-most end of the RTL flow
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.align(Alignment.CenterVertically)
-            ) {
-                Text(
-                    text = BidiUtils.formatAyahMarker(ayahNumber, useArabicDigits = true),
-                    fontFamily = arabicFont,
-                    fontSize = (arabicFontSizeSp * 0.78f).sp,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
+            Text(
+                text = ayahMarkerText,
+                fontFamily = arabicFont,
+                fontSize = (arabicFontSizeSp * 0.78f).sp,
+                color = onSecondaryContainerColor,
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .clip(tileShape)
+                    .background(markerBgColor, tileShape)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            )
         }
     }
 }

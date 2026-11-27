@@ -94,8 +94,25 @@ class HomeViewModel(
         .distinctUntilChanged()
         .flatMapLatest { quranDao.observeSurah(it) }
 
+    private val homePrefsFlow = preferencesRepository.preferencesFlow
+        .map { p ->
+            p.copy(
+                lastRecitedSurahId = 0,
+                lastRecitedAyahNumber = 0,
+                lastRecitedReciterId = 7,
+                lastRecitedPositionMs = 0L,
+                arabicFontSizeSp = 28f,
+                wbwFontSizeSp = 13f,
+                translationFontSizeSp = 16f,
+                audioPlaybackSpeed = 1.0f,
+                audioRepeatPerAyah = 1,
+                audioPauseSeconds = 0
+            )
+        }
+        .distinctUntilChanged()
+
     private val coreHomeFlow = combine(
-        preferencesRepository.preferencesFlow.distinctUntilChanged(),
+        homePrefsFlow,
         userLibraryDao.observeReadingProgress().distinctUntilChanged(),
         userLibraryDao.observeRecentStreaks().distinctUntilChanged(),
         lastSurahFlow.distinctUntilChanged(),

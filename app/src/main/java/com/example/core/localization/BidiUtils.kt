@@ -42,9 +42,35 @@ object BidiUtils {
      */
     fun sanitizeIndoPakArabic(input: String): String {
         if (input.isEmpty()) return ""
-        val sb = StringBuilder(input.length)
+        val len = input.length
+        var needsClean = input[0] == ' ' || input[len - 1] == ' '
+        if (!needsClean) {
+            var prevSpace = false
+            for (i in 0 until len) {
+                val ch = input[i]
+                val code = ch.code
+                if (ch == '\uFEFF' || ch == '\u200B' || ch == '\u200E' || ch == '\u200F' ||
+                    ch == '\uFE8D' || ch == '\uFE8E' || (code in 0xE000..0xF8FF)
+                ) {
+                    needsClean = true
+                    break
+                }
+                if (ch == ' ') {
+                    if (prevSpace) {
+                        needsClean = true
+                        break
+                    }
+                    prevSpace = true
+                } else {
+                    prevSpace = false
+                }
+            }
+        }
+        if (!needsClean) return input
+
+        val sb = StringBuilder(len)
         var lastWasSpace = false
-        for (i in 0 until input.length) {
+        for (i in 0 until len) {
             val ch = input[i]
             val mapped: Char? = when (ch) {
                 '\uFEFF', '\u200B', '\u200E', '\u200F', '\uE021', '\uE022' -> null

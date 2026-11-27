@@ -19,7 +19,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Search
@@ -415,18 +414,11 @@ fun ExplorerScreen(
                                         color = MaterialTheme.colorScheme.primary
                                     )
 
-                                    Spacer(modifier = Modifier.width(8.dp))
-
                                     if (isDownloading) {
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
-                                    } else if (surah.isDownloaded) {
-                                        Icon(
-                                            Icons.Default.CheckCircle,
-                                            contentDescription = stringResource(R.string.downloaded_badge),
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    } else {
+                                    } else if (!surah.isDownloaded) {
+                                        Spacer(modifier = Modifier.width(8.dp))
                                         IconButton(
                                             onClick = { viewModel.downloadSurah(surah.id) },
                                             modifier = Modifier.testTag("download_surah_${surah.id}")

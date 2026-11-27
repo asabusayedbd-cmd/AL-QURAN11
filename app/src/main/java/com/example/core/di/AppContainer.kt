@@ -90,29 +90,37 @@ class AppContainer(context: Context) {
     fun warmUpAsync() {
         if (!warmedUp.compareAndSet(false, true)) return
         warmScope.launch {
-            runCatching { preferencesRepository.preferencesFlow.first() }
+            val prefs = runCatching { preferencesRepository.preferencesFlow.first() }.getOrNull()
+            val activeFonts = buildList {
+                if (prefs?.uiLanguageCode.equals("bn", ignoreCase = true)) {
+                    add(R.font.noto_sans_bengali)
+                    add(R.font.hind_siliguri)
+                } else {
+                    add(R.font.plus_jakarta_sans)
+                }
+                val activeArabicFont = when (prefs?.arabicFontFamily) {
+                    com.example.core.localization.ArabicFontFamilyOption.SCHEHERAZADE -> R.font.scheherazade_new
+                    com.example.core.localization.ArabicFontFamilyOption.AMIRI -> R.font.amiri
+                    com.example.core.localization.ArabicFontFamilyOption.NOTO_NASKH -> R.font.noto_naskh_arabic
+                    com.example.core.localization.ArabicFontFamilyOption.NOTO_NASTALIQ_URDU -> R.font.noto_nastaliq_urdu
+                    com.example.core.localization.ArabicFontFamilyOption.GULZAR -> R.font.gulzar
+                    com.example.core.localization.ArabicFontFamilyOption.ALKALAMI -> R.font.alkalami
+                    com.example.core.localization.ArabicFontFamilyOption.IBM_PLEX_ARABIC -> R.font.ibm_plex_sans_arabic
+                    com.example.core.localization.ArabicFontFamilyOption.NOTO_KUFI -> R.font.noto_kufi_arabic
+                    else -> if (prefs?.scriptType == com.example.core.localization.QuranScriptType.INDOPAK) {
+                        R.font.scheherazade_new
+                    } else {
+                        R.font.amiri_quran
+                    }
+                }
+                add(activeArabicFont)
+            }
+            for (fontRes in activeFonts) {
+                runCatching { ResourcesCompat.getFont(appContext, fontRes) }
+            }
         }
         warmScope.launch {
             seeder.seedIfNeeded(deferBulkDelayMs = 1800L, interSurahYieldMs = 45L)
-        }
-        warmScope.launch {
-            kotlinx.coroutines.delay(2200L)
-            val fontResIds = intArrayOf(
-                R.font.plus_jakarta_sans,
-                R.font.amiri,
-                R.font.noto_sans_bengali,
-                R.font.noto_naskh_arabic,
-                R.font.hind_siliguri,
-                R.font.scheherazade_new,
-                R.font.noto_nastaliq_urdu,
-                R.font.gulzar,
-                R.font.alkalami,
-                R.font.ibm_plex_sans_arabic,
-                R.font.noto_kufi_arabic
-            )
-            for (fontRes in fontResIds) {
-                runCatching { ResourcesCompat.getFont(appContext, fontRes) }
-            }
         }
     }
 

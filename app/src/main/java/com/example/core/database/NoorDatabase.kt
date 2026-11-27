@@ -26,7 +26,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         HabitStreakEntity::class,
         DuaEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class NoorDatabase : RoomDatabase() {
@@ -37,6 +37,8 @@ abstract class NoorDatabase : RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: NoorDatabase? = null
+
+        const val PREPOPULATED_ASSET_DB = "noor_al_quran_prepop.db"
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -71,17 +73,30 @@ abstract class NoorDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_ayahs_surahId_ayahNumber` ON `ayahs` (`surahId`, `ayahNumber`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_words_ayahId_position` ON `words` (`ayahId`, `position`)")
+            }
+        }
+
         fun getInstance(context: Context): NoorDatabase {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: Room.databaseBuilder(
-                    context.applicationContext,
+                val appCtx = context.applicationContext
+                val hasPrepopAsset = runCatching {
+                    appCtx.assets.open(PREPOPULATED_ASSET_DB).use { true }
+                }.getOrDefault(false)
+                val builder = Room.databaseBuilder(
+                    appCtx,
                     NoorDatabase::class.java,
                     "noor_al_quran.db"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
-                    .build()
-                    .also { INSTANCE = it }
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                if (hasPrepopAsset) {
+                    builder.createFromAsset(PREPOPULATED_ASSET_DB)
+                }
+                INSTANCE ?: builder.build().also { INSTANCE = it }
             }
         }
     }

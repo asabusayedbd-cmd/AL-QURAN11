@@ -108,6 +108,7 @@ data class ReaderUiState(
     val allSurahs: List<SurahEntity> = emptyList(),
     val localizedSurahName: String = "",
     val ayahs: List<AyahDisplayBundle> = emptyList(),
+    val isLoadingSurah: Boolean = true,
     val isSurahIncomplete: Boolean = false,
     val preferences: UserPreferences = UserPreferences(),
     val playbackState: AudioPlaybackState = AudioPlaybackState(),
@@ -141,9 +142,26 @@ class ReaderViewModel(
     private val quranDao = database.quranDao()
     private val userLibraryDao = database.userLibraryDao()
 
+    private data class BundleQueryKey(
+        val surahId: Int,
+        val maxWindow: Int,
+        val wbwLanguageCode: String,
+        val needWordBundles: Boolean
+    )
+
+    private data class BundlesSnapshot(
+        val surahId: Int,
+        val surah: SurahEntity?,
+        val bundles: List<AyahDisplayBundle>,
+        val maxWindow: Int
+    )
+
     private val _surahId = MutableStateFlow(initialSurahId.coerceIn(1, 114))
+    private val _maxAyahWindow = MutableStateFlow(INITIAL_AYAH_WINDOW)
+    private val _isLoadingSurah = MutableStateFlow(true)
     private val _screenAttached = MutableStateFlow(false)
     private val _firstVisibleSurahId = MutableStateFlow(0)
+    private val _deliveredSurahId = MutableStateFlow(0)
     private val _selectedTafsirAyah = MutableStateFlow<AyahEntity?>(null)
     private val _isFetchingTafsir = MutableStateFlow(false)
     private val _tafsirError = MutableStateFlow<String?>(null)
@@ -157,6 +175,19 @@ class ReaderViewModel(
     val lineTranslationState: StateFlow<LineTranslationUiState> = _lineTranslationState
     private var downloadJob: Job? = null
     private var batchTranslateJob: Job? = null
+    private var windowExpandJob: Job? = null
+
+    companion object {
+        private const val INITIAL_AYAH_WINDOW = 24
+    }
+
+    private fun computeInitialWindow(targetAyah: Int, targetPage: Int): Int {
+        return when {
+            targetPage > 0 -> Int.MAX_VALUE
+            targetAyah > 16 -> targetAyah + 16
+            else -> INITIAL_AYAH_WINDOW
+        }
+    }
 
     init {
         PerfTracker.markReaderEntered(initialSurahId.coerceIn(1, 114))
@@ -164,10 +195,40 @@ class ReaderViewModel(
         // Critical Path: Load local Quran text immediately without waiting for network or optional sync
         viewModelScope.launch(Dispatchers.IO) {
             _surahId.collectLatest { sid ->
-                val surah = quranDao.getSurah(sid)
-                val existingCount = quranDao.countAyahsInSurah(sid)
-                if (surah == null || existingCount < surah.ayahCount) {
-                    seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount)
+                _isLoadingSurah.value = true
+                try {
+                    val surah = quranDao.getSurah(sid)
+                    val existingCount = quranDao.countAyahsInSurah(sid)
+                    val loaded = if (surah == null || existingCount < surah.ayahCount) {
+                        seeder?.ensureSurahLoadedFromAssets(sid, surah?.ayahCount) ?: false
+                    } else {
+                        true
+                    }
+                    // Wait until the active uiState pipeline delivers non-empty bundles for sid before
+                    // clearing the loading flag, preventing a 1-frame empty-state "Download Surah" flash.
+                    if (loaded && _screenAttached.value) {
+                        withTimeoutOrNull(1_500L) {
+                            _deliveredSurahId.first { it == sid }
+                        }
+                    }
+                } finally {
+                    _isLoadingSurah.value = false
+                }
+            }
+        }
+
+        // Expand windowed Surah loading after first visible frame (or short fallback in headless mode)
+        viewModelScope.launch(Dispatchers.Default) {
+            _surahId.collectLatest { sid ->
+                if (_maxAyahWindow.value < Int.MAX_VALUE) {
+                    val waitMs = if (_screenAttached.value) 3_000L else 220L
+                    withTimeoutOrNull(waitMs) {
+                        _firstVisibleSurahId.first { it == sid }
+                    }
+                    delay(45L)
+                    if (_surahId.value == sid) {
+                        _maxAyahWindow.value = Int.MAX_VALUE
+                    }
                 }
             }
         }
@@ -248,7 +309,7 @@ class ReaderViewModel(
     private suspend fun awaitFirstVisibleGate(sid: Int) {
         // Ensure local Ayahs exist in Room first so optional writes never lock or race initial asset load
         withTimeoutOrNull(4_000L) {
-            quranDao.observeAyahsBySurah(sid).first { it.isNotEmpty() }
+            quranDao.observeAyahsBySurahUpTo(sid, 1).first { it.isNotEmpty() }
         }
         // When UI screen is attached, wait until first visible reader content lays out before starting optional sync
         val waitBudgetMs = if (_screenAttached.value) 5_000L else 250L
@@ -259,8 +320,12 @@ class ReaderViewModel(
         delay(120L)
     }
 
-    fun onScreenAttached(surahId: Int) {
+    fun onScreenAttached(surahId: Int, targetAyah: Int = 1, targetPage: Int = 0) {
         _screenAttached.value = true
+        val initialWin = computeInitialWindow(targetAyah, targetPage)
+        if (initialWin > _maxAyahWindow.value) {
+            _maxAyahWindow.value = initialWin
+        }
         PerfTracker.markReaderEntered(surahId.coerceIn(1, 114))
     }
 
@@ -269,6 +334,14 @@ class ReaderViewModel(
             _firstVisibleSurahId.value = surahId
         }
         PerfTracker.markFirstVisibleReaderContent(surahId, mushafGroupingSkipped)
+        if (_maxAyahWindow.value < Int.MAX_VALUE && windowExpandJob?.isActive != true) {
+            windowExpandJob = viewModelScope.launch(Dispatchers.Default) {
+                delay(40L)
+                if (_surahId.value == surahId) {
+                    _maxAyahWindow.value = Int.MAX_VALUE
+                }
+            }
+        }
     }
 
     val playbackState: StateFlow<AudioPlaybackState> = audioController.state
@@ -284,21 +357,57 @@ class ReaderViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ActivePlaybackCursor())
 
-    private val surahAndBundlesFlow = _surahId.flatMapLatest { sid ->
-        combine(
-            quranDao.observeSurah(sid),
-            quranDao.observeAyahsBySurah(sid),
-            quranDao.observeWordsBySurah(sid),
-            quranDao.observeWordTranslationsBySurah(sid),
-            quranDao.observeAyahTranslationsBySurah(sid),
-            combine(
-                preferencesRepository.preferencesFlow,
-                quranDao.observeEnabledTranslationSources(),
-                userLibraryDao.observeBookmarkedKeysForSurah(sid),
-                userLibraryDao.observeNoteKeysForSurah(sid)
-            ) { prefs, enabledSources, bookmarkedKeys, noteKeys ->
-                Pair(prefs to enabledSources, bookmarkedKeys.toHashSet() to noteKeys.toHashSet())
+    private val uiPreferencesFlow = preferencesRepository.preferencesFlow
+        .map { p ->
+            p.copy(
+                lastRecitedSurahId = 0,
+                lastRecitedAyahNumber = 0,
+                lastRecitedReciterId = 7,
+                lastRecitedPositionMs = 0L
+            )
+        }
+        .distinctUntilChanged()
+
+    private val bundleQueryFlow = combine(
+        _surahId,
+        _maxAyahWindow,
+        preferencesRepository.preferencesFlow
+            .map { Triple(it.wbwLanguageCode, it.readerViewMode, it.showWordByWord) }
+            .distinctUntilChanged()
+    ) { sid, maxWindow, (wbwLang, viewMode, showWbw) ->
+        val effectiveWindow = if (viewMode == ReaderViewMode.MUSHAF) Int.MAX_VALUE else maxWindow
+        val needWordBundles = viewMode == ReaderViewMode.WORD_BY_WORD && showWbw
+        BundleQueryKey(sid, effectiveWindow, wbwLang, needWordBundles)
+    }.distinctUntilChanged()
+
+    private val surahAndBundlesFlow = bundleQueryFlow.flatMapLatest { qk ->
+        val wordsFlow = if (qk.needWordBundles) {
+            quranDao.observeWordsBySurahUpTo(qk.surahId, qk.maxWindow)
+        } else {
+            flowOf(emptyList())
+        }
+        val wordTrFlow = if (qk.needWordBundles) {
+            quranDao.observeWordTranslationsBySurahFiltered(qk.surahId, qk.maxWindow, qk.wbwLanguageCode)
+        } else {
+            flowOf(emptyList())
+        }
+        val enabledSourcesFlow = quranDao.observeEnabledTranslationSources().distinctUntilChanged()
+        val ayahTrFlow = enabledSourcesFlow.flatMapLatest { enabled ->
+            if (enabled.isNotEmpty()) {
+                quranDao.observeEnabledAyahTranslationsBySurahUpTo(qk.surahId, qk.maxWindow)
+            } else {
+                quranDao.observeAyahTranslationsBySurahUpTo(qk.surahId, qk.maxWindow)
             }
+        }
+        combine(
+            quranDao.observeSurah(qk.surahId),
+            quranDao.observeAyahsBySurahUpTo(qk.surahId, qk.maxWindow),
+            wordsFlow,
+            wordTrFlow,
+            ayahTrFlow,
+            enabledSourcesFlow,
+            userLibraryDao.observeBookmarkedKeysForSurah(qk.surahId),
+            userLibraryDao.observeNoteKeysForSurah(qk.surahId)
         ) { arr ->
             val surah = arr[0] as SurahEntity?
             @Suppress("UNCHECKED_CAST")
@@ -308,27 +417,27 @@ class ReaderViewModel(
             @Suppress("UNCHECKED_CAST")
             val wordTrs = arr[3] as List<WordTranslationEntity>
             @Suppress("UNCHECKED_CAST")
-            val allTranslations = arr[4] as List<AyahTranslationEntity>
+            val ayahTranslations = arr[4] as List<AyahTranslationEntity>
             @Suppress("UNCHECKED_CAST")
-            val meta = arr[5] as Pair<Pair<UserPreferences, List<com.example.core.database.TranslationSourceEntity>>, Pair<HashSet<String>, HashSet<String>>>
+            val enabledSources = arr[5] as List<TranslationSourceEntity>
+            @Suppress("UNCHECKED_CAST")
+            val bookmarkedKeys = (arr[6] as List<String>).toHashSet()
+            @Suppress("UNCHECKED_CAST")
+            val noteKeys = (arr[7] as List<String>).toHashSet()
 
-            val (prefs, enabledSources) = meta.first
-            val (bookmarkedKeys, noteKeys) = meta.second
             val bundles = if (ayahs.isEmpty()) {
                 emptyList()
             } else {
-                val needWordBundles = prefs.readerViewMode == ReaderViewMode.WORD_BY_WORD && prefs.showWordByWord
-                val enabledIds = enabledSources.map { it.id }.toSet()
                 val sourceTitleMap = enabledSources.associate { it.id to it.translatorName }
-                val wordsByAyah = if (needWordBundles) allWords.groupBy { it.ayahId } else emptyMap()
-                val trsByAyah = allTranslations.groupBy { it.ayahId }
-                val wordTrById = if (needWordBundles) wordTrs.groupBy { it.wordId } else emptyMap()
+                val wordsByAyah = if (qk.needWordBundles) allWords.groupBy { it.ayahId } else emptyMap()
+                val trsByAyah = ayahTranslations.groupBy { it.ayahId }
+                val wordTrById = if (qk.needWordBundles) wordTrs.groupBy { it.wordId } else emptyMap()
 
                 ayahs.map { ayah ->
-                    val wList = if (needWordBundles) {
+                    val wList = if (qk.needWordBundles) {
                         wordsByAyah[ayah.id].orEmpty().map { w ->
                             val wTrs = wordTrById[w.id].orEmpty()
-                            val meaning = wTrs.firstOrNull { it.languageCode == prefs.wbwLanguageCode }?.meaningText
+                            val meaning = wTrs.firstOrNull { it.languageCode == qk.wbwLanguageCode }?.meaningText
                                 ?: wTrs.firstOrNull { it.languageCode == "en" }?.meaningText
                                 ?: wTrs.firstOrNull()?.meaningText
                                 ?: ""
@@ -337,18 +446,14 @@ class ReaderViewModel(
                     } else {
                         emptyList()
                     }
-                    val rawTrs = trsByAyah[ayah.id].orEmpty()
-                    val ayahTrs = rawTrs
-                        .filter { enabledIds.isEmpty() || it.sourceId in enabledIds }
-                        .ifEmpty { rawTrs }
-                        .map { tr ->
-                            val canonicalTitle = sourceTitleMap[tr.sourceId]
-                            if (!canonicalTitle.isNullOrBlank() && canonicalTitle != tr.translatorName) {
-                                tr.copy(translatorName = canonicalTitle)
-                            } else {
-                                tr
-                            }
+                    val ayahTrs = trsByAyah[ayah.id].orEmpty().map { tr ->
+                        val canonicalTitle = sourceTitleMap[tr.sourceId]
+                        if (!canonicalTitle.isNullOrBlank() && canonicalTitle != tr.translatorName) {
+                            tr.copy(translatorName = canonicalTitle)
+                        } else {
+                            tr
                         }
+                    }
                     AyahDisplayBundle(
                         ayah = ayah,
                         words = wList,
@@ -359,9 +464,10 @@ class ReaderViewModel(
                 }
             }
             if (bundles.isNotEmpty()) {
-                PerfTracker.markLocalDataReady(sid, bundles.size)
+                PerfTracker.markLocalDataReady(qk.surahId, bundles.size)
+                _deliveredSurahId.value = qk.surahId
             }
-            Triple(surah, bundles, prefs)
+            BundlesSnapshot(qk.surahId, surah, bundles, qk.maxWindow)
         }
     }.flowOn(Dispatchers.Default)
 
@@ -395,9 +501,10 @@ class ReaderViewModel(
     private val sidebarFlagsFlow = combine(
         _busyTranslationSourceId,
         _isRefreshingTafsirs,
-        _isLoadingInlineTafsirs
-    ) { busyTrId, refreshingTaf, loadingInlineTaf ->
-        Triple(busyTrId, refreshingTaf, loadingInlineTaf)
+        _isLoadingInlineTafsirs,
+        _isLoadingSurah
+    ) { busyTrId, refreshingTaf, loadingInlineTaf, isLoadingSurah ->
+        listOf(busyTrId, refreshingTaf, loadingInlineTaf, isLoadingSurah)
     }
 
     private val overlayFlow = combine(
@@ -424,12 +531,28 @@ class ReaderViewModel(
 
     val uiState: StateFlow<ReaderUiState> = combine(
         surahAndBundlesFlow,
+        uiPreferencesFlow,
         catalogFlow,
         overlayFlow,
         inlineTafsirsForSurahFlow,
         sidebarFlagsFlow
-    ) { core, catalog, overlay, inlineTafsirs, sidebarFlags ->
-        val (surah, baseBundles, prefs) = core
+    ) { arr ->
+        val core = arr[0] as BundlesSnapshot
+        val prefs = arr[1] as UserPreferences
+        @Suppress("UNCHECKED_CAST")
+        val catalog = arr[2] as List<Any>
+        @Suppress("UNCHECKED_CAST")
+        val overlay = arr[3] as Pair<Triple<AyahEntity?, List<AyahTafsirEntity>, UserNoteEntity?>, Triple<Pair<Boolean, String?>, Pair<Boolean, String?>, WordInspectorState?>>
+        @Suppress("UNCHECKED_CAST")
+        val inlineTafsirs = arr[4] as List<AyahTafsirEntity>
+        @Suppress("UNCHECKED_CAST")
+        val sidebarFlags = arr[5] as List<Any?>
+
+        val requestedSurahId = _surahId.value
+        val snapshotMatches = core.surahId == requestedSurahId
+        val surah = if (snapshotMatches) core.surah else null
+        val baseBundles = if (snapshotMatches) core.bundles else emptyList()
+        val activeWindow = if (snapshotMatches) core.maxWindow else INITIAL_AYAH_WINDOW
         @Suppress("UNCHECKED_CAST")
         val allSurahs = catalog[0] as List<SurahEntity>
         @Suppress("UNCHECKED_CAST")
@@ -444,7 +567,10 @@ class ReaderViewModel(
         val (tafsirStatus, downloadStatus, inspected) = flags
         val (fetchingTafsir, tafErr) = tafsirStatus
         val (downloadingSurah, dlErr) = downloadStatus
-        val (busyTrId, refreshingTaf, loadingInlineTaf) = sidebarFlags
+        val busyTrId = sidebarFlags[0] as Int?
+        val refreshingTaf = sidebarFlags[1] as Boolean
+        val loadingInlineTaf = sidebarFlags[2] as Boolean
+        val isLoadingSurahFlag = sidebarFlags[3] as Boolean
 
         val bundles = if (prefs.showInlineTafsir && inlineTafsirs.isNotEmpty()) {
             val inlineByAyah = inlineTafsirs.associateBy { it.ayahId }
@@ -455,17 +581,24 @@ class ReaderViewModel(
 
         val localizedName = surah?.let {
             BidiUtils.formatSurahTitle(it.nameTransliteration, it.localizedNamesJson, prefs.uiLanguageCode)
-        } ?: "Surah ${_surahId.value}"
+        } ?: "Surah $requestedSurahId"
 
-        val isIncomplete = surah != null && bundles.size < surah.ayahCount
+        val stillLoading = (isLoadingSurahFlag || !snapshotMatches) && bundles.isEmpty()
 
-        PerfTracker.recordReaderStateEmission(_surahId.value, bundles.isNotEmpty())
+        val isIncomplete = surah != null &&
+            snapshotMatches &&
+            activeWindow == Int.MAX_VALUE &&
+            !stillLoading &&
+            bundles.size < surah.ayahCount
+
+        PerfTracker.recordReaderStateEmission(requestedSurahId, bundles.isNotEmpty())
 
         ReaderUiState(
             surah = surah,
             allSurahs = allSurahs,
             localizedSurahName = localizedName,
             ayahs = bundles,
+            isLoadingSurah = stillLoading,
             isSurahIncomplete = isIncomplete,
             preferences = prefs,
             playbackState = AudioPlaybackState(),
@@ -492,14 +625,21 @@ class ReaderViewModel(
             initialValue = ReaderUiState()
         )
 
-    fun loadSurah(surahId: Int) {
+    fun loadSurah(surahId: Int, targetAyah: Int = 1, targetPage: Int = 0) {
         val targetId = surahId.coerceIn(1, 114)
+        val initialWin = computeInitialWindow(targetAyah, targetPage)
         if (_surahId.value != targetId) {
             PerfTracker.markReaderEntered(targetId)
             batchTranslateJob?.cancel()
+            windowExpandJob?.cancel()
             _lineTranslationState.value = LineTranslationUiState()
             _firstVisibleSurahId.value = 0
+            _deliveredSurahId.value = 0
+            _isLoadingSurah.value = true
+            _maxAyahWindow.value = initialWin
             _surahId.value = targetId
+        } else if (initialWin > _maxAyahWindow.value) {
+            _maxAyahWindow.value = initialWin
         }
         _downloadError.value = null
     }

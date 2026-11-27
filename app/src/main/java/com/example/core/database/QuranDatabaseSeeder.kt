@@ -83,6 +83,24 @@ class QuranDatabaseSeeder(
                         return@withLock
                     }
 
+                    // Fast-path for installs initialized via pre-populated SQLite asset DB:
+                    // verify completeness in <5ms, ensure default user library rows exist, and mark seed complete.
+                    if (hasAllSurahs &&
+                        hasAllAyahs &&
+                        hasAllDuas &&
+                        quranDao.countReciters() >= 75 &&
+                        quranDao.countTafsirSources() >= 15 &&
+                        quranDao.countTranslationSources() >= 35 &&
+                        quranDao.countWordsWithoutNormalized() == 0
+                    ) {
+                        database.withTransaction {
+                            ensureDefaultUserLibraryState()
+                        }
+                        seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
+                        isFullySeeded = true
+                        return@withLock
+                    }
+
                     // Stage 1: Seed 114 Surah catalog, translation/tafsir/Qari catalogs, & tiny priority Surahs (<40ms)
                     val surahEntities = readSurahCatalogFromAssets(
                         markAllDownloaded = savedVersion < CURRENT_SEED_VERSION

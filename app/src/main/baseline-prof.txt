@@ -1,17 +1,27 @@
-# ART Baseline Profile rules for Al-Quran cold launch, Home, and Surah Reader hot paths
+# ART Baseline Profile rules for Al-Quran cold launch, Home, Explorer, and Surah Reader hot paths
 Lcom/example/NoorApplication;->**(**)**
 Lcom/example/MainActivity;->**(**)**
 Lcom/example/core/di/AppContainer;->**(**)**
 Lcom/example/core/perf/PerfTracker;->**(**)**
 Lcom/example/core/database/NoorDatabase;->**(**)**
+Lcom/example/core/database/NoorDatabase_Impl;->**(**)**
+Lcom/example/core/database/QuranDao_Impl;->**(**)**
+Lcom/example/core/database/UserLibraryDao_Impl;->**(**)**
+Lcom/example/core/database/DuaDao_Impl;->**(**)**
 Lcom/example/core/database/QuranDatabaseSeeder;->**(**)**
 Lcom/example/core/localization/BidiUtils;->**(**)**
 Lcom/example/core/localization/PreferencesRepository;->**(**)**
+Lcom/example/core/audio/QuranAudioController;->**(**)**
+Lcom/example/ui/theme/ThemeKt;->**(**)**
+Lcom/example/ui/theme/TypeKt;->**(**)**
 Lcom/example/ui/navigation/NoorNavHostKt;->**(**)**
 Lcom/example/ui/components/StartupWelcomeOverlayKt;->**(**)**
+Lcom/example/ui/components/WordByWordFlowRowKt;->**(**)**
+Lcom/example/ui/components/TajweedTextFormatter;->**(**)**
 Lcom/example/feature/home/HomeViewModel;->**(**)**
 Lcom/example/feature/home/HomeScreenKt;->**(**)**
+Lcom/example/feature/explorer/ExplorerViewModel;->**(**)**
+Lcom/example/feature/explorer/ExplorerScreenKt;->**(**)**
 Lcom/example/feature/reader/ReaderViewModel;->**(**)**
 Lcom/example/feature/reader/ReaderScreenKt;->**(**)**
 Lcom/example/feature/reader/MushafPageCanvasKt;->**(**)**
-Lcom/example/ui/components/TajweedTextFormatter;->**(**)**

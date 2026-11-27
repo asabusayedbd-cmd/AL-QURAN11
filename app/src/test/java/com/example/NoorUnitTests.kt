@@ -25,6 +25,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -837,6 +838,91 @@ class NoorUnitTests {
         assertEquals(allDuas.size, allDuas.map { it.id }.distinct().size)
         assertEquals(12, allDuas.map { it.category }.distinct().size)
         assertTrue(allDuas.all { it.arabicText.isNotBlank() && it.translation.isNotBlank() && it.reference.isNotBlank() })
+    }
+
+    // 23. Room MIGRATION_3_4 composite indices & BidiUtils zero-allocation fast path
+    @Test
+    fun testMigration3To4CompositeIndexesAndBidiFastPath() {
+        val clean = "قُلْ هُوَ ٱللَّهُ أَحَدٌ"
+        val result = BidiUtils.sanitizeIndoPakArabic(clean)
+        assertTrue("Expected zero-allocation same String instance for clean input", result === clean)
+
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val dbName = "migration_3_4_${System.nanoTime()}.db"
+        val helper = androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory().create(
+            androidx.sqlite.db.SupportSQLiteOpenHelper.Configuration.builder(appContext)
+                .name(dbName)
+                .callback(object : androidx.sqlite.db.SupportSQLiteOpenHelper.Callback(3) {
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `ayahs` (`id` INTEGER NOT NULL PRIMARY KEY, `surahId` INTEGER NOT NULL, `ayahNumber` INTEGER NOT NULL)")
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `words` (`id` INTEGER NOT NULL PRIMARY KEY, `ayahId` INTEGER NOT NULL, `position` INTEGER NOT NULL)")
+                    }
+
+                    override fun onUpgrade(
+                        db: androidx.sqlite.db.SupportSQLiteDatabase,
+                        oldVersion: Int,
+                        newVersion: Int
+                    ) = Unit
+                })
+                .build()
+        )
+        try {
+            val db = helper.writableDatabase
+            com.example.core.database.NoorDatabase.MIGRATION_3_4.migrate(db)
+            db.query("SELECT name FROM sqlite_master WHERE type='index'").use { c ->
+                val indexes = mutableListOf<String>()
+                while (c.moveToNext()) {
+                    indexes.add(c.getString(0))
+                }
+                assertTrue("index_ayahs_surahId_ayahNumber" in indexes)
+                assertTrue("index_words_ayahId_position" in indexes)
+            }
+            helper.close()
+        } finally {
+            appContext.getDatabasePath(dbName).delete()
+        }
+    }
+
+    // 24. Pre-packaged SQLite asset DB schema validation & fast-path seeding
+    @Test
+    fun testPrepopulatedAssetDatabaseOpensAndFastPathSeeds() = runBlocking<Unit> {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val dbName = "prepop_verify_${System.nanoTime()}.db"
+        val db = androidx.room.Room.databaseBuilder(
+            appContext,
+            com.example.core.database.NoorDatabase::class.java,
+            dbName
+        )
+            .createFromAsset(com.example.core.database.NoorDatabase.PREPOPULATED_ASSET_DB)
+            .addMigrations(
+                com.example.core.database.NoorDatabase.MIGRATION_1_2,
+                com.example.core.database.NoorDatabase.MIGRATION_2_3,
+                com.example.core.database.NoorDatabase.MIGRATION_3_4
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        try {
+            val seeder = com.example.core.database.QuranDatabaseSeeder(appContext, db)
+            seeder.seedIfNeeded()
+
+            val quranDao = db.quranDao()
+            assertEquals(114, quranDao.countSurahs())
+            assertEquals(114, quranDao.getDownloadedSurahIds().size)
+            assertEquals(6236, quranDao.countAllAyahs())
+            assertEquals(0, quranDao.countWordsWithoutNormalized())
+            assertTrue(quranDao.countReciters() >= 75)
+            assertTrue(quranDao.countTranslationSources() >= 35)
+            assertTrue(db.duaDao().countDuas() >= 300)
+            assertFalse(
+                "Source 161 must not be falsely marked isDownloaded in prepop DB",
+                quranDao.getAllTranslationSources().firstOrNull { it.id == 161 }?.isDownloaded == true
+            )
+            assertNotNull("Expected default reading progress after fast-path seed", db.userLibraryDao().getReadingProgress())
+        } finally {
+            db.close()
+            appContext.getDatabasePath(dbName).delete()
+        }
     }
 }
 

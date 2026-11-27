@@ -32,6 +32,9 @@ interface QuranDao {
     @Query("SELECT * FROM ayahs WHERE surahId = :surahId ORDER BY ayahNumber ASC")
     fun observeAyahsBySurah(surahId: Int): Flow<List<AyahEntity>>
 
+    @Query("SELECT * FROM ayahs WHERE surahId = :surahId AND ayahNumber <= :maxAyahNumber ORDER BY ayahNumber ASC")
+    fun observeAyahsBySurahUpTo(surahId: Int, maxAyahNumber: Int): Flow<List<AyahEntity>>
+
     @Query("SELECT * FROM ayahs WHERE surahId = :surahId ORDER BY ayahNumber ASC")
     suspend fun getAyahsBySurah(surahId: Int): List<AyahEntity>
 
@@ -120,6 +123,16 @@ interface QuranDao {
         """
     )
     fun observeWordsBySurah(surahId: Int): Flow<List<WordEntity>>
+
+    @Query(
+        """
+        SELECT w.* FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId AND a.ayahNumber <= :maxAyahNumber
+        ORDER BY a.ayahNumber ASC, w.position ASC
+        """
+    )
+    fun observeWordsBySurahUpTo(surahId: Int, maxAyahNumber: Int): Flow<List<WordEntity>>
 
     @Query("SELECT * FROM words WHERE ayahId IN (:ayahIds) ORDER BY ayahId ASC, position ASC")
     suspend fun getWordsForAyahs(ayahIds: List<Int>): List<WordEntity>
@@ -307,6 +320,22 @@ interface QuranDao {
     )
     fun observeWordTranslationsBySurah(surahId: Int): Flow<List<WordTranslationEntity>>
 
+    @Query(
+        """
+        SELECT wt.* FROM word_translations wt
+        INNER JOIN words w ON w.id = wt.wordId
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId
+          AND a.ayahNumber <= :maxAyahNumber
+          AND wt.languageCode IN (:wbwLang, 'en')
+        """
+    )
+    fun observeWordTranslationsBySurahFiltered(
+        surahId: Int,
+        maxAyahNumber: Int,
+        wbwLang: String
+    ): Flow<List<WordTranslationEntity>>
+
     @Query("SELECT * FROM word_translations WHERE wordId IN (:wordIds)")
     suspend fun getWordTranslationsForWords(wordIds: List<Long>): List<WordTranslationEntity>
 
@@ -358,6 +387,34 @@ interface QuranDao {
         """
     )
     fun observeAyahTranslationsBySurah(surahId: Int): Flow<List<AyahTranslationEntity>>
+
+    @Query(
+        """
+        SELECT t.* FROM ayah_translations t
+        INNER JOIN ayahs a ON a.id = t.ayahId
+        INNER JOIN translation_sources ts ON ts.id = t.sourceId
+        WHERE a.surahId = :surahId
+          AND a.ayahNumber <= :maxAyahNumber
+          AND ts.isEnabled = 1
+        """
+    )
+    fun observeEnabledAyahTranslationsBySurahUpTo(
+        surahId: Int,
+        maxAyahNumber: Int
+    ): Flow<List<AyahTranslationEntity>>
+
+    @Query(
+        """
+        SELECT t.* FROM ayah_translations t
+        INNER JOIN ayahs a ON a.id = t.ayahId
+        WHERE a.surahId = :surahId
+          AND a.ayahNumber <= :maxAyahNumber
+        """
+    )
+    fun observeAyahTranslationsBySurahUpTo(
+        surahId: Int,
+        maxAyahNumber: Int
+    ): Flow<List<AyahTranslationEntity>>
 
     @Query("SELECT * FROM ayah_translations WHERE ayahId IN (:ayahIds)")
     suspend fun getTranslationsForAyahs(ayahIds: List<Int>): List<AyahTranslationEntity>

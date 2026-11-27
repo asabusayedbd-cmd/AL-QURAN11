@@ -122,17 +122,14 @@ fun MushafPageCard(
     val highlightBg = ornamentColor.copy(alpha = if (isDark) 0.28f else 0.18f)
     val selectedBg = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
 
-    val pageAnnotatedText = remember(
+    val basePageData = remember(
         pageAyahs,
         scriptType,
         tajweedColorsEnabled,
-        tajweedPalette,
-        playingAyahNumber,
-        selectedAyahId,
-        highlightBg,
-        selectedBg
+        tajweedPalette
     ) {
-        buildAnnotatedString {
+        val ranges = ArrayList<Triple<Int, Int, IntRange>>(pageAyahs.size)
+        val baseStr = buildAnnotatedString {
             pageAyahs.forEachIndexed { index, bundle ->
                 val rawArabic = if (isIndoPak) {
                     BidiUtils.sanitizeIndoPakArabic(bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani })
@@ -147,25 +144,37 @@ fun MushafPageCard(
                     ayahEndMarker = BidiUtils.formatAyahMarker(bundle.ayah.ayahNumber, useArabicDigits = true),
                     useTajweedMarkup = !isIndoPak
                 )
-                val isPlayingThis = playingAyahNumber == bundle.ayah.ayahNumber
-                val isSelectedThis = selectedAyahId == bundle.ayah.id
-
+                val start = length
                 val link = LinkAnnotation.Clickable(tag = bundle.ayah.verseKey) {
                     onAyahClick(bundle.ayah)
                 }
                 withLink(link) {
-                    when {
-                        isPlayingThis -> withStyle(SpanStyle(background = highlightBg)) {
-                            append(formattedVerse)
-                        }
-                        isSelectedThis -> withStyle(SpanStyle(background = selectedBg)) {
-                            append(formattedVerse)
-                        }
-                        else -> append(formattedVerse)
-                    }
+                    append(formattedVerse)
                 }
+                val end = length
+                ranges.add(Triple(bundle.ayah.id, bundle.ayah.ayahNumber, start until end))
                 if (index < pageAyahs.lastIndex) {
                     append("  ")
+                }
+            }
+        }
+        baseStr to ranges
+    }
+
+    val pageAnnotatedText = remember(basePageData, playingAyahNumber, selectedAyahId, highlightBg, selectedBg) {
+        val (baseStr, ranges) = basePageData
+        val activeRange = ranges.firstOrNull { (_, ayahNum, _) -> playingAyahNumber == ayahNum }?.third
+        val selectedRange = ranges.firstOrNull { (ayahId, _, _) -> selectedAyahId == ayahId }?.third
+        if (activeRange == null && selectedRange == null) {
+            baseStr
+        } else {
+            buildAnnotatedString {
+                append(baseStr)
+                selectedRange?.let { r ->
+                    addStyle(SpanStyle(background = selectedBg), r.first, r.last + 1)
+                }
+                activeRange?.let { r ->
+                    addStyle(SpanStyle(background = highlightBg), r.first, r.last + 1)
                 }
             }
         }

@@ -160,12 +160,12 @@ fun ReaderScreen(
     targetPage: Int = 0,
     modifier: Modifier = Modifier
 ) {
-    remember(surahId) {
-        viewModel.onScreenAttached(surahId)
+    remember(surahId, targetAyah, targetPage) {
+        viewModel.onScreenAttached(surahId, targetAyah, targetPage)
         true
     }
-    LaunchedEffect(surahId) {
-        viewModel.loadSurah(surahId)
+    LaunchedEffect(surahId, targetAyah, targetPage) {
+        viewModel.loadSurah(surahId, targetAyah, targetPage)
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -454,7 +454,7 @@ fun ReaderScreen(
                                 )
                             }
                         }
-                        if (state.surah?.isDownloaded != true) {
+                        if (state.surah != null && !state.surah!!.isDownloaded && !state.isLoadingSurah && !state.isDownloadingSurah) {
                             IconButton(
                                 onClick = { viewModel.downloadCurrentSurah() },
                                 modifier = Modifier.testTag("reader_download_surah_button")
@@ -731,7 +731,9 @@ fun ReaderScreen(
                             )
                         }
                         Spacer(modifier = Modifier.height(12.dp))
-                        if (state.isDownloadingSurah) {
+                        if (state.isLoadingSurah && !state.isDownloadingSurah) {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                        } else if (state.isDownloadingSurah) {
                             CircularProgressIndicator(modifier = Modifier.size(36.dp))
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(

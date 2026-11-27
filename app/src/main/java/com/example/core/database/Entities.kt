@@ -31,6 +31,7 @@ data class SurahEntity(
     ],
     indices = [
         Index("surahId"),
+        Index(value = ["surahId", "ayahNumber"]),
         Index("verseKey", unique = true),
         Index("juzNumber"),
         Index("pageNumber"),
@@ -64,6 +65,7 @@ data class AyahEntity(
     ],
     indices = [
         Index("ayahId"),
+        Index(value = ["ayahId", "position"]),
         Index("rootArabic"),
         Index("textUthmani"),
         Index("normalizedText")

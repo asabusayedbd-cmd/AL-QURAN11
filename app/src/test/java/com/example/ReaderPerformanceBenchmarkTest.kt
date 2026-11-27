@@ -216,6 +216,110 @@ class ReaderPerformanceBenchmarkTest {
             "Optional sync (${trace.optionalSyncStartMs}ms) must start after first visible (${trace.firstVisibleContentMs}ms)",
             trace.optionalSyncStartMs!! >= trace.firstVisibleContentMs!!
         )
+        assertTrue(
+            "Expected no top-bar or empty-state Download Surah button flash",
+            composeRule.onAllNodesWithTag("download_current_surah_button").fetchSemanticsNodes().isEmpty() &&
+                composeRule.onAllNodesWithTag("reader_download_surah_button").fetchSemanticsNodes().isEmpty()
+        )
+        composeRule.waitUntil(timeoutMillis = 10_000) {
+            vm.uiState.value.ayahs.size == 286
+        }
+    }
+
+    @Test
+    fun measurePrepopulatedAssetDbSurah2ColdOpenAndNoDownloadFlash() = runBlocking {
+        val prepopName = "prepop_bench_${System.nanoTime()}.db"
+        val prepopDb = Room.databaseBuilder(app, NoorDatabase::class.java, prepopName)
+            .createFromAsset(NoorDatabase.PREPOPULATED_ASSET_DB)
+            .addMigrations(
+                NoorDatabase.MIGRATION_1_2,
+                NoorDatabase.MIGRATION_2_3,
+                NoorDatabase.MIGRATION_3_4
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        try {
+            val prepopSeeder = QuranDatabaseSeeder(app, prepopDb)
+            val tSeed0 = System.nanoTime()
+            prepopSeeder.seedIfNeeded()
+            val seedFastPathMs = (System.nanoTime() - tSeed0) / 1_000_000.0
+
+            val (syncRepo, okHttp) = buildSyncRepo(simulatedLatencyMs = 200L)
+            val audioController = QuranAudioController(app, prepopDb, okHttp, prefsRepo)
+            val lineTranslator = LineTranslator(app, okHttp)
+
+            prefsRepo.setReaderViewMode(ReaderViewMode.WORD_BY_WORD)
+            prefsRepo.setWbwLanguage("en")
+            prefsRepo.setShowInlineTafsir(false)
+
+            PerfTracker.resetForTest()
+            PerfTracker.markSurahTapped(2)
+            val tapNs = System.nanoTime()
+
+            val vm = ReaderViewModel(
+                initialSurahId = 2,
+                database = prepopDb,
+                preferencesRepository = prefsRepo,
+                syncRepository = syncRepo,
+                audioController = audioController,
+                seeder = prepopSeeder,
+                lineTranslator = lineTranslator
+            )
+
+            var downloadFlashDetected = false
+            val collectorJob = launch(Dispatchers.Default) {
+                vm.uiState.collect { st ->
+                    if (!st.isLoadingSurah && st.ayahs.isEmpty() && st.surah != null) {
+                        downloadFlashDetected = true
+                    }
+                    if (st.surah != null && !st.surah.isDownloaded) {
+                        downloadFlashDetected = true
+                    }
+                }
+            }
+
+            composeRule.setContent {
+                NoorAlQuranTheme {
+                    ReaderScreen(
+                        surahId = 2,
+                        targetAyah = 1,
+                        viewModel = vm,
+                        onNavigateBack = {}
+                    )
+                }
+            }
+
+            composeRule.waitUntil(timeoutMillis = 15_000) {
+                composeRule.onAllNodesWithTag("ayah_card_2:1").fetchSemanticsNodes().isNotEmpty()
+            }
+            val firstVisibleMs = (System.nanoTime() - tapNs) / 1_000_000.0
+
+            composeRule.waitUntil(timeoutMillis = 15_000) {
+                vm.uiState.value.ayahs.size == 286
+            }
+            val fullExpandMs = (System.nanoTime() - tapNs) / 1_000_000.0
+
+            assertFalse("Download Surah button must never flash on Surah open", downloadFlashDetected)
+            assertTrue(composeRule.onAllNodesWithTag("download_current_surah_button").fetchSemanticsNodes().isEmpty())
+            assertTrue(composeRule.onAllNodesWithTag("reader_download_surah_button").fetchSemanticsNodes().isEmpty())
+            assertEquals(0, networkCallsCount.get())
+
+            println(
+                String.format(
+                    "PERF_PREPOP_ASSET seedFastPathMs=%.2f firstVisibleMs=%.2f fullExpand286Ms=%.2f",
+                    seedFastPathMs,
+                    firstVisibleMs,
+                    fullExpandMs
+                )
+            )
+
+            collectorJob.cancel()
+            audioController.release()
+        } finally {
+            prepopDb.close()
+            app.getDatabasePath(prepopName).delete()
+        }
     }
 
     @Test

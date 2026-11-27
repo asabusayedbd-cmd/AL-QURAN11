@@ -65,6 +65,9 @@ import com.example.feature.reader.ReaderViewModel
 import com.example.feature.settings.SettingsScreen
 import com.example.feature.settings.SettingsViewModel
 import com.example.ui.components.StartupWelcomeOverlay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import androidx.compose.runtime.remember
 
 const val ROUTE_HOME = "home"
 const val ROUTE_EXPLORER = "explorer"
@@ -214,12 +217,19 @@ fun NoorAppRoot(
                                         }
                                     }
                                 )
-                                val audioState by appContainer.audioController.state.collectAsStateWithLifecycle()
-                                val resumeSummary = if (audioState.hasSavedRecitation) {
+                                val resumeInfoFlow = remember(appContainer) {
+                                    appContainer.audioController.state
+                                        .map { Triple(it.hasSavedRecitation, it.lastRecitedSurahId, it.lastRecitedAyahNumber) }
+                                        .distinctUntilChanged()
+                                }
+                                val resumeInfo by resumeInfoFlow.collectAsStateWithLifecycle(
+                                    initialValue = Triple(false, 0, 0)
+                                )
+                                val resumeSummary = if (resumeInfo.first) {
                                     stringResource(
                                         R.string.resume_recitation_fmt,
-                                        com.example.core.localization.BidiUtils.formatNumber(audioState.lastRecitedSurahId, uiLanguageCode),
-                                        com.example.core.localization.BidiUtils.formatNumber(audioState.lastRecitedAyahNumber, uiLanguageCode)
+                                        com.example.core.localization.BidiUtils.formatNumber(resumeInfo.second, uiLanguageCode),
+                                        com.example.core.localization.BidiUtils.formatNumber(resumeInfo.third, uiLanguageCode)
                                     )
                                 } else {
                                     null
