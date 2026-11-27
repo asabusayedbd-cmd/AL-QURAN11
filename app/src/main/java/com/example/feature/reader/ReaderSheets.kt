@@ -61,6 +61,7 @@ import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.SegmentRoleType
 import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.UserPreferences
+import com.example.ui.theme.arabicLineHeightMultiplier
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
 
@@ -141,8 +142,9 @@ fun WordMorphologySheet(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    val cleanIndopak = BidiUtils.sanitizeIndoPakArabic(inspected.word.textIndopak)
                     val primaryWordArabic = if (scriptType == QuranScriptType.INDOPAK) {
-                        inspected.word.textIndopak.ifBlank { inspected.word.textUthmani }
+                        cleanIndopak.ifBlank { inspected.word.textUthmani }
                     } else {
                         inspected.word.textUthmani
                     }
@@ -151,12 +153,13 @@ fun WordMorphologySheet(
                             text = primaryWordArabic,
                             fontFamily = arabicScriptFont(scriptType, arabicFontFamily),
                             fontSize = 44.sp,
+                            lineHeight = (44f * arabicLineHeightMultiplier(scriptType, arabicFontFamily)).sp,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
-                    if (inspected.word.textIndopak.isNotBlank() && inspected.word.textIndopak != inspected.word.textUthmani) {
+                    if (cleanIndopak.isNotBlank() && cleanIndopak != inspected.word.textUthmani) {
                         val altScriptLabel = if (scriptType == QuranScriptType.INDOPAK) "Uthmani" else "IndoPak"
-                        val altArabic = if (scriptType == QuranScriptType.INDOPAK) inspected.word.textUthmani else inspected.word.textIndopak
+                        val altArabic = if (scriptType == QuranScriptType.INDOPAK) inspected.word.textUthmani else cleanIndopak
                         Text(
                             text = "$altScriptLabel: $altArabic",
                             style = MaterialTheme.typography.bodySmall,

@@ -450,16 +450,7 @@ class DuaViewModel(
                     }
                 } else {
                     ttsReady = true
-                    instance.setPitch(0.84f)
-                    runCatching {
-                        val arMale = instance.voices?.firstOrNull { v ->
-                            v.locale.language == "ar" && (
-                                v.name.contains("male", ignoreCase = true) ||
-                                !v.name.contains("female", ignoreCase = true)
-                            )
-                        }
-                        if (arMale != null) instance.voice = arMale
-                    }
+                    com.example.core.audio.TtsVoiceSelector.configureMaleArabicTts(instance)
                     instance.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {}
                         override fun onDone(utteranceId: String?) {
@@ -486,7 +477,7 @@ class DuaViewModel(
 
     private fun triggerTtsUtterance(engine: TextToSpeech, dua: DuaEntity) {
         _audioState.update { it.copy(isTtsSpeakingId = dua.id, activePlayingId = null, statusMessage = null) }
-        engine.setPitch(0.84f)
+        com.example.core.audio.TtsVoiceSelector.configureMaleArabicTts(engine)
         engine.speak(dua.arabicText, TextToSpeech.QUEUE_FLUSH, null, "dua_${dua.id}")
     }
 

@@ -69,7 +69,11 @@ data class AudioPlaybackState(
     val isPlayingFromOfflineCache: Boolean = false,
     val audioDownloadProgress: AudioDownloadProgress? = null,
     val offlineCacheSizeBytes: Long = 0L,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val lastRecitedSurahId: Int = 1,
+    val lastRecitedAyahNumber: Int = 1,
+    val lastRecitedPositionMs: Long = 0L,
+    val hasSavedRecitation: Boolean = false
 )
 
 class QuranAudioController(
@@ -97,6 +101,7 @@ class QuranAudioController(
     private var isPlayingSingleWord: Boolean = false
     private var lastLoadedAyahId: Int = -1
     private var prefsInitialized: Boolean = false
+    private var pendingResumeSeekMs: Long = 0L
 
     private val _state = MutableStateFlow(AudioPlaybackState())
     val state: StateFlow<AudioPlaybackState> = _state.asStateFlow()
@@ -106,9 +111,29 @@ class QuranAudioController(
             preferencesRepository?.preferencesFlow?.first()?.let { prefs ->
                 if (!prefsInitialized) {
                     prefsInitialized = true
+                    val safeReciterId = if (prefs.activeReciterId == 75) 7 else prefs.activeReciterId
+                    val savedSurahId = prefs.lastRecitedSurahId
+                    val savedAyah = prefs.lastRecitedAyahNumber
+                    val hasSaved = savedSurahId in 1..114 && savedAyah > 0
+                    val savedSurah = if (hasSaved) quranDao.getSurah(savedSurahId) else null
+                    val savedReciter = quranDao.getReciter(safeReciterId)
+                    val lang = prefs.uiLanguageCode
+                    val resolvedSurahName = savedSurah?.let {
+                        BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, lang).ifBlank { it.nameTransliteration }
+                    }
+                    val resolvedReciterName = savedReciter?.name ?: "Mishary Rashid Alafasy"
                     _state.update { current ->
                         current.copy(
-                            reciterId = prefs.activeReciterId,
+                            surahId = if (hasSaved) savedSurahId else current.surahId,
+                            surahName = resolvedSurahName ?: current.surahName,
+                            ayahNumber = if (hasSaved) savedAyah else current.ayahNumber,
+                            maxAyahInSurah = savedSurah?.ayahCount ?: current.maxAyahInSurah,
+                            reciterId = safeReciterId,
+                            reciterName = resolvedReciterName,
+                            lastRecitedSurahId = if (hasSaved) savedSurahId else 1,
+                            lastRecitedAyahNumber = if (hasSaved) savedAyah else 1,
+                            lastRecitedPositionMs = prefs.lastRecitedPositionMs,
+                            hasSavedRecitation = hasSaved,
                             hifzConfig = current.hifzConfig.copy(
                                 playbackSpeed = prefs.audioPlaybackSpeed,
                                 repeatPerAyah = prefs.audioRepeatPerAyah,
@@ -137,12 +162,31 @@ class QuranAudioController(
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 Player.STATE_BUFFERING -> _state.update { it.copy(isBuffering = true) }
-                Player.STATE_READY -> _state.update {
-                    it.copy(
-                        isBuffering = false,
-                        durationMs = mediaController?.duration?.coerceAtLeast(0L) ?: 0L,
-                        errorMessage = null
-                    )
+                Player.STATE_READY -> {
+                    val controller = mediaController
+                    val seekTarget = pendingResumeSeekMs
+                    val duration = controller?.duration?.coerceAtLeast(0L) ?: 0L
+                    if (seekTarget > 1200L && controller != null && (duration <= 0L || seekTarget < duration - 300L)) {
+                        pendingResumeSeekMs = 0L
+                        controller.seekTo(seekTarget)
+                        _state.update {
+                            it.copy(
+                                isBuffering = false,
+                                positionMs = seekTarget,
+                                durationMs = duration,
+                                errorMessage = null
+                            )
+                        }
+                    } else {
+                        pendingResumeSeekMs = 0L
+                        _state.update {
+                            it.copy(
+                                isBuffering = false,
+                                durationMs = duration,
+                                errorMessage = null
+                            )
+                        }
+                    }
                 }
                 Player.STATE_ENDED -> handleMediaEnded()
                 Player.STATE_IDLE -> _state.update { it.copy(isBuffering = false) }
@@ -150,6 +194,7 @@ class QuranAudioController(
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            pendingResumeSeekMs = 0L
             Log.e("QuranAudio", "Playback error", error)
             _state.update {
                 it.copy(
@@ -186,6 +231,56 @@ class QuranAudioController(
         }, MoreExecutors.directExecutor())
     }
 
+    private fun persistLastRecited(surahId: Int, ayahNumber: Int, reciterId: Int, positionMs: Long) {
+        if (surahId !in 1..114 || ayahNumber <= 0) return
+        val safeReciter = if (reciterId == 75) 7 else reciterId
+        val safePos = positionMs.coerceAtLeast(0L)
+        _state.update {
+            it.copy(
+                lastRecitedSurahId = surahId,
+                lastRecitedAyahNumber = ayahNumber,
+                lastRecitedPositionMs = safePos,
+                hasSavedRecitation = true
+            )
+        }
+        scope.launch {
+            preferencesRepository?.setLastRecited(surahId, ayahNumber, safeReciter, safePos)
+        }
+    }
+
+    fun resumeLastRecitation() {
+        scope.launch {
+            val prefs = preferencesRepository?.preferencesFlow?.first()
+            val cur = _state.value
+            val targetSurahId = prefs?.lastRecitedSurahId?.takeIf { it in 1..114 }
+                ?: cur.lastRecitedSurahId.coerceIn(1, 114)
+            val targetAyah = prefs?.lastRecitedAyahNumber?.takeIf { it > 0 }
+                ?: cur.lastRecitedAyahNumber.coerceAtLeast(1)
+            val rawReciter = prefs?.lastRecitedReciterId ?: cur.reciterId
+            val safeReciterId = if (rawReciter == 75) 7 else rawReciter
+            val savedPosMs = prefs?.lastRecitedPositionMs ?: cur.lastRecitedPositionMs
+            val surah = quranDao.getSurah(targetSurahId)
+            val reciter = quranDao.getReciter(safeReciterId)
+            val lang = prefs?.uiLanguageCode ?: "en"
+            val surahName = surah?.let {
+                BidiUtils.extractLocalizedSurahName(it.localizedNamesJson, lang).ifBlank { it.nameTransliteration }
+            } ?: cur.surahName
+            val maxAyah = surah?.ayahCount ?: cur.maxAyahInSurah
+            val reciterName = reciter?.name ?: cur.reciterName
+
+            playAyah(
+                surahId = targetSurahId,
+                ayahNumber = targetAyah.coerceIn(1, maxAyah.coerceAtLeast(1)),
+                surahName = surahName,
+                maxAyahInSurah = maxAyah,
+                reciterId = safeReciterId,
+                reciterName = reciterName,
+                iteration = 1,
+                initialPositionMs = savedPosMs
+            )
+        }
+    }
+
     fun playAyah(
         surahId: Int,
         ayahNumber: Int,
@@ -193,27 +288,32 @@ class QuranAudioController(
         maxAyahInSurah: Int,
         reciterId: Int,
         reciterName: String,
-        iteration: Int = 1
+        iteration: Int = 1,
+        initialPositionMs: Long = 0L
     ) {
         pendingPauseJob?.cancel()
         isPlayingSingleWord = false
         wbwWordIndex = 0
+        val safeReciterId = if (reciterId == 75) 7 else reciterId
+        pendingResumeSeekMs = initialPositionMs.coerceAtLeast(0L)
 
         scope.launch {
             val verseKey = "$surahId:$ayahNumber"
             val ayah = quranDao.getAyahByKey(verseKey)
-            val reciterSegment = if (ayah != null) quranDao.getAudioSegment(reciterId, ayah.id) else null
+            val reciterSegment = if (ayah != null) quranDao.getAudioSegment(safeReciterId, ayah.id) else null
             val timingSegment = reciterSegment ?: if (ayah != null) quranDao.getAudioSegment(7, ayah.id) else null
             currentSegments = timingSegment?.wordTimestampSegmentsJson?.let { HifzLoopEngine.parseWordSegments(it) }
                 ?: emptyList()
             currentAyahWords = if (ayah != null) quranDao.getWordsForAyah(ayah.id) else emptyList()
             lastLoadedAyahId = ayah?.id ?: -1
 
-            val reciter = quranDao.getReciter(reciterId)
+            val reciter = quranDao.getReciter(safeReciterId)
             val resolvedReciterName = reciter?.name ?: reciterName
+            persistLastRecited(surahId, ayahNumber, safeReciterId, pendingResumeSeekMs)
             val wbwMode = _state.value.hifzConfig.wordByWordMode && currentAyahWords.isNotEmpty()
 
             if (wbwMode) {
+                pendingResumeSeekMs = 0L
                 val firstWord = currentAyahWords.first()
                 val wordUri = buildWordAudioUri(firstWord, surahId, ayahNumber)
                 _state.update {
@@ -224,7 +324,7 @@ class QuranAudioController(
                         surahName = surahName,
                         ayahNumber = ayahNumber,
                         maxAyahInSurah = maxAyahInSurah,
-                        reciterId = reciterId,
+                        reciterId = safeReciterId,
                         reciterName = resolvedReciterName,
                         currentIteration = iteration,
                         activeWordPosition = firstWord.position,
@@ -243,14 +343,14 @@ class QuranAudioController(
                     speed = _state.value.hifzConfig.playbackSpeed
                 )
             } else {
-                val cachedFile = localAyahCacheFile(reciterId, surahId, ayahNumber)
+                val cachedFile = localAyahCacheFile(safeReciterId, surahId, ayahNumber)
                 val useCached = cachedFile.exists() && cachedFile.length() > 1024L
                 val uri = if (useCached) {
                     Uri.fromFile(cachedFile).toString()
                 } else {
                     reciterSegment?.localFilePath?.takeIf { File(it).exists() }?.let { Uri.fromFile(File(it)).toString() }
                         ?: reciterSegment?.audioUrl?.takeIf { it.isNotBlank() }
-                        ?: buildReciterAudioUrl(reciter?.baseUrl, reciterId, surahId, ayahNumber)
+                        ?: buildReciterAudioUrl(reciter?.baseUrl, safeReciterId, surahId, ayahNumber)
                 }
 
                 _state.update {
@@ -261,12 +361,12 @@ class QuranAudioController(
                         surahName = surahName,
                         ayahNumber = ayahNumber,
                         maxAyahInSurah = maxAyahInSurah,
-                        reciterId = reciterId,
+                        reciterId = safeReciterId,
                         reciterName = resolvedReciterName,
                         currentIteration = iteration,
                         activeWordPosition = null,
                         totalWordsInAyah = currentAyahWords.size,
-                        positionMs = 0L,
+                        positionMs = pendingResumeSeekMs,
                         durationMs = 0L,
                         pauseRemainingSec = 0,
                         isPlayingFromOfflineCache = useCached,
@@ -339,6 +439,8 @@ class QuranAudioController(
         val clamped = positionMs.coerceIn(0L, controller.duration.coerceAtLeast(0L))
         controller.seekTo(clamped)
         _state.update { it.copy(positionMs = clamped) }
+        val s = _state.value
+        persistLastRecited(s.surahId, s.ayahNumber, s.reciterId, clamped)
     }
 
     fun seekRelative(deltaMs: Long) {
@@ -350,11 +452,22 @@ class QuranAudioController(
         val controller = mediaController
         if (controller == null) {
             val s = _state.value
-            playAyah(s.surahId, s.ayahNumber, s.surahName, s.maxAyahInSurah, s.reciterId, s.reciterName)
+            playAyah(
+                surahId = s.surahId,
+                ayahNumber = s.ayahNumber,
+                surahName = s.surahName,
+                maxAyahInSurah = s.maxAyahInSurah,
+                reciterId = s.reciterId,
+                reciterName = s.reciterName,
+                initialPositionMs = s.lastRecitedPositionMs
+            )
             return
         }
         if (controller.isPlaying) {
+            val pos = controller.currentPosition.coerceAtLeast(0L)
             controller.pause()
+            val s = _state.value
+            persistLastRecited(s.surahId, s.ayahNumber, s.reciterId, pos)
         } else {
             pendingPauseJob?.cancel()
             _state.update { it.copy(pauseRemainingSec = 0) }
@@ -381,6 +494,11 @@ class QuranAudioController(
         pendingPauseJob?.cancel()
         wordPollingJob?.cancel()
         sleepTimerJob?.cancel()
+        val s = _state.value
+        val capturedPos = mediaController?.currentPosition?.coerceAtLeast(0L) ?: s.positionMs
+        if (s.isVisible) {
+            persistLastRecited(s.surahId, s.ayahNumber, s.reciterId, capturedPos)
+        }
         mediaController?.let {
             it.stop()
             it.clearMediaItems()
@@ -431,15 +549,16 @@ class QuranAudioController(
     }
 
     fun updateReciter(reciterId: Int, reciterName: String) {
+        val safeReciterId = if (reciterId == 75) 7 else reciterId
         val current = _state.value
-        _state.update { it.copy(reciterId = reciterId, reciterName = reciterName) }
+        _state.update { it.copy(reciterId = safeReciterId, reciterName = reciterName) }
         if (current.isVisible) {
             playAyah(
                 current.surahId,
                 current.ayahNumber,
                 current.surahName,
                 current.maxAyahInSurah,
-                reciterId,
+                safeReciterId,
                 reciterName
             )
         }
@@ -462,7 +581,10 @@ class QuranAudioController(
             if (isActive) {
                 pendingPauseJob?.cancel()
                 wordPollingJob?.cancel()
+                val pos = mediaController?.currentPosition?.coerceAtLeast(0L) ?: _state.value.positionMs
                 mediaController?.pause()
+                val s = _state.value
+                persistLastRecited(s.surahId, s.ayahNumber, s.reciterId, pos)
                 _state.update { it.copy(isPlaying = false, sleepRemainingSec = null, pauseRemainingSec = 0) }
             }
         }
@@ -686,6 +808,7 @@ class QuranAudioController(
                 if (s.hifzConfig.autoPlayNextSurah && s.surahId < 114) {
                     playNextSurahFromStart(s.surahId + 1, s.reciterId, s.reciterName)
                 } else {
+                    persistLastRecited(s.surahId, s.ayahNumber, s.reciterId, 0L)
                     _state.update { it.copy(isPlaying = false, activeWordPosition = null, currentIteration = 1) }
                 }
             }

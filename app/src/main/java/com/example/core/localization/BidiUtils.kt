@@ -36,6 +36,43 @@ object BidiUtils {
     }
 
     /**
+     * Sanitizes IndoPak / South Asian Quranic strings that contain Private-Use Area (PUA),
+     * zero-width BOM/direction marks, or presentation Alef glyphs (U+FE8D / U+FE8E)
+     * that render as missing-glyph tofu boxes on modern Android fonts.
+     */
+    fun sanitizeIndoPakArabic(input: String): String {
+        if (input.isEmpty()) return ""
+        val sb = StringBuilder(input.length)
+        var lastWasSpace = false
+        for (i in 0 until input.length) {
+            val ch = input[i]
+            val mapped: Char? = when (ch) {
+                '\uFEFF', '\u200B', '\u200E', '\u200F', '\uE021', '\uE022' -> null
+                '\uFE8D', '\uFE8E' -> '\u0627' // Isolated/Final Alef -> standard Alef
+                '\uE003' -> '\u06D8' // High Meem Waqf
+                '\uE004', '\uE01A' -> '\u06D6' // Sad-Lam-Ya pause mark
+                '\uE01B' -> '\u06D7' // Qaf-Lam-Ya pause mark
+                '\uE01C' -> '\u06D8' // Meem initial Waqf
+                '\uE01E' -> '\u06D9' // La Waqf
+                '\uE01F' -> '\u06DA' // Jeem Waqf
+                else -> if (ch.code in 0xE000..0xF8FF) null else ch
+            }
+            if (mapped != null) {
+                if (mapped == ' ') {
+                    if (!lastWasSpace && sb.isNotEmpty()) {
+                        sb.append(' ')
+                        lastWasSpace = true
+                    }
+                } else {
+                    sb.append(mapped)
+                    lastWasSpace = false
+                }
+            }
+        }
+        return sb.toString().trim()
+    }
+
+    /**
      * Wraps a verse key like "2:255" safely in RTL/LTR contexts so digits and colon never reverse.
      */
     fun wrapVerseKey(verseKey: String, uiLocale: Locale = Locale.getDefault()): String {

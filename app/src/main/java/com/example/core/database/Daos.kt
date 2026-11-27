@@ -127,6 +127,22 @@ interface QuranDao {
     @Query("SELECT * FROM words WHERE ayahId = :ayahId ORDER BY position ASC")
     suspend fun getWordsForAyah(ayahId: Int): List<WordEntity>
 
+    @Query(
+        """
+        SELECT w.* FROM words w
+        INNER JOIN ayahs a ON a.id = w.ayahId
+        WHERE a.surahId = :surahId
+        ORDER BY a.ayahNumber ASC, w.position ASC
+        """
+    )
+    suspend fun getWordsBySurah(surahId: Int): List<WordEntity>
+
+    @Query("UPDATE ayahs SET textIndopak = :textIndopak WHERE id = :ayahId")
+    suspend fun updateAyahIndoPakText(ayahId: Int, textIndopak: String)
+
+    @Query("UPDATE words SET textIndopak = :textIndopak WHERE id = :wordId")
+    suspend fun updateWordIndoPakText(wordId: Long, textIndopak: String)
+
     @Query("SELECT COUNT(*) FROM words WHERE rootArabic = :rootArabic AND rootArabic != ''")
     suspend fun countWordsByRoot(rootArabic: String): Int
 
@@ -396,6 +412,9 @@ interface QuranDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReciters(reciters: List<AudioReciterEntity>)
+
+    @Query("DELETE FROM audio_reciters WHERE id = :reciterId")
+    suspend fun deleteReciterById(reciterId: Int)
 
     @Query("SELECT * FROM audio_segments WHERE reciterId = :reciterId AND ayahId IN (:ayahIds)")
     fun observeAudioSegments(reciterId: Int, ayahIds: List<Int>): Flow<List<AudioSegmentEntity>>

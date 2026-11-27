@@ -140,7 +140,9 @@ fun HomeScreen(
     onOpenExplorer: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenDua: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lastRecitedSummary: String? = null,
+    onResumeRecitation: (() -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -352,15 +354,30 @@ fun HomeScreen(
                             )
                         }
 
-                        FilledTonalButton(
-                            onClick = {
-                                onOpenReader(state.progress.lastSurahId, state.progress.lastAyahNumber)
-                            },
-                            modifier = Modifier.testTag("continue_reading_button")
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = null)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.nav_quran))
+                            FilledTonalButton(
+                                onClick = {
+                                    onOpenReader(state.progress.lastSurahId, state.progress.lastAyahNumber)
+                                },
+                                modifier = Modifier.testTag("continue_reading_button")
+                            ) {
+                                Icon(Icons.Default.PlayArrow, contentDescription = null)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(stringResource(R.string.nav_quran))
+                            }
+                            if (!lastRecitedSummary.isNullOrBlank() && onResumeRecitation != null) {
+                                FilledTonalButton(
+                                    onClick = onResumeRecitation,
+                                    modifier = Modifier.testTag("home_resume_recitation_button")
+                                ) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(lastRecitedSummary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
                         }
                     }
                 }

@@ -5,7 +5,7 @@ import android.util.JsonReader
 import java.io.InputStreamReader
 
 object DuaSeederData {
-    const val EXPECTED_MIN_DUA_COUNT = 150
+    const val EXPECTED_MIN_DUA_COUNT = 300
     private const val ASSET_PATH = "duas/duas_catalog.json"
 
     fun streamChunksFromAssets(
@@ -81,7 +81,7 @@ object DuaSeederData {
     }
 
     fun loadAllFromAssets(context: Context): List<DuaEntity> {
-        val all = ArrayList<DuaEntity>(160)
+        val all = ArrayList<DuaEntity>(340)
         readInChunks(context, chunkSize = 40).forEach { chunk ->
             all.addAll(chunk)
         }

@@ -31,6 +31,7 @@ import com.example.core.database.WordEntity
 import com.example.core.localization.ArabicFontFamilyOption
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.QuranScriptType
+import com.example.ui.theme.arabicLineHeightMultiplier
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
 
@@ -67,6 +68,9 @@ fun WordByWordFlowRow(
 
     // Strictly isolate Quranic Word-by-Word flow as Right-to-Left regardless of app chrome language.
     val arabicFont = remember(scriptType, arabicFontFamily) { arabicScriptFont(scriptType, arabicFontFamily) }
+    val lineMult = remember(scriptType, arabicFontFamily) {
+        maxOf(1.48f, arabicLineHeightMultiplier(scriptType, arabicFontFamily) * 0.92f)
+    }
     val wordMeaningStyle = remember(wbwFontSizeSp, wbwLanguageCode) {
         banglaSafeBodyStyle(wbwFontSizeSp, wbwLanguageCode)
     }
@@ -103,7 +107,7 @@ fun WordByWordFlowRow(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             val arabicWord = if (scriptType == QuranScriptType.INDOPAK) {
-                                item.word.textIndopak.ifBlank { item.word.textUthmani }
+                                BidiUtils.sanitizeIndoPakArabic(item.word.textIndopak.ifBlank { item.word.textUthmani })
                             } else {
                                 item.word.textUthmani
                             }
@@ -112,7 +116,7 @@ fun WordByWordFlowRow(
                                 text = arabicWord,
                                 fontFamily = arabicFont,
                                 fontSize = arabicFontSizeSp.sp,
-                                lineHeight = (arabicFontSizeSp * 1.45f).sp,
+                                lineHeight = (arabicFontSizeSp * lineMult).sp,
                                 color = if (isActive) {
                                     MaterialTheme.colorScheme.onPrimaryContainer
                                 } else {

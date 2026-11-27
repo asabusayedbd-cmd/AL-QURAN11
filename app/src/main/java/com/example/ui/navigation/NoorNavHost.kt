@@ -196,12 +196,24 @@ fun NoorAppRoot(
                                         }
                                     }
                                 )
+                                val audioState by appContainer.audioController.state.collectAsStateWithLifecycle()
+                                val resumeSummary = if (audioState.hasSavedRecitation) {
+                                    stringResource(
+                                        R.string.resume_recitation_fmt,
+                                        com.example.core.localization.BidiUtils.formatNumber(audioState.lastRecitedSurahId, uiLanguageCode),
+                                        com.example.core.localization.BidiUtils.formatNumber(audioState.lastRecitedAyahNumber, uiLanguageCode)
+                                    )
+                                } else {
+                                    null
+                                }
                                 HomeScreen(
                                     viewModel = vm,
                                     onOpenReader = openReader,
                                     onOpenExplorer = { navigateTopLevel(ROUTE_EXPLORER) },
                                     onOpenLibrary = { navigateTopLevel(ROUTE_LIBRARY) },
-                                    onOpenDua = { navigateTopLevel(ROUTE_DUA) }
+                                    onOpenDua = { navigateTopLevel(ROUTE_DUA) },
+                                    lastRecitedSummary = resumeSummary,
+                                    onResumeRecitation = { appContainer.audioController.resumeLastRecitation() }
                                 )
                             }
 

@@ -54,6 +54,13 @@ class AppContainer(context: Context) {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(25, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val req = chain.request().newBuilder()
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    .header("Accept", "application/json, text/plain, */*")
+                    .build()
+                chain.proceed(req)
+            }
             .build()
     }
 
@@ -96,7 +103,12 @@ class AppContainer(context: Context) {
                 R.font.noto_sans_bengali,
                 R.font.noto_naskh_arabic,
                 R.font.hind_siliguri,
-                R.font.scheherazade_new
+                R.font.scheherazade_new,
+                R.font.noto_nastaliq_urdu,
+                R.font.gulzar,
+                R.font.alkalami,
+                R.font.ibm_plex_sans_arabic,
+                R.font.noto_kufi_arabic
             )
             for (fontRes in fontResIds) {
                 runCatching { ResourcesCompat.getFont(appContext, fontRes) }

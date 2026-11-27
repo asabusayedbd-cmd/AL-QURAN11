@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -122,6 +123,7 @@ import com.example.ui.components.ShareCardGenerator
 import com.example.ui.components.TajweedTextFormatter
 import com.example.ui.components.WordByWordFlowRow
 import com.example.ui.theme.LocalTajweedPalette
+import com.example.ui.theme.arabicLineHeightMultiplier
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -162,6 +164,7 @@ fun ReaderScreen(
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val playbackCursor by viewModel.playbackCursor.collectAsStateWithLifecycle()
+    val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
     val lineState by viewModel.lineTranslationState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val listState = rememberLazyListState()
@@ -177,6 +180,7 @@ fun ReaderScreen(
     var showQariPickerFromReader by remember { mutableStateOf(false) }
     var showSurahSwitcher by remember { mutableStateOf(false) }
     var showBatchLangPicker by remember { mutableStateOf(false) }
+    var pageJumperCurrentPage by remember { mutableStateOf<Int?>(null) }
     var lineTranslateAyah by remember { mutableStateOf<AyahDisplayBundle?>(null) }
     var mushafChromeVisible by rememberSaveable { mutableStateOf(true) }
     var pendingTargetAyah by rememberSaveable { mutableIntStateOf(targetAyah) }
@@ -237,7 +241,8 @@ fun ReaderScreen(
     }
 
     val activeSurahId = state.surah?.id ?: surahId
-    val headerOffset = if (state.surah?.bismillahPre == true) 1 else 0
+    val showTopBismillah = state.preferences.readerViewMode == ReaderViewMode.WORD_BY_WORD && state.surah?.bismillahPre == true
+    val headerOffset = if (showTopBismillah) 1 else 0
 
     // Scroll cleanly to targetPage, targetAyah, or reset to top when Surah changes (mode-aware for WBW vs Mushaf)
     LaunchedEffect(activeSurahId, state.ayahs.size, pendingTargetAyah, pendingTargetPage, state.preferences.readerViewMode, headerOffset) {
@@ -365,7 +370,8 @@ fun ReaderScreen(
                 onOpenTajweedGuide = {
                     coroutineScope.launch { drawerState.close() }
                     showTajweedGuide = true
-                }
+                },
+                onSelectMushafStyle = viewModel::setMushafStyle
             )
         }
     ) {
@@ -472,7 +478,6 @@ fun ReaderScreen(
             }
         },
         bottomBar = {
-            val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
             AudioHifzBar(
                 playbackState = playbackState,
                 reciters = state.reciters,
@@ -595,6 +600,59 @@ fun ReaderScreen(
                     }
                 }
 
+                // Resume Last Recitation Quick Chip (when audio bar is closed and a previous position is saved)
+                AnimatedVisibility(visible = showChrome && !playbackState.isVisible && playbackState.hasSavedRecitation) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .testTag("reader_resume_recitation_button")
+                            .clickable { viewModel.resumeLastRecitation() }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = stringResource(
+                                        R.string.resume_recitation_fmt,
+                                        BidiUtils.formatNumber(playbackState.lastRecitedSurahId, state.preferences.uiLanguageCode),
+                                        BidiUtils.formatNumber(playbackState.lastRecitedAyahNumber, state.preferences.uiLanguageCode)
+                                    ),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Text(
+                                text = stringResource(R.string.resume_recitation),
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+
                 // Non-blocking partial Surah / downloading progress banner
                 if (state.ayahs.isNotEmpty() && (state.isDownloadingSurah || state.isSurahIncomplete || state.downloadError != null)) {
                     Surface(
@@ -712,23 +770,18 @@ fun ReaderScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        if (state.surah?.bismillahPre == true) {
+                        if (showTopBismillah) {
                             item(key = "bismillah_${activeSurahId}", contentType = "bismillah") {
                                 Surface(
                                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
                                     shape = MaterialTheme.shapes.medium,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(
-                                            enabled = state.preferences.readerViewMode == ReaderViewMode.MUSHAF
-                                        ) {
-                                            mushafChromeVisible = !mushafChromeVisible
-                                        }
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Text(
                                         text = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
                                         fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                         fontSize = 26.sp,
+                                        lineHeight = (26f * arabicLineHeightMultiplier(state.preferences.scriptType, state.preferences.arabicFontFamily)).sp,
                                         textAlign = TextAlign.Center,
                                         color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier
@@ -740,158 +793,53 @@ fun ReaderScreen(
                         }
 
                         if (state.preferences.readerViewMode == ReaderViewMode.MUSHAF) {
-                            items(
+                            itemsIndexed(
                                 items = mushafPages,
-                                key = { "page_${it.first}" },
-                                contentType = { "mushaf_page" }
-                            ) { (pageNumber, pageAyahs) ->
-                                val juzNumber = pageAyahs.firstOrNull()?.ayah?.juzNumber ?: state.surah?.startJuz ?: 1
-                                val isIndoPak = state.preferences.scriptType == QuranScriptType.INDOPAK
-                                val highlightBg = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.65f)
-                                val selectedBg = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.65f)
-                                val selectedMushafId = selectedMushafAyah?.id
+                                key = { _, item -> "page_${item.first}" },
+                                contentType = { _, _ -> "mushaf_page" }
+                            ) { pageIndex, (pageNumber, pageAyahs) ->
                                 val playingAyahNum = if (playbackCursor.isVisible && playbackCursor.surahId == activeSurahId) {
                                     playbackCursor.ayahNumber
                                 } else null
 
-                                val pageAnnotatedText = remember(
-                                    pageAyahs,
-                                    state.preferences.scriptType,
-                                    state.preferences.tajweedColorsEnabled,
-                                    tajweedPalette,
-                                    playingAyahNum,
-                                    selectedMushafId
-                                ) {
-                                    buildAnnotatedString {
-                                        pageAyahs.forEachIndexed { index, bundle ->
-                                            val rawArabic = if (isIndoPak) {
-                                                bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani }
-                                            } else {
-                                                bundle.ayah.textUthmani
+                                MushafPageCard(
+                                    pageNumber = pageNumber,
+                                    pageAyahs = pageAyahs,
+                                    surah = state.surah,
+                                    localizedSurahName = state.localizedSurahName,
+                                    mushafStyle = state.preferences.mushafStyle,
+                                    scriptType = state.preferences.scriptType,
+                                    arabicFontFamily = state.preferences.arabicFontFamily,
+                                    arabicFontSizeSp = state.preferences.arabicFontSizeSp,
+                                    tajweedColorsEnabled = state.preferences.tajweedColorsEnabled,
+                                    tajweedPalette = tajweedPalette,
+                                    uiLanguageCode = state.preferences.uiLanguageCode,
+                                    playingAyahNumber = playingAyahNum,
+                                    selectedAyahId = selectedMushafAyah?.id,
+                                    chromeVisible = mushafChromeVisible,
+                                    hasPrevPage = pageIndex > 0,
+                                    hasNextPage = pageIndex < mushafPages.lastIndex,
+                                    onToggleChrome = { mushafChromeVisible = !mushafChromeVisible },
+                                    onAyahClick = { ayah ->
+                                        selectedMushafAyah = ayah
+                                        viewModel.recordAyahRead(ayah)
+                                    },
+                                    onOpenPageJumper = { pageJumperCurrentPage = pageNumber },
+                                    onPrevPage = {
+                                        if (pageIndex > 0) {
+                                            coroutineScope.launch {
+                                                listState.animateScrollToItem((pageIndex - 1 + headerOffset).coerceAtLeast(0))
                                             }
-                                            val formattedVerse = TajweedTextFormatter.formatArabicVerse(
-                                                rawText = rawArabic,
-                                                tajweedHtml = bundle.ayah.textTajweedHtml,
-                                                tajweedEnabled = state.preferences.tajweedColorsEnabled,
-                                                palette = tajweedPalette,
-                                                ayahEndMarker = BidiUtils.formatAyahMarker(bundle.ayah.ayahNumber, useArabicDigits = true),
-                                                useTajweedMarkup = !isIndoPak
-                                            )
-                                            val isPlayingThis = playingAyahNum == bundle.ayah.ayahNumber
-                                            val isSelectedThis = selectedMushafId == bundle.ayah.id
-
-                                            val link = LinkAnnotation.Clickable(tag = bundle.ayah.verseKey) {
-                                                selectedMushafAyah = bundle.ayah
-                                                viewModel.recordAyahRead(bundle.ayah)
-                                            }
-                                            withLink(link) {
-                                                if (isPlayingThis) {
-                                                    withStyle(SpanStyle(background = highlightBg)) {
-                                                        append(formattedVerse)
-                                                    }
-                                                } else if (isSelectedThis) {
-                                                    withStyle(SpanStyle(background = selectedBg)) {
-                                                        append(formattedVerse)
-                                                    }
-                                                } else {
-                                                    append(formattedVerse)
-                                                }
-                                            }
-                                            if (index < pageAyahs.lastIndex) {
-                                                append("   ")
+                                        }
+                                    },
+                                    onNextPage = {
+                                        if (pageIndex < mushafPages.lastIndex) {
+                                            coroutineScope.launch {
+                                                listState.animateScrollToItem(pageIndex + 1 + headerOffset)
                                             }
                                         }
                                     }
-                                }
-
-                                Surface(
-                                    color = MaterialTheme.colorScheme.surface,
-                                    shape = MaterialTheme.shapes.large,
-                                    border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
-                                    tonalElevation = 1.dp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("mushaf_page_card_$pageNumber")
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 18.dp, vertical = 14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        // Authentic Mushaf Page Top Strip
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { mushafChromeVisible = !mushafChromeVisible },
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                                                shape = MaterialTheme.shapes.small
-                                            ) {
-                                                Text(
-                                                    text = "Page $pageNumber • Juz $juzNumber",
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                                )
-                                            }
-
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                Text(
-                                                    text = state.surah?.nameArabic ?: "",
-                                                    fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
-                                                    fontSize = 18.sp,
-                                                    color = MaterialTheme.colorScheme.primary
-                                                )
-                                                if (!mushafChromeVisible) {
-                                                    IconButton(
-                                                        onClick = { mushafChromeVisible = true },
-                                                        modifier = Modifier.size(32.dp)
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Default.FullscreenExit,
-                                                            contentDescription = "Show reader bar",
-                                                            modifier = Modifier.size(18.dp)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        HorizontalDivider(
-                                            thickness = 0.6.dp,
-                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                                        )
-
-                                        // Continuous Flowing Mushaf Page Script (Tap any Ayah for audio, bookmark, Tafsir, or copy)
-                                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                            Text(
-                                                text = pageAnnotatedText,
-                                                fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
-                                                fontSize = state.preferences.arabicFontSizeSp.sp,
-                                                lineHeight = (state.preferences.arabicFontSizeSp * 1.95f).sp,
-                                                textAlign = TextAlign.Start,
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = 4.dp)
-                                            )
-                                        }
-
-                                        Text(
-                                            text = "Tap any verse for Play, Bookmark & Tafsir • Tap header to toggle distraction-free mode",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-                                            textAlign = TextAlign.Center,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
+                                )
                             }
                         } else {
                             items(
@@ -1031,10 +979,10 @@ fun ReaderScreen(
                                             }
                                         }
 
-                                        // Full Arabic Ayah (Memoized, supports Uthmani Tajweed and preserves IndoPak script)
+                                        // Full Arabic Ayah (Memoized, supports Uthmani Tajweed and preserves sanitized IndoPak script)
                                         val isIndoPak = state.preferences.scriptType == QuranScriptType.INDOPAK
                                         val arabicRaw = if (isIndoPak) {
-                                            bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani }
+                                            BidiUtils.sanitizeIndoPakArabic(bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani })
                                         } else {
                                             bundle.ayah.textUthmani
                                         }
@@ -1060,7 +1008,7 @@ fun ReaderScreen(
                                                 text = formattedArabic,
                                                 fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                                                 fontSize = state.preferences.arabicFontSizeSp.sp,
-                                                lineHeight = (state.preferences.arabicFontSizeSp * 1.7f).sp,
+                                                lineHeight = (state.preferences.arabicFontSizeSp * arabicLineHeightMultiplier(state.preferences.scriptType, state.preferences.arabicFontFamily)).sp,
                                                 textAlign = TextAlign.Start,
                                                 modifier = Modifier.fillMaxWidth()
                                             )
@@ -1346,7 +1294,7 @@ fun ReaderScreen(
         val bundle = state.ayahs.firstOrNull { it.ayah.id == mushafAyah.id }
         val isIndoPak = state.preferences.scriptType == QuranScriptType.INDOPAK
         val previewArabic = if (isIndoPak) {
-            mushafAyah.textIndopak.ifBlank { mushafAyah.textUthmani }
+            BidiUtils.sanitizeIndoPakArabic(mushafAyah.textIndopak.ifBlank { mushafAyah.textUthmani })
         } else {
             mushafAyah.textUthmani
         }
@@ -1381,7 +1329,7 @@ fun ReaderScreen(
                         text = previewArabic,
                         fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
                         fontSize = 24.sp,
-                        lineHeight = 40.sp,
+                        lineHeight = (24f * arabicLineHeightMultiplier(state.preferences.scriptType, state.preferences.arabicFontFamily)).sp,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1648,8 +1596,24 @@ fun ReaderScreen(
         )
     }
 
+    pageJumperCurrentPage?.let { currentP ->
+        MushafPageJumperModal(
+            currentPage = currentP,
+            availablePages = mushafPages.map { it.first },
+            uiLanguageCode = state.preferences.uiLanguageCode,
+            onJumpToPage = { targetP ->
+                val idx = mushafPages.indexOfFirst { it.first == targetP }
+                if (idx >= 0) {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(idx + headerOffset)
+                    }
+                }
+            },
+            onDismiss = { pageJumperCurrentPage = null }
+        )
+    }
+
     if (showRecitationSettings) {
-        val playbackState by viewModel.playbackState.collectAsStateWithLifecycle()
         val effectivePlaybackState = if (playbackState.isVisible) {
             playbackState
         } else {

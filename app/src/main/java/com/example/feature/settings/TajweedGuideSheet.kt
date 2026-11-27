@@ -268,19 +268,7 @@ fun TajweedGuideSheet(
         var engine: TextToSpeech? = null
         engine = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                engine?.language = Locale.forLanguageTag("ar")
-                engine?.setPitch(0.84f)
-                runCatching {
-                    val arMaleVoice = engine?.voices?.firstOrNull { v ->
-                        v.locale.language == "ar" && (
-                            v.name.contains("male", ignoreCase = true) ||
-                            !v.name.contains("female", ignoreCase = true)
-                        )
-                    }
-                    if (arMaleVoice != null) {
-                        engine?.voice = arMaleVoice
-                    }
-                }
+                com.example.core.audio.TtsVoiceSelector.configureMaleArabicTts(engine)
                 ttsReady = true
             }
         }
@@ -295,7 +283,7 @@ fun TajweedGuideSheet(
 
     fun speakArabic(text: String, rate: Float = 1.0f) {
         if (ttsReady) {
-            tts.setPitch(0.84f)
+            com.example.core.audio.TtsVoiceSelector.configureMaleArabicTts(tts)
             tts.setSpeechRate(rate)
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "tajweed_${System.nanoTime()}")
         }

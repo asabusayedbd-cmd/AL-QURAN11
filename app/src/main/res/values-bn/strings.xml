@@ -178,7 +178,7 @@
     <string name="home_quiz_desc">অফলাইনে সূরা, পারা ও কুরআন বিষয়ক কুইজ খেলুন।</string>
     <string name="home_quiz_button">কুইজ খেলুন</string>
     <string name="home_dua_title">সহীহ দোয়া ও রুকইয়াহ</string>
-    <string name="home_dua_desc">সহীহ হাদীস ও কুরআনের রেফারেন্সসহ ১৫০+ বিষয়ভিত্তিক দোয়া।</string>
+    <string name="home_dua_desc">সহীহ হাদীস ও কুরআনের রেফারেন্সসহ ৩০০+ বিষয়ভিত্তিক দোয়া।</string>
     <string name="home_dua_button">দোয়া দেখুন</string>
     <string name="home_search_city_hint">শহর বা দেশের নাম লিখুন (যেমন Dhaka)…</string>
     <string name="qibla_bearing_fmt">%1$s • উত্তর থেকে %2$s° কোণ</string>
@@ -329,4 +329,11 @@
     <string name="inline_tafsir_full_btn">পূর্ণ তাফসীর ও নোট</string>
     <string name="inline_tafsir_fetch_btn">তাফসীর লোড করুন</string>
     <string name="inline_tafsir_loading">তাফসীর লোড হচ্ছে…</string>
+    <string name="mushaf_edition_title">মুসহাফ পৃষ্ঠার ধরন</string>
+    <string name="resume_recitation">চালু করুন</string>
+    <string name="resume_recitation_fmt">তিলাওয়াত চালু %1$s:%2$s</string>
+    <string name="jump_to_page">পৃষ্ঠায় যান</string>
+    <string name="prev_page">আগের পৃষ্ঠা</string>
+    <string name="next_page">পরের পৃষ্ঠা</string>
+    <string name="reader_page_fmt">পৃষ্ঠা %1$s</string>
 </resources>

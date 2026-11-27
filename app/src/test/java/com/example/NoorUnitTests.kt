@@ -34,6 +34,7 @@ import org.robolectric.annotation.Config
 import com.example.core.di.AppContainer
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.util.Locale
 
@@ -745,4 +746,97 @@ class NoorUnitTests {
         assertEquals("م ل ك", rootedAnalysis.spacedRoot)
         assertEquals("ملك", rootedAnalysis.rootLetters)
     }
+
+    // 18. IndoPak Glyph Sanitization & Starter Asset Verification
+    @Test
+    fun testIndoPakSanitizationAndAssetCleanliness() {
+        val dirty = "\uFEFF\u200Bقُلْ هُوَ اللَّهُ أَحَدٌ\uFE8E \uE021\uE003"
+        val sanitized = BidiUtils.sanitizeIndoPakArabic(dirty)
+        assertFalse(sanitized.contains('\uFEFF'))
+        assertFalse(sanitized.contains('\u200B'))
+        assertFalse(sanitized.contains('\uFE8E'))
+        assertFalse(sanitized.contains('\uE021'))
+        assertTrue(sanitized.contains("قُلْ هُوَ اللَّهُ أَحَدٌ"))
+        assertTrue(sanitized.contains('\u06D8'))
+
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val starterText = appContext.assets.open("quran_starter/quran_starter.json").bufferedReader().use { it.readText() }
+        val ayahs = JSONObject(starterText).getJSONArray("ayahs")
+        for (i in 0 until ayahs.length()) {
+            val indopak = BidiUtils.sanitizeIndoPakArabic(ayahs.getJSONObject(i).optString("textIndopak"))
+            assertFalse("Unexpected PUA glyph after sanitization", indopak.any { it.code in 0xE000..0xF8FF })
+        }
+    }
+
+    // 19. Grouped 17 Arabic Fonts, Line Height Multipliers & 5 Mushaf Edition Styles
+    @Test
+    fun testGroupedArabicFontsAndMushafEditions() {
+        val options = com.example.core.localization.ArabicFontFamilyOption.entries
+        assertEquals(17, options.size)
+        val groups = options.groupBy { it.group }
+        assertEquals(3, groups.size)
+        assertTrue((groups[com.example.core.localization.ArabicFontGroup.MADANI_UTHMANI]?.size ?: 0) >= 5)
+        assertTrue((groups[com.example.core.localization.ArabicFontGroup.BANGLADESHI_INDOPAK]?.size ?: 0) >= 7)
+        assertTrue((groups[com.example.core.localization.ArabicFontGroup.CALLIGRAPHIC_MODERN]?.size ?: 0) >= 4)
+
+        assertTrue(
+            com.example.ui.theme.arabicLineHeightMultiplier(
+                com.example.core.localization.QuranScriptType.INDOPAK,
+                com.example.core.localization.ArabicFontFamilyOption.NOTO_NASTALIQ_URDU
+            ) >= 2.2f
+        )
+
+        val editions = com.example.core.localization.MushafEditionStyle.entries
+        assertEquals(5, editions.size)
+        assertEquals(5, editions.map { it.titleEn }.distinct().size)
+    }
+
+    // 20. Scholarly Offline Bangla Word-by-Word Lexicon
+    @Test
+    fun testBanglaScholarlyWbwLexicon() {
+        assertEquals("আল্লাহ", com.example.core.localization.QuranBanglaWbwLexicon.lookup("ٱللَّهِ", "Allah"))
+        assertEquals("পরম করুণাময়", com.example.core.localization.QuranBanglaWbwLexicon.lookup("ٱلرَّحْمَـٰنِ", "The Entirely Merciful"))
+        assertEquals("রব/পালনকর্তা", com.example.core.localization.QuranBanglaWbwLexicon.lookup("رَبِّ", "Lord"))
+        assertEquals("সালাত/নামায", com.example.core.localization.QuranBanglaWbwLexicon.lookup("ٱلصَّلَوٰةَ", "the prayer"))
+    }
+
+    // 21. Male-Only Reciters, TtsVoiceSelector & Last-Recited Preference Persistence
+    @Test
+    fun testMaleOnlyAudioAndLastRecitedPersistence() = runBlocking {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val starterText = appContext.assets.open("quran_starter/quran_starter.json").bufferedReader().use { it.readText() }
+        val reciters = JSONObject(starterText).getJSONArray("reciters")
+        for (i in 0 until reciters.length()) {
+            val rec = reciters.getJSONObject(i)
+            assertFalse("Female reciter id=75 must be purged", rec.getInt("id") == 75)
+            assertFalse("Reciter must not contain female label", rec.getString("name").contains("female", ignoreCase = true))
+        }
+
+        // Guard against "female".contains("male") substring bug
+        assertTrue(com.example.core.audio.TtsVoiceSelector.isLikelyFemaleVoiceName("ar-xa-x-arz-female-local"))
+        assertFalse(com.example.core.audio.TtsVoiceSelector.isLikelyMaleVoiceName("ar-xa-x-arz-female-local"))
+        assertTrue(com.example.core.audio.TtsVoiceSelector.isLikelyMaleVoiceName("ar-xa-x-arc-male-local"))
+
+        val prefsRepo = com.example.core.localization.PreferencesRepository(appContext)
+        prefsRepo.setActiveReciterId(75)
+        prefsRepo.setLastRecited(surahId = 18, ayahNumber = 10, reciterId = 75, positionMs = 4250L)
+        val latest = prefsRepo.preferencesFlow.first()
+        assertEquals(7, latest.activeReciterId)
+        assertEquals(18, latest.lastRecitedSurahId)
+        assertEquals(10, latest.lastRecitedAyahNumber)
+        assertEquals(7, latest.lastRecitedReciterId)
+        assertEquals(4250L, latest.lastRecitedPositionMs)
+    }
+
+    // 22. Expanded 300+ Authentic Hisnul Muslim Dua Catalog Integrity
+    @Test
+    fun testExpandedDuaCatalog300Plus() {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val allDuas = com.example.core.database.DuaSeederData.readInChunks(appContext, chunkSize = 50).flatten().toList()
+        assertTrue("Expected >= 300 Duas in catalog, got ${allDuas.size}", allDuas.size >= 300)
+        assertEquals(allDuas.size, allDuas.map { it.id }.distinct().size)
+        assertEquals(12, allDuas.map { it.category }.distinct().size)
+        assertTrue(allDuas.all { it.arabicText.isNotBlank() && it.translation.isNotBlank() && it.reference.isNotBlank() })
+    }
 }
+

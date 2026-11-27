@@ -59,6 +59,11 @@ val ReemKufiArabicFont = FontFamily(
     Font(R.font.reem_kufi, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
+val NotoKufiArabicFont = FontFamily(
+    Font(R.font.noto_kufi_arabic, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.noto_kufi_arabic, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
 val ArefRuqaaArabicFont = FontFamily(
     Font(R.font.aref_ruqaa, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
     Font(R.font.aref_ruqaa, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
@@ -67,6 +72,26 @@ val ArefRuqaaArabicFont = FontFamily(
 val CairoArabicFont = FontFamily(
     Font(R.font.cairo, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
     Font(R.font.cairo, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val NotoNastaliqUrduFont = FontFamily(
+    Font(R.font.noto_nastaliq_urdu, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.noto_nastaliq_urdu, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val GulzarArabicFont = FontFamily(
+    Font(R.font.gulzar, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.gulzar, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val AlkalamiArabicFont = FontFamily(
+    Font(R.font.alkalami, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.alkalami, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
+)
+
+val IbmPlexArabicFont = FontFamily(
+    Font(R.font.ibm_plex_sans_arabic, FontWeight.Normal, loadingStrategy = FontLoadingStrategy.Async),
+    Font(R.font.ibm_plex_sans_arabic, FontWeight.Bold, loadingStrategy = FontLoadingStrategy.Async)
 )
 
 val BanglaBodyFont = FontFamily(
@@ -101,12 +126,25 @@ fun arabicScriptFont(
     ArabicFontFamilyOption.SCHEHERAZADE -> IndoPakArabicFont
     ArabicFontFamilyOption.LATEEF -> LateefArabicFont
     ArabicFontFamilyOption.NOTO_NASKH -> NotoArabicFont
+    ArabicFontFamilyOption.NOTO_NASTALIQ_URDU -> NotoNastaliqUrduFont
+    ArabicFontFamilyOption.GULZAR -> GulzarArabicFont
+    ArabicFontFamilyOption.ALKALAMI -> AlkalamiArabicFont
+    ArabicFontFamilyOption.IBM_PLEX_ARABIC -> IbmPlexArabicFont
     ArabicFontFamilyOption.HARMATTAN -> HarmattanArabicFont
     ArabicFontFamilyOption.MARKAZI -> MarkaziArabicFont
     ArabicFontFamilyOption.MIRZA -> MirzaArabicFont
     ArabicFontFamilyOption.REEM_KUFI -> ReemKufiArabicFont
+    ArabicFontFamilyOption.NOTO_KUFI -> NotoKufiArabicFont
     ArabicFontFamilyOption.AREF_RUQAA -> ArefRuqaaArabicFont
     ArabicFontFamilyOption.CAIRO -> CairoArabicFont
+}
+
+fun arabicLineHeightMultiplier(
+    scriptType: QuranScriptType,
+    fontOption: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO
+): Float = when (fontOption) {
+    ArabicFontFamilyOption.AUTO -> if (scriptType == QuranScriptType.INDOPAK) 1.76f else 1.72f
+    else -> fontOption.lineHeightMultiplier
 }
 
 fun contentFontForLanguage(languageCode: String): FontFamily = when (languageCode.lowercase()) {

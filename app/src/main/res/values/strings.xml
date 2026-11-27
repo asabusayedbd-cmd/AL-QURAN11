@@ -178,7 +178,7 @@
     <string name="home_quiz_desc">Test your knowledge of Surahs, Juz, and Quranic facts offline.</string>
     <string name="home_quiz_button">Play Quiz</string>
     <string name="home_dua_title">Authentic Duas &amp; Ruqyah</string>
-    <string name="home_dua_desc">150+ Topic-based Duas with Sahih Hadith references &amp; flashcard sharing.</string>
+    <string name="home_dua_desc">300+ Topic-based Duas with Sahih Hadith references &amp; flashcard sharing.</string>
     <string name="home_dua_button">Explore Duas</string>
     <string name="home_search_city_hint">Search city or country…</string>
     <string name="qibla_bearing_fmt">%1$s • Bearing %2$s° from North</string>
@@ -329,4 +329,11 @@
     <string name="inline_tafsir_full_btn">Full Tafsir &amp; Notes</string>
     <string name="inline_tafsir_fetch_btn">Load Tafsir</string>
     <string name="inline_tafsir_loading">Loading Tafsir…</string>
+    <string name="mushaf_edition_title">Mushaf Page Edition</string>
+    <string name="resume_recitation">Resume</string>
+    <string name="resume_recitation_fmt">Resume Recitation %1$s:%2$s</string>
+    <string name="jump_to_page">Jump to Page</string>
+    <string name="prev_page">Prev Page</string>
+    <string name="next_page">Next Page</string>
+    <string name="reader_page_fmt">Page %1$s</string>
 </resources>

@@ -1037,6 +1037,12 @@ class ReaderViewModel(
         preferencesRepository.setReaderCardStyle(style)
     }
 
+    fun setMushafStyle(style: com.example.core.localization.MushafEditionStyle) = viewModelScope.launch {
+        preferencesRepository.setMushafStyle(style)
+    }
+
+    fun resumeLastRecitation() = audioController.resumeLastRecitation()
+
     fun setTajweedEnabled(enabled: Boolean) = viewModelScope.launch {
         preferencesRepository.setTajweedEnabled(enabled)
     }

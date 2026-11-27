@@ -69,6 +69,8 @@ import com.example.R
 import com.example.core.database.TafsirSourceEntity
 import com.example.core.database.TranslationSourceEntity
 import com.example.core.localization.ArabicFontFamilyOption
+import com.example.core.localization.ArabicFontGroup
+import com.example.core.localization.MushafEditionStyle
 import com.example.core.localization.NoorThemeMode
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderCardStyle
@@ -104,7 +106,8 @@ fun ReaderSidebarDrawerContent(
     onOpenAllTranslations: () -> Unit,
     onSelectActiveTafsirSource: (TafsirSourceEntity) -> Unit,
     onOpenAllTafsirs: () -> Unit,
-    onOpenTajweedGuide: () -> Unit
+    onOpenTajweedGuide: () -> Unit,
+    onSelectMushafStyle: (MushafEditionStyle) -> Unit = {}
 ) {
     val activeTranslationsCount = remember(translationSources) {
         translationSources.count { it.isEnabled }
@@ -309,92 +312,141 @@ fun ReaderSidebarDrawerContent(
                         )
                     }
                 }
+                // Mushaf Edition Style Selector (Madani 15-Line, Bangladeshi Hafezi, Kolkata IndoPak, Ottoman, Maghribi)
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+                Text(
+                    text = stringResource(R.string.mushaf_edition_title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val isBnUi = preferences.uiLanguageCode.equals("bn", ignoreCase = true)
+                    MushafEditionStyle.entries.forEach { edition ->
+                        val selected = preferences.mushafStyle == edition
+                        val label = if (isBnUi) edition.titleBn else edition.titleEn
+                        FilterChip(
+                            selected = selected,
+                            onClick = { onSelectMushafStyle(edition) },
+                            leadingIcon = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .clip(CircleShape)
+                                        .background(androidx.compose.ui.graphics.Color(edition.borderHex))
+                                )
+                            },
+                            label = { Text("$label • ${edition.linesBadge}") },
+                            modifier = Modifier.testTag("sidebar_mushaf_style_${edition.name}")
+                        )
+                    }
+                }
             }
 
-            // 3. 11+ Distinct Arabic Fonts Selector with Live Preview
+            // 3. Grouped Arabic Fonts Selector (Madani/Uthmani, Bangladeshi/IndoPak, Calligraphic/Modern)
             SidebarSectionCard(
                 icon = Icons.Default.FontDownload,
                 title = stringResource(R.string.sidebar_fonts_section, ArabicFontFamilyOption.entries.size - 1)
             ) {
-                val fontEntries = ArabicFontFamilyOption.entries
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (pair in fontEntries.chunked(2)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            pair.forEach { option ->
-                                val selected = preferences.arabicFontFamily == option
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (selected) {
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                                    },
-                                    border = if (selected) {
-                                        BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
-                                    } else {
-                                        BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("sidebar_font_${option.name}")
-                                        .clickable { onSelectArabicFont(option) }
+                val isBnUi = preferences.uiLanguageCode.equals("bn", ignoreCase = true)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ArabicFontGroup.entries.forEachIndexed { groupIndex, group ->
+                        val groupFonts = ArabicFontFamilyOption.entries.filter { it.group == group }
+                        if (groupIndex > 0) {
+                            HorizontalDivider(
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                        }
+                        Text(
+                            text = if (isBnUi) group.titleBn else group.titleEn,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            for (pair in groupFonts.chunked(2)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Column(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                    pair.forEach { option ->
+                                        val selected = preferences.arabicFontFamily == option
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (selected) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                                            },
+                                            border = if (selected) {
+                                                BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+                                            } else {
+                                                BorderStroke(0.6.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                            },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("sidebar_font_${option.name}")
+                                                .clickable { onSelectArabicFont(option) }
                                         ) {
-                                            Text(
-                                                text = option.displayName,
-                                                style = MaterialTheme.typography.labelMedium,
-                                                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = if (selected) {
-                                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.onSurface
-                                                },
-                                                modifier = Modifier.weight(1f)
-                                            )
-                                            if (selected) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = "Selected",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(14.dp)
-                                                )
+                                            Column(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = option.displayName,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        color = if (selected) {
+                                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurface
+                                                        },
+                                                        modifier = Modifier.weight(1f)
+                                                    )
+                                                    if (selected) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Check,
+                                                            contentDescription = "Selected",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(14.dp)
+                                                        )
+                                                    }
+                                                }
+                                                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                                                    Text(
+                                                        text = option.arabicSample,
+                                                        fontFamily = arabicScriptFont(preferences.scriptType, option),
+                                                        fontSize = 17.sp,
+                                                        lineHeight = (18f * option.lineHeightMultiplier).sp,
+                                                        maxLines = 2,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        textAlign = TextAlign.Start,
+                                                        color = if (selected) {
+                                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                                        } else {
+                                                            MaterialTheme.colorScheme.primary
+                                                        },
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    )
+                                                }
                                             }
                                         }
-                                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                            Text(
-                                                text = option.arabicSample,
-                                                fontFamily = arabicScriptFont(preferences.scriptType, option),
-                                                fontSize = 18.sp,
-                                                lineHeight = 28.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                textAlign = TextAlign.Start,
-                                                color = if (selected) {
-                                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                                } else {
-                                                    MaterialTheme.colorScheme.primary
-                                                },
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
+                                    }
+                                    if (pair.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
                                     }
                                 }
-                            }
-                            if (pair.size == 1) {
-                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }

@@ -137,7 +137,6 @@
     {"id": 72, "name": "Ibrahim Walk (English Translation Audio)", "localizedName": "الترجمة الإنجليزية • ইংরেজি অনুবাদ অডিও", "style": "Translation", "baseUrl": "https://everyayah.com/data/English/Sahih_Intnl_Ibrahim_Walk_192kbps/", "isDownloaded": false},
     {"id": 73, "name": "Basfar + Ibrahim Walk (Arabic & English)", "localizedName": "عربي + إنجليزي • আরবি ও ইংরেজি অডিও", "style": "Translation", "baseUrl": "https://everyayah.com/data/MultiLanguage/Basfar_Walk_192kbps/", "isDownloaded": false},
     {"id": 74, "name": "Shamshad Ali Khan (Urdu Audio)", "localizedName": "الترجمة الأردية • উর্দু অনুবাদ অডিও", "style": "Translation", "baseUrl": "https://everyayah.com/data/translations/urdu_shamshad_ali_khan_46kbps/", "isDownloaded": false},
-    {"id": 75, "name": "Dr. Farhat Hashmi (Urdu Word/Ayah)", "localizedName": "فرحت هاشمي (أردو) • ফারহাত হাশমী (উর্দু)", "style": "Translation", "baseUrl": "https://everyayah.com/data/translations/urdu_farhat_hashmi/", "isDownloaded": false},
     {"id": 76, "name": "Balayev (Azerbaijani Audio)", "localizedName": "الترجمة الأذرية • আজারবাইজানি অনুবাদ অডিও", "style": "Translation", "baseUrl": "https://everyayah.com/data/translations/azerbaijani/balayev_128kbps/", "isDownloaded": false}
   ],
   "ayahs": [

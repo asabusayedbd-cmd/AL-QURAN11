@@ -13,6 +13,7 @@ import com.example.core.database.WordEntity
 import com.example.core.database.WordTranslationEntity
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
+import com.example.core.localization.QuranBanglaWbwLexicon
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -96,8 +97,9 @@ class QuranSyncRepository(
 
                     val uthmani = v.textUthmani?.takeIf { it.isNotBlank() }
                         ?: onlyWords.joinToString(" ") { it.textUthmani.orEmpty() }
-                    val indopak = v.textIndopak?.takeIf { it.isNotBlank() }
+                    val rawIndopak = v.textIndopak?.takeIf { it.isNotBlank() }
                         ?: onlyWords.joinToString(" ") { it.textIndopak ?: it.textUthmani.orEmpty() }.ifBlank { uthmani }
+                    val indopak = BidiUtils.sanitizeIndoPakArabic(rawIndopak).ifBlank { uthmani }
                     val rawTajweed = v.textTajweed?.let { stripEndSpan(it) }.takeIf { !it.isNullOrBlank() } ?: uthmani
 
                     ayahsToSave.add(
@@ -118,13 +120,15 @@ class QuranSyncRepository(
 
                     for (w in onlyWords) {
                         val wordTextUthmani = w.textUthmani.orEmpty().trim()
+                        val wordTextIndopak = BidiUtils.sanitizeIndoPakArabic(w.textIndopak.orEmpty())
+                            .ifBlank { wordTextUthmani }
                         wordsToSave.add(
                             WordEntity(
                                 id = w.id,
                                 ayahId = v.id,
                                 position = w.position,
                                 textUthmani = wordTextUthmani,
-                                textIndopak = w.textIndopak?.takeIf { it.isNotBlank() } ?: wordTextUthmani,
+                                textIndopak = wordTextIndopak,
                                 transliteration = cleanHtml(w.transliteration?.text.orEmpty()),
                                 rootArabic = "",
                                 lemmaArabic = "",
@@ -390,7 +394,14 @@ class QuranSyncRepository(
                     for (resp in pages) {
                         for (v in resp.verses) {
                             val localAyah = ayahByVerseKey[v.verseKey] ?: continue
-                            for (w in v.words) {
+                            val validWords = v.words.filter { w ->
+                                val type = w.charTypeName?.lowercase()
+                                val text = w.textUthmani.orEmpty().trim()
+                                type != "end" &&
+                                    !(type == "pause" && w.translation?.text.isNullOrBlank()) &&
+                                    !VERSE_END_MARKER_REGEX.matches(text)
+                            }
+                            for (w in validWords) {
                                 val meaning = cleanHtml(w.translation?.text.orEmpty())
                                 if (meaning.isBlank()) continue
                                 val matchedWord = wordByAyahPos[localAyah.id to w.position] ?: continue
@@ -411,53 +422,71 @@ class QuranSyncRepository(
                     insertedCount += apiMeanings.size
                 }
 
-                // Fill any remaining words without this WBW language via batch LineTranslator from English
-                if (lineTranslator != null) {
-                    val allWordTrs = localWords.map { it.id }
-                        .chunked(500)
-                        .flatMap { quranDao.getWordTranslationsForWords(it) }
-                        .groupBy { it.wordId }
+                // Fill any remaining words without this WBW language using curated offline lexicon (for Bangla)
+                // first, then batch LineTranslator from English as offline/API fallback
+                val allWordTrs = localWords.map { it.id }
+                    .chunked(500)
+                    .flatMap { quranDao.getWordTranslationsForWords(it) }
+                    .groupBy { it.wordId }
 
-                    val missingWordToEnglish = ArrayList<Pair<Long, String>>()
-                    for (w in localWords) {
-                        val trs = allWordTrs[w.id].orEmpty()
-                        val hasLang = trs.any { it.languageCode.equals(lang, ignoreCase = true) && it.meaningText.isNotBlank() }
-                        if (!hasLang) {
-                            val enMeaning = trs.firstOrNull { it.languageCode.equals("en", ignoreCase = true) }?.meaningText
-                                ?: w.transliteration
-                            if (enMeaning.isNotBlank()) {
-                                missingWordToEnglish.add(w.id to enMeaning.trim())
+                val lexiconMatchedEntities = ArrayList<WordTranslationEntity>()
+                val missingWordToEnglish = ArrayList<Pair<Long, String>>()
+                for (w in localWords) {
+                    val trs = allWordTrs[w.id].orEmpty()
+                    val hasLang = trs.any { it.languageCode.equals(lang, ignoreCase = true) && it.meaningText.isNotBlank() }
+                    if (!hasLang) {
+                        val enMeaning = trs.firstOrNull { it.languageCode.equals("en", ignoreCase = true) }?.meaningText
+                            ?: w.transliteration
+                        val curatedBn = if (lang == "bn") {
+                            QuranBanglaWbwLexicon.lookup(w.textUthmani, enMeaning)
+                        } else {
+                            null
+                        }
+                        if (!curatedBn.isNullOrBlank()) {
+                            lexiconMatchedEntities.add(
+                                WordTranslationEntity(
+                                    wordId = w.id,
+                                    languageCode = "bn",
+                                    meaningText = curatedBn
+                                )
+                            )
+                        } else if (enMeaning.isNotBlank()) {
+                            missingWordToEnglish.add(w.id to enMeaning.trim())
+                        }
+                    }
+                }
+
+                if (lexiconMatchedEntities.isNotEmpty()) {
+                    quranDao.insertWordTranslations(lexiconMatchedEntities)
+                    insertedCount += lexiconMatchedEntities.size
+                }
+
+                if (lineTranslator != null && missingWordToEnglish.isNotEmpty()) {
+                    val distinctEn = missingWordToEnglish.map { it.second }.distinct()
+                    val translatedMap = HashMap<String, String>(distinctEn.size)
+                    for (chunk in distinctEn.chunked(40)) {
+                        val res = lineTranslator.translateLinesJoined(chunk, lang)
+                        if (res.isSuccess) {
+                            val out = res.getOrThrow()
+                            chunk.forEachIndexed { idx, srcText ->
+                                val tr = out.getOrNull(idx).orEmpty().trim()
+                                if (tr.isNotBlank()) translatedMap[srcText] = tr
                             }
                         }
                     }
-
-                    if (missingWordToEnglish.isNotEmpty()) {
-                        val distinctEn = missingWordToEnglish.map { it.second }.distinct()
-                        val translatedMap = HashMap<String, String>(distinctEn.size)
-                        for (chunk in distinctEn.chunked(40)) {
-                            val res = lineTranslator.translateLinesJoined(chunk, lang)
-                            if (res.isSuccess) {
-                                val out = res.getOrThrow()
-                                chunk.forEachIndexed { idx, srcText ->
-                                    val tr = out.getOrNull(idx).orEmpty().trim()
-                                    if (tr.isNotBlank()) translatedMap[srcText] = tr
-                                }
+                    if (translatedMap.isNotEmpty()) {
+                        val fallbackEntities = missingWordToEnglish.mapNotNull { (wordId, enText) ->
+                            translatedMap[enText]?.let { trText ->
+                                WordTranslationEntity(
+                                    wordId = wordId,
+                                    languageCode = lang,
+                                    meaningText = trText
+                                )
                             }
                         }
-                        if (translatedMap.isNotEmpty()) {
-                            val fallbackEntities = missingWordToEnglish.mapNotNull { (wordId, enText) ->
-                                translatedMap[enText]?.let { trText ->
-                                    WordTranslationEntity(
-                                        wordId = wordId,
-                                        languageCode = lang,
-                                        meaningText = trText
-                                    )
-                                }
-                            }
-                            if (fallbackEntities.isNotEmpty()) {
-                                quranDao.insertWordTranslations(fallbackEntities)
-                                insertedCount += fallbackEntities.size
-                            }
+                        if (fallbackEntities.isNotEmpty()) {
+                            quranDao.insertWordTranslations(fallbackEntities)
+                            insertedCount += fallbackEntities.size
                         }
                     }
                 }

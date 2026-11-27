@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -42,23 +43,174 @@ enum class ReaderCardStyle {
     MINIMAL_PAPER
 }
 
+enum class ArabicFontGroup(
+    val titleEn: String,
+    val titleBn: String
+) {
+    MADANI_UTHMANI("Madani & Uthmani Script", "মাদানী ও উসমানী লিপি"),
+    BANGLADESHI_INDOPAK("Bangladeshi & IndoPak Fonts", "বাংলাদেশী ও ইন্দো-পাক ফন্ট"),
+    CALLIGRAPHIC_MODERN("Calligraphic & Modern Fonts", "ক্যালিগ্রাফি ও আধুনিক ফন্ট")
+}
+
 enum class ArabicFontFamilyOption(
     val displayName: String,
     val subtitle: String,
+    val group: ArabicFontGroup,
+    val lineHeightMultiplier: Float = 1.72f,
     val arabicSample: String = "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ"
 ) {
-    AUTO("Auto (Script Default)", "Amiri Quran (Uthmani) • Scheherazade (IndoPak)"),
-    AMIRI_QURAN("Amiri Quran", "Authentic Madani Mushaf typography"),
-    AMIRI("Amiri Classic", "Traditional Cairo Naskh"),
-    SCHEHERAZADE("Scheherazade New", "Tall IndoPak & Uthmani clarity"),
-    LATEEF("Lateef", "South Asian IndoPak calligraphic style"),
-    NOTO_NASKH("Noto Naskh Arabic", "Crisp high-legibility modern Naskh"),
-    HARMATTAN("Harmattan", "Maghribi & clear vowel positioning"),
-    MARKAZI("Markazi Text", "Refined classic editorial Naskh"),
-    MIRZA("Mirza", "Flowing calligraphic Naskh display"),
-    REEM_KUFI("Reem Kufi", "Geometric modern Kufi calligraphy"),
-    AREF_RUQAA("Aref Ruqaa", "Traditional handwritten Ruq'ah"),
-    CAIRO("Cairo", "Clean contemporary Arabic")
+    AUTO(
+        "Auto (Script Default)",
+        "Amiri Quran (Uthmani) • Scheherazade (IndoPak)",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.72f
+    ),
+    AMIRI_QURAN(
+        "Amiri Quran",
+        "Authentic Madani Mushaf typography",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.75f
+    ),
+    AMIRI(
+        "Amiri Classic",
+        "Traditional Cairo Naskh",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.70f
+    ),
+    NOTO_NASKH(
+        "Noto Naskh Arabic",
+        "Crisp high-legibility modern Naskh",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.65f
+    ),
+    MARKAZI(
+        "Markazi Text",
+        "Refined classic editorial Naskh",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.65f
+    ),
+    IBM_PLEX_ARABIC(
+        "IBM Plex Sans Arabic",
+        "Balanced modern Madani & study clarity",
+        ArabicFontGroup.MADANI_UTHMANI,
+        1.60f
+    ),
+    SCHEHERAZADE(
+        "Scheherazade New",
+        "Classic Hafezi IndoPak & Uthmani clarity",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        1.76f
+    ),
+    LATEEF(
+        "Lateef",
+        "South Asian Bangladeshi & IndoPak script",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        1.78f
+    ),
+    NOTO_NASTALIQ_URDU(
+        "Noto Nastaliq",
+        "Authentic Lahore & Bangladeshi calligraphic style",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        2.25f
+    ),
+    GULZAR(
+        "Gulzar IndoPak",
+        "Ornate South Asian Nastaliq Mushaf script",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        2.05f
+    ),
+    ALKALAMI(
+        "Alkalami",
+        "Bold hand-crafted pen script with clear vowels",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        1.90f
+    ),
+    HARMATTAN(
+        "Harmattan",
+        "High-clarity South & West vowel positioning",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        1.70f
+    ),
+    MIRZA(
+        "Mirza",
+        "Flowing calligraphic Naskh display",
+        ArabicFontGroup.BANGLADESHI_INDOPAK,
+        1.72f
+    ),
+    REEM_KUFI(
+        "Reem Kufi",
+        "Geometric modern Kufi calligraphy",
+        ArabicFontGroup.CALLIGRAPHIC_MODERN,
+        1.62f
+    ),
+    NOTO_KUFI(
+        "Noto Kufi Arabic",
+        "Structured architectural Kufi script",
+        ArabicFontGroup.CALLIGRAPHIC_MODERN,
+        1.62f
+    ),
+    AREF_RUQAA(
+        "Aref Ruqaa",
+        "Traditional handwritten Ruq'ah",
+        ArabicFontGroup.CALLIGRAPHIC_MODERN,
+        1.75f
+    ),
+    CAIRO(
+        "Cairo",
+        "Clean contemporary Arabic",
+        ArabicFontGroup.CALLIGRAPHIC_MODERN,
+        1.58f
+    )
+}
+
+enum class MushafEditionStyle(
+    val titleEn: String,
+    val titleBn: String,
+    val linesBadge: String,
+    val lightPaperHex: Long,
+    val darkPaperHex: Long,
+    val borderHex: Long
+) {
+    MADANI_15_LINE(
+        "Madani 15-Line",
+        "মাদানী ১৫-লাইন",
+        "15 Lines",
+        0xFFFCF7EC,
+        0xFF171E19,
+        0xFF0F5C4D
+    ),
+    BANGLADESHI_HAFEZI(
+        "Bangladeshi Hafezi",
+        "বাংলাদেশী হাফেজী",
+        "Hafezi",
+        0xFFFDF8EB,
+        0xFF1B1B15,
+        0xFF8B6914
+    ),
+    KOLKATA_INDOPAK(
+        "Kolkata IndoPak",
+        "কলকাতা ইন্দো-পাক",
+        "13 Lines",
+        0xFFFAF6E8,
+        0xFF191D19,
+        0xFF1F6A52
+    ),
+    OTTOMAN_ROYAL(
+        "Royal Ottoman",
+        "রয়াল উসমানী",
+        "Gold Trim",
+        0xFFFFFAF0,
+        0xFF1C1712,
+        0xFFC59B27
+    ),
+    MAGHRIBI_CLASSIC(
+        "Maghribi Classic",
+        "মাগরিবী ক্লাসিক",
+        "Classic",
+        0xFFF6EFE2,
+        0xFF1A1614,
+        0xFF7A4E2D
+    )
 }
 
 data class UserPreferences(
@@ -68,6 +220,7 @@ data class UserPreferences(
     val activeReciterId: Int = 7,
     val themeMode: NoorThemeMode = NoorThemeMode.SERENE_EMERALD,
     val readerCardStyle: ReaderCardStyle = ReaderCardStyle.CLASSIC_ELEVATED,
+    val mushafStyle: MushafEditionStyle = MushafEditionStyle.MADANI_15_LINE,
     val scriptType: QuranScriptType = QuranScriptType.UTHMANI,
     val arabicFontFamily: ArabicFontFamilyOption = ArabicFontFamilyOption.AUTO,
     val readerViewMode: ReaderViewMode = ReaderViewMode.WORD_BY_WORD,
@@ -89,7 +242,11 @@ data class UserPreferences(
     val audioWordByWordMode: Boolean = false,
     val autoPlayNextSurah: Boolean = true,
     val autoPlayWordOnInspect: Boolean = false,
-    val hanafiAsr: Boolean = false
+    val hanafiAsr: Boolean = false,
+    val lastRecitedSurahId: Int = 0,
+    val lastRecitedAyahNumber: Int = 0,
+    val lastRecitedReciterId: Int = 7,
+    val lastRecitedPositionMs: Long = 0L
 )
 
 class PreferencesRepository(private val context: Context) {
@@ -101,6 +258,7 @@ class PreferencesRepository(private val context: Context) {
         val ACTIVE_RECITER_ID = intPreferencesKey("active_reciter_id")
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val READER_CARD_STYLE = stringPreferencesKey("reader_card_style")
+        val MUSHAF_STYLE = stringPreferencesKey("mushaf_style")
         val SCRIPT_TYPE = stringPreferencesKey("script_type")
         val ARABIC_FONT_FAMILY = stringPreferencesKey("arabic_font_family")
         val READER_VIEW_MODE = stringPreferencesKey("reader_view_mode")
@@ -123,18 +281,28 @@ class PreferencesRepository(private val context: Context) {
         val AUTO_NEXT_SURAH = booleanPreferencesKey("auto_next_surah")
         val AUTO_PLAY_WORD_ON_INSPECT = booleanPreferencesKey("auto_play_word_on_inspect")
         val HANAFI_ASR = booleanPreferencesKey("hanafi_asr")
+        val LAST_RECITED_SURAH_ID = intPreferencesKey("last_recited_surah_id")
+        val LAST_RECITED_AYAH_NUMBER = intPreferencesKey("last_recited_ayah_number")
+        val LAST_RECITED_RECITER_ID = intPreferencesKey("last_recited_reciter_id")
+        val LAST_RECITED_POS_MS = longPreferencesKey("last_recited_pos_ms")
     }
 
     val preferencesFlow: Flow<UserPreferences> = context.noorDataStore.data.map { prefs ->
+        val savedActiveReciter = prefs[Keys.ACTIVE_RECITER_ID] ?: 7
+        val safeActiveReciter = if (savedActiveReciter == 75) 7 else savedActiveReciter
+        val savedLastReciter = prefs[Keys.LAST_RECITED_RECITER_ID] ?: safeActiveReciter
+        val safeLastReciter = if (savedLastReciter == 75) 7 else savedLastReciter
         UserPreferences(
             uiLanguageCode = prefs[Keys.UI_LANGUAGE] ?: "en",
             wbwLanguageCode = prefs[Keys.WBW_LANGUAGE] ?: "en",
             activeTafsirSourceId = prefs[Keys.ACTIVE_TAFSIR_ID] ?: 164,
-            activeReciterId = prefs[Keys.ACTIVE_RECITER_ID] ?: 7,
+            activeReciterId = safeActiveReciter,
             themeMode = enumValues<NoorThemeMode>().firstOrNull { it.name == prefs[Keys.THEME_MODE] }
                 ?: NoorThemeMode.SERENE_EMERALD,
             readerCardStyle = enumValues<ReaderCardStyle>().firstOrNull { it.name == prefs[Keys.READER_CARD_STYLE] }
                 ?: ReaderCardStyle.CLASSIC_ELEVATED,
+            mushafStyle = enumValues<MushafEditionStyle>().firstOrNull { it.name == prefs[Keys.MUSHAF_STYLE] }
+                ?: MushafEditionStyle.MADANI_15_LINE,
             scriptType = enumValues<QuranScriptType>().firstOrNull { it.name == prefs[Keys.SCRIPT_TYPE] }
                 ?: QuranScriptType.UTHMANI,
             arabicFontFamily = enumValues<ArabicFontFamilyOption>().firstOrNull { it.name == prefs[Keys.ARABIC_FONT_FAMILY] }
@@ -159,7 +327,11 @@ class PreferencesRepository(private val context: Context) {
             audioWordByWordMode = prefs[Keys.AUDIO_WBW_MODE] ?: false,
             autoPlayNextSurah = prefs[Keys.AUTO_NEXT_SURAH] ?: true,
             autoPlayWordOnInspect = prefs[Keys.AUTO_PLAY_WORD_ON_INSPECT] ?: false,
-            hanafiAsr = prefs[Keys.HANAFI_ASR] ?: false
+            hanafiAsr = prefs[Keys.HANAFI_ASR] ?: false,
+            lastRecitedSurahId = prefs[Keys.LAST_RECITED_SURAH_ID] ?: 0,
+            lastRecitedAyahNumber = prefs[Keys.LAST_RECITED_AYAH_NUMBER] ?: 0,
+            lastRecitedReciterId = safeLastReciter,
+            lastRecitedPositionMs = prefs[Keys.LAST_RECITED_POS_MS] ?: 0L
         )
     }
 
@@ -194,7 +366,8 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun setActiveReciterId(id: Int) {
-        context.noorDataStore.edit { it[Keys.ACTIVE_RECITER_ID] = id }
+        val safeId = if (id == 75) 7 else id
+        context.noorDataStore.edit { it[Keys.ACTIVE_RECITER_ID] = safeId }
     }
 
     suspend fun setThemeMode(mode: NoorThemeMode) {
@@ -203,6 +376,10 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setReaderCardStyle(style: ReaderCardStyle) {
         context.noorDataStore.edit { it[Keys.READER_CARD_STYLE] = style.name }
+    }
+
+    suspend fun setMushafStyle(style: MushafEditionStyle) {
+        context.noorDataStore.edit { it[Keys.MUSHAF_STYLE] = style.name }
     }
 
     suspend fun setScriptType(script: QuranScriptType) {
@@ -283,5 +460,16 @@ class PreferencesRepository(private val context: Context) {
 
     suspend fun setHanafiAsr(enabled: Boolean) {
         context.noorDataStore.edit { it[Keys.HANAFI_ASR] = enabled }
+    }
+
+    suspend fun setLastRecited(surahId: Int, ayahNumber: Int, reciterId: Int, positionMs: Long) {
+        if (surahId !in 1..114 || ayahNumber <= 0) return
+        val safeReciter = if (reciterId == 75) 7 else reciterId
+        context.noorDataStore.edit {
+            it[Keys.LAST_RECITED_SURAH_ID] = surahId
+            it[Keys.LAST_RECITED_AYAH_NUMBER] = ayahNumber
+            it[Keys.LAST_RECITED_RECITER_ID] = safeReciter
+            it[Keys.LAST_RECITED_POS_MS] = positionMs.coerceAtLeast(0L)
+        }
     }
 }

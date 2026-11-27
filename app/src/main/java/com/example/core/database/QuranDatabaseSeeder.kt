@@ -41,7 +41,7 @@ class QuranDatabaseSeeder(
 
     companion object {
         private const val KEY_SEED_VERSION = "seed_version"
-        private const val CURRENT_SEED_VERSION = 7
+        private const val CURRENT_SEED_VERSION = 8
         private const val EXPECTED_TOTAL_AYAHS = 6236
         // Keep cold Stage 1 tiny (17 Ayahs total) so Home & first frame render immediately
         private val PRIORITY_SURAH_IDS = listOf(1, 112, 113, 114)
@@ -152,6 +152,7 @@ class QuranDatabaseSeeder(
                             quranDao.insertTranslationSources(mergedTr)
                             quranDao.insertTafsirSources(mergedTaf)
                             quranDao.insertReciters(catalogs.reciters)
+                            quranDao.deleteReciterById(75)
                         }
                     }
 
@@ -268,6 +269,35 @@ class QuranDatabaseSeeder(
                             }
                             database.withTransaction {
                                 quranDao.insertWords(fixed)
+                            }
+                            if (interSurahYieldMs > 0L) delay(interSurahYieldMs) else yield()
+                        }
+                    }
+
+                    // Sanitize any existing IndoPak glyphs in already-seeded Surahs safely via UPDATE (never wipes FKs)
+                    if (savedVersion in 1 until CURRENT_SEED_VERSION) {
+                        for (sid in 1..114) {
+                            val existingAyahs = quranDao.getAyahsBySurah(sid)
+                            val dirtyAyahUpdates = existingAyahs.mapNotNull { ayah ->
+                                val cleaned = BidiUtils.sanitizeIndoPakArabic(ayah.textIndopak)
+                                    .ifBlank { ayah.textUthmani }
+                                if (cleaned != ayah.textIndopak) ayah.id to cleaned else null
+                            }
+                            val existingWords = quranDao.getWordsBySurah(sid)
+                            val dirtyWordUpdates = existingWords.mapNotNull { word ->
+                                val cleaned = BidiUtils.sanitizeIndoPakArabic(word.textIndopak)
+                                    .ifBlank { word.textUthmani }
+                                if (cleaned != word.textIndopak) word.id to cleaned else null
+                            }
+                            if (dirtyAyahUpdates.isNotEmpty() || dirtyWordUpdates.isNotEmpty()) {
+                                database.withTransaction {
+                                    for ((ayahId, cleanedText) in dirtyAyahUpdates) {
+                                        quranDao.updateAyahIndoPakText(ayahId, cleanedText)
+                                    }
+                                    for ((wordId, cleanedWord) in dirtyWordUpdates) {
+                                        quranDao.updateWordIndoPakText(wordId, cleanedWord)
+                                    }
+                                }
                             }
                             if (interSurahYieldMs > 0L) delay(interSurahYieldMs) else yield()
                         }
@@ -576,6 +606,8 @@ class QuranDatabaseSeeder(
                     segJsonBuilder.append(']')
 
                     if (id > 0 && ayahNumber > 0) {
+                        val sanitizedIndoPakAyah = BidiUtils.sanitizeIndoPakArabic(textIndopak)
+                            .ifBlank { textUthmani }
                         ayahs.add(
                             AyahEntity(
                                 id = id,
@@ -583,7 +615,7 @@ class QuranDatabaseSeeder(
                                 ayahNumber = ayahNumber,
                                 verseKey = verseKey,
                                 textUthmani = textUthmani,
-                                textIndopak = textIndopak.ifBlank { textUthmani },
+                                textIndopak = sanitizedIndoPakAyah,
                                 textTajweedHtml = textTajweed.ifBlank { textUthmani },
                                 normalizedArabic = BidiUtils.normalizeArabicForSearch(textUthmani),
                                 juzNumber = juz,
@@ -596,13 +628,15 @@ class QuranDatabaseSeeder(
                         val ayahPadded = ayahNumber.toString().padStart(3, '0')
                         for (w in rawWords) {
                             val posPadded = w.position.toString().padStart(3, '0')
+                            val sanitizedIndoPakWord = BidiUtils.sanitizeIndoPakArabic(w.textIndopak)
+                                .ifBlank { w.textUthmani }
                             words.add(
                                 WordEntity(
                                     id = w.id,
                                     ayahId = id,
                                     position = w.position,
                                     textUthmani = w.textUthmani,
-                                    textIndopak = w.textIndopak.ifBlank { w.textUthmani },
+                                    textIndopak = sanitizedIndoPakWord,
                                     transliteration = w.transliteration,
                                     rootArabic = "",
                                     lemmaArabic = "",
