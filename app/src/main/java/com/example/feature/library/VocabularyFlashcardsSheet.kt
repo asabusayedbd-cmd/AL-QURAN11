@@ -130,6 +130,16 @@ fun VocabularyFlashcardsSheet(
         engine = TextToSpeech(context.applicationContext) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 engine?.language = Locale.forLanguageTag("ar")
+                engine?.setPitch(0.84f)
+                runCatching {
+                    val arMale = engine?.voices?.firstOrNull { v ->
+                        v.locale.language == "ar" && (
+                            v.name.contains("male", ignoreCase = true) ||
+                            !v.name.contains("female", ignoreCase = true)
+                        )
+                    }
+                    if (arMale != null) engine?.voice = arMale
+                }
                 ttsReady = true
             }
         }
@@ -415,6 +425,7 @@ fun VocabularyFlashcardsSheet(
                             IconButton(
                                 onClick = {
                                     if (ttsReady) {
+                                        tts.setPitch(0.84f)
                                         tts.setSpeechRate(0.85f)
                                         tts.speak(card.textUthmani, TextToSpeech.QUEUE_FLUSH, null, "fc_${card.wordId}")
                                     }

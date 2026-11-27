@@ -481,7 +481,10 @@ fun SettingsScreen(
     }
 
     if (showTajweedGuide) {
-        TajweedGuideSheet(onDismiss = { showTajweedGuide = false })
+        TajweedGuideSheet(
+            uiLanguageCode = state.preferences.uiLanguageCode,
+            onDismiss = { showTajweedGuide = false }
+        )
     }
 }
 

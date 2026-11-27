@@ -78,16 +78,18 @@ class AppContainer(context: Context) {
         QuranAudioController(appContext, database, okHttpClient, preferencesRepository)
     }
 
+    private var languageSyncJob: kotlinx.coroutines.Job? = null
+
     fun warmUpAsync() {
         if (!warmedUp.compareAndSet(false, true)) return
         warmScope.launch {
             runCatching { preferencesRepository.preferencesFlow.first() }
         }
         warmScope.launch {
-            seeder.seedIfNeeded(deferBulkDelayMs = 300L, interSurahYieldMs = 0L)
+            seeder.seedIfNeeded(deferBulkDelayMs = 1800L, interSurahYieldMs = 45L)
         }
         warmScope.launch {
-            kotlinx.coroutines.delay(1800L)
+            kotlinx.coroutines.delay(2200L)
             val fontResIds = intArrayOf(
                 R.font.plus_jakarta_sans,
                 R.font.amiri,
@@ -98,6 +100,56 @@ class AppContainer(context: Context) {
             )
             for (fontRes in fontResIds) {
                 runCatching { ResourcesCompat.getFont(appContext, fontRes) }
+            }
+        }
+    }
+
+    fun syncLanguageContent(languageCode: String) {
+        val normLang = languageCode.lowercase().trim()
+        val primaryTrId = when (normLang) {
+            "bn" -> 161
+            "ur" -> 97
+            "id" -> 33
+            "tr" -> 77
+            "fr" -> 31
+            "es" -> 83
+            "de" -> 27
+            "ru" -> 45
+            "hi" -> 122
+            "fa" -> 29
+            else -> 20
+        }
+        languageSyncJob?.cancel()
+        languageSyncJob = warmScope.launch {
+            runCatching {
+                val quranDao = database.quranDao()
+                quranDao.setTranslationEnabled(primaryTrId, true)
+
+                val lastSurah = database.userLibraryDao().getReadingProgress()?.lastSurahId ?: 1
+                val prioritySurahs = listOf(lastSurah, 1, 112, 113, 114).distinct()
+                val source = quranDao.getAllTranslationSources().firstOrNull { it.id == primaryTrId }
+
+                for (sid in prioritySurahs) {
+                    val surah = quranDao.getSurah(sid)
+                    if (surah == null || quranDao.countAyahsInSurah(sid) < surah.ayahCount) {
+                        seeder.ensureSurahLoadedFromAssets(sid, surah?.ayahCount)
+                    }
+                    if (!normLang.equals("en", ignoreCase = true)) {
+                        quranSyncRepository.ensureWbwForSurah(sid, normLang, lineTranslator)
+                    }
+                    if (primaryTrId != 20 && source != null) {
+                        quranSyncRepository.ensureTranslationsForSurah(
+                            surahId = sid,
+                            enabledSources = listOf(source),
+                            lineTranslator = lineTranslator
+                        )
+                    }
+                }
+
+                if (primaryTrId != 20 && quranDao.countTranslationsForSource(primaryTrId) < 6000) {
+                    // Use direct Quran.com API download for full-Quran pack without blocking on 500+ sequential translate calls
+                    quranSyncRepository.downloadTranslationPack(primaryTrId, lineTranslator = null)
+                }
             }
         }
     }

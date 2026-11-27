@@ -11,13 +11,17 @@ import com.example.core.database.DuaEntity
 import com.example.core.database.NoorDatabase
 import com.example.core.database.QuranDatabaseSeeder
 import com.example.core.localization.LineTranslator
+import com.example.core.localization.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -55,7 +59,8 @@ class DuaViewModel(
     private val database: NoorDatabase,
     private val okHttpClient: OkHttpClient,
     private val seeder: QuranDatabaseSeeder? = null,
-    private val lineTranslator: LineTranslator? = null
+    private val lineTranslator: LineTranslator? = null,
+    private val preferencesRepository: PreferencesRepository? = null
 ) : ViewModel() {
     private val appContext = context.applicationContext
     private val duaDao = database.duaDao()
@@ -66,6 +71,9 @@ class DuaViewModel(
     private val _audioState = MutableStateFlow(DuaAudioUiState())
     private val _translationState = MutableStateFlow(DuaTranslationUiState())
     private var batchTranslateJob: kotlinx.coroutines.Job? = null
+    private var autoTranslateJob: kotlinx.coroutines.Job? = null
+    @Volatile
+    private var manualOverrideLang: String? = null
 
     private var mediaPlayer: MediaPlayer? = null
     private var tts: TextToSpeech? = null
@@ -126,6 +134,44 @@ class DuaViewModel(
         viewModelScope.launch {
             seeder?.ensureDuasSeededNow()
         }
+        val prefsRepo = preferencesRepository
+        val translator = lineTranslator
+        if (prefsRepo != null && translator != null) {
+            viewModelScope.launch {
+                var lastUiLang: String? = null
+                combine(
+                    prefsRepo.preferencesFlow.map { it.uiLanguageCode.lowercase().trim() }.distinctUntilChanged(),
+                    duas
+                ) { uiLang, visibleDuas ->
+                    uiLang to visibleDuas
+                }.collectLatest { (uiLang, visibleDuas) ->
+                    if (lastUiLang != null && lastUiLang != uiLang) {
+                        manualOverrideLang = null
+                    }
+                    lastUiLang = uiLang
+                    val effectiveLang = manualOverrideLang ?: uiLang
+                    if (effectiveLang == "en") {
+                        autoTranslateJob?.cancel()
+                        if (manualOverrideLang == null && _translationState.value.activeLanguage != null) {
+                            _translationState.update { DuaTranslationUiState() }
+                        }
+                        return@collectLatest
+                    }
+                    if (visibleDuas.isEmpty()) return@collectLatest
+                    val pending = visibleDuas.filter { dua ->
+                        _translationState.value.translatedById[dua.id]?.first != effectiveLang
+                    }
+                    if (pending.isEmpty()) {
+                        _translationState.update { it.copy(activeLanguage = effectiveLang, isBatchTranslating = false) }
+                        return@collectLatest
+                    }
+                    autoTranslateJob?.cancel()
+                    autoTranslateJob = launch {
+                        translateChunkedList(pending, effectiveLang, translator, reportError = false)
+                    }
+                }
+            }
+        }
     }
 
     fun translateDua(dua: DuaEntity, targetLang: String) {
@@ -167,7 +213,20 @@ class DuaViewModel(
         val translator = lineTranslator ?: return
         val visible = duas.value
         if (visible.isEmpty()) return
+        manualOverrideLang = targetLang
         batchTranslateJob?.cancel()
+        autoTranslateJob?.cancel()
+        batchTranslateJob = viewModelScope.launch {
+            translateChunkedList(visible, targetLang, translator, reportError = true)
+        }
+    }
+
+    private suspend fun translateChunkedList(
+        targets: List<DuaEntity>,
+        targetLang: String,
+        translator: LineTranslator,
+        reportError: Boolean
+    ) {
         _translationState.update {
             it.copy(
                 activeLanguage = targetLang,
@@ -175,39 +234,37 @@ class DuaViewModel(
                 errorMessage = null
             )
         }
-        batchTranslateJob = viewModelScope.launch {
-            try {
-                for (chunk in visible.chunked(5)) {
-                    val inputs = chunk.flatMap { listOf(it.title, it.translation, it.virtueOrContext) }
-                    val res = translator.translateLinesJoined(inputs, targetLang)
-                    if (res.isSuccess) {
-                        val parts = res.getOrThrow()
-                        val updates = chunk.mapIndexed { idx, dua ->
-                            val base = idx * 3
-                            dua.id to (targetLang to TranslatedDuaFields(
-                                title = parts.getOrNull(base).orEmpty().ifBlank { dua.title },
-                                translation = parts.getOrNull(base + 1).orEmpty().ifBlank { dua.translation },
-                                virtueOrContext = parts.getOrNull(base + 2).orEmpty().ifBlank { dua.virtueOrContext }
-                            ))
-                        }.toMap()
-                        _translationState.update { state ->
-                            state.copy(translatedById = state.translatedById + updates)
-                        }
-                    } else {
-                        _translationState.update {
-                            it.copy(
-                                isBatchTranslating = false,
-                                errorMessage = res.exceptionOrNull()?.localizedMessage
-                            )
-                        }
-                        return@launch
+        try {
+            for (chunk in targets.chunked(6)) {
+                val inputs = chunk.flatMap { listOf(it.title, it.translation, it.virtueOrContext) }
+                val res = translator.translateLinesJoined(inputs, targetLang)
+                if (res.isSuccess) {
+                    val parts = res.getOrThrow()
+                    val updates = chunk.mapIndexed { idx, dua ->
+                        val base = idx * 3
+                        dua.id to (targetLang to TranslatedDuaFields(
+                            title = parts.getOrNull(base).orEmpty().ifBlank { dua.title },
+                            translation = parts.getOrNull(base + 1).orEmpty().ifBlank { dua.translation },
+                            virtueOrContext = parts.getOrNull(base + 2).orEmpty().ifBlank { dua.virtueOrContext }
+                        ))
+                    }.toMap()
+                    _translationState.update { state ->
+                        state.copy(translatedById = state.translatedById + updates)
                     }
+                } else {
+                    _translationState.update {
+                        it.copy(
+                            isBatchTranslating = false,
+                            errorMessage = if (reportError) res.exceptionOrNull()?.localizedMessage else it.errorMessage
+                        )
+                    }
+                    return
                 }
-                _translationState.update { it.copy(isBatchTranslating = false) }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                _translationState.update { it.copy(isBatchTranslating = false) }
-                throw e
             }
+            _translationState.update { it.copy(isBatchTranslating = false) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            _translationState.update { it.copy(isBatchTranslating = false) }
+            throw e
         }
     }
 
@@ -216,7 +273,9 @@ class DuaViewModel(
     }
 
     fun clearAllDuaTranslations() {
+        manualOverrideLang = "en"
         batchTranslateJob?.cancel()
+        autoTranslateJob?.cancel()
         _translationState.update {
             DuaTranslationUiState()
         }
@@ -391,6 +450,16 @@ class DuaViewModel(
                     }
                 } else {
                     ttsReady = true
+                    instance.setPitch(0.84f)
+                    runCatching {
+                        val arMale = instance.voices?.firstOrNull { v ->
+                            v.locale.language == "ar" && (
+                                v.name.contains("male", ignoreCase = true) ||
+                                !v.name.contains("female", ignoreCase = true)
+                            )
+                        }
+                        if (arMale != null) instance.voice = arMale
+                    }
                     instance.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                         override fun onStart(utteranceId: String?) {}
                         override fun onDone(utteranceId: String?) {
@@ -417,6 +486,7 @@ class DuaViewModel(
 
     private fun triggerTtsUtterance(engine: TextToSpeech, dua: DuaEntity) {
         _audioState.update { it.copy(isTtsSpeakingId = dua.id, activePlayingId = null, statusMessage = null) }
+        engine.setPitch(0.84f)
         engine.speak(dua.arabicText, TextToSpeech.QUEUE_FLUSH, null, "dua_${dua.id}")
     }
 

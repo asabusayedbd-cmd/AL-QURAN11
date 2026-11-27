@@ -164,9 +164,25 @@ class PreferencesRepository(private val context: Context) {
     }
 
     suspend fun setUiLanguage(languageCode: String) {
-        context.noorDataStore.edit { it[Keys.UI_LANGUAGE] = languageCode }
-        val appLocales = LocaleListCompat.forLanguageTags(languageCode)
-        AppCompatDelegate.setApplicationLocales(appLocales)
+        val defaultTafsirId = when (languageCode.lowercase().trim()) {
+            "bn" -> 164
+            "ar" -> 16
+            "ur" -> 160
+            "ru" -> 170
+            else -> 169
+        }
+        context.noorDataStore.edit {
+            it[Keys.UI_LANGUAGE] = languageCode
+            it[Keys.WBW_LANGUAGE] = languageCode
+            it[Keys.ACTIVE_TAFSIR_ID] = defaultTafsirId
+        }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+            val currentTags = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+            if (!currentTags.equals(languageCode, ignoreCase = true)) {
+                val appLocales = LocaleListCompat.forLanguageTags(languageCode)
+                AppCompatDelegate.setApplicationLocales(appLocales)
+            }
+        }
     }
 
     suspend fun setWbwLanguage(languageCode: String) {

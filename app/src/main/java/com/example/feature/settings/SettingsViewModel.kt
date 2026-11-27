@@ -58,7 +58,8 @@ class SettingsViewModel(
     private val syncRepository: QuranSyncRepository,
     private val audioController: QuranAudioController? = null,
     private val seeder: QuranDatabaseSeeder? = null,
-    private val lineTranslator: LineTranslator? = null
+    private val lineTranslator: LineTranslator? = null,
+    private val onSyncLanguageContent: ((String) -> Unit)? = null
 ) : ViewModel() {
 
     private val quranDao = database.quranDao()
@@ -147,8 +148,41 @@ class SettingsViewModel(
     }
 
     fun setUiLanguage(languageCode: String) {
+        val normLang = languageCode.lowercase().trim()
+        val primaryTrId = when (normLang) {
+            "bn" -> 161
+            "ur" -> 97
+            "id" -> 33
+            "tr" -> 77
+            "fr" -> 31
+            "es" -> 83
+            "de" -> 27
+            "ru" -> 45
+            "hi" -> 122
+            "fa" -> 29
+            else -> 20
+        }
         viewModelScope.launch {
-            preferencesRepository.setUiLanguage(languageCode)
+            preferencesRepository.setUiLanguage(normLang)
+            quranDao.setTranslationEnabled(primaryTrId, true)
+            _statusMessage.value = "Language set to ${LineTranslator.languageLabel(normLang)}. Translation, WBW & Duas updated."
+            if (onSyncLanguageContent != null) {
+                onSyncLanguageContent.invoke(normLang)
+            } else if (primaryTrId != 20 && quranDao.countTranslationsForSource(primaryTrId) < 6000) {
+                _busySourceId.value = primaryTrId
+                syncRepository.downloadTranslationPack(primaryTrId, lineTranslator)
+                _busySourceId.value = null
+            }
+        }
+        if (onSyncLanguageContent == null && !normLang.equals("en", ignoreCase = true)) {
+            wbwSyncJob?.cancel()
+            wbwSyncJob = viewModelScope.launch(Dispatchers.IO) {
+                val lastSurah = database.userLibraryDao().getReadingProgress()?.lastSurahId ?: 1
+                val priority = listOf(lastSurah, 1, 112, 113, 114).distinct()
+                for (sid in priority) {
+                    syncRepository.ensureWbwForSurah(sid, normLang, lineTranslator)
+                }
+            }
         }
     }
 
@@ -254,7 +288,7 @@ class SettingsViewModel(
             _busySurahId.value = surahId
             val res = syncRepository.deleteSurahOffline(surahId)
             _statusMessage.value = res.fold(
-                onSuccess = { "Deleted Surah $surahId offline cache" },
+                onSuccess = { "Cleared Surah $surahId audio cache — Mushaf text is protected" },
                 onFailure = { "Failed: ${it.localizedMessage}" }
             )
             refreshAudioSurahIds()
@@ -314,7 +348,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             val res = syncRepository.deleteAllDownloadedSurahs()
             _statusMessage.value = res.fold(
-                onSuccess = { "Deleted all cached Surahs ($it removed) and audio" },
+                onSuccess = { "Cleared offline audio cache — all 114 Mushaf Surahs remain protected" },
                 onFailure = { "Failed: ${it.localizedMessage}" }
             )
             refreshAudioSurahIds()

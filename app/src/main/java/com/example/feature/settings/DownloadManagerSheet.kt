@@ -200,11 +200,11 @@ fun DownloadManagerSheet(
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = MaterialTheme.colorScheme.error
                             ),
-                            enabled = downloadedSurahsCount > 0 || state.offlineCacheSizeBytes > 0L
+                            enabled = state.offlineCacheSizeBytes > 0L
                         ) {
                             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(stringResource(R.string.dm_delete_all), fontSize = 12.sp, maxLines = 1)
+                            Text(if (state.preferences.uiLanguageCode == "bn") "অডিও ক্যাশ সাফ" else "Clear Audio", fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }
@@ -529,24 +529,32 @@ fun DownloadManagerSheet(
     }
 
     if (showDeleteAllDialog) {
+        val isBn = state.preferences.uiLanguageCode == "bn"
         AlertDialog(
             onDismissRequest = { showDeleteAllDialog = false },
-            title = { Text("Delete All Offline Downloads?") },
-            text = { Text("This will remove all downloaded Surah texts and audio files from your device. You can re-download them at any time.") },
+            title = { Text(if (isBn) "অডিও ক্যাশ পরিষ্কার করবেন?" else "Clear Offline Audio Cache?") },
+            text = {
+                Text(
+                    if (isBn)
+                        "পবিত্র কুরআনের মূল পাঠ ও সকল সূরা স্থায়ীভাবে সংরক্ষিত এবং অ্যাপ থেকে কখনো মুছে ফেলা যাবে না। এই অপশনটি শুধুমাত্র ডাউনলোডকৃত ক্বারীগণের অডিও তিলাওয়াত ফাইল সাফ করবে।"
+                    else
+                        "The sacred Holy Quran text and Surahs are permanently protected and cannot be deleted from the app. This action only cleans downloaded audio recitation files."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteAllDownloadedSurahs()
+                        viewModel.clearOfflineAudioCache()
                         showDeleteAllDialog = false
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("Delete Everything")
+                    Text(if (isBn) "অডিও ক্যাশ মুছুন" else "Clear Audio Cache")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteAllDialog = false }) {
-                    Text("Cancel")
+                    Text(if (isBn) "বাতিল" else "Cancel")
                 }
             }
         )
@@ -605,16 +613,30 @@ private fun SurahDownloadRow(
                 if (isBusy) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                 } else if (surah.isDownloaded) {
-                    IconButton(
-                        onClick = onDeleteSurah,
-                        modifier = Modifier.testTag("delete_surah_${surah.id}")
+                    // Sacred Mushaf is permanently protected and cannot be deleted
+                    Surface(
+                        shape = MaterialTheme.shapes.extraSmall,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     ) {
-                        Icon(
-                            Icons.Default.DeleteOutline,
-                            contentDescription = "Delete Surah",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Permanent Mushaf Protected",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = if (uiLang == "bn") "সংরক্ষিত কুরআন" else "Protected Mushaf",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 } else {
                     IconButton(

@@ -153,8 +153,6 @@ class ReaderViewModel(
     private var downloadJob: Job? = null
     private var assetLoadJob: Job? = null
     private var batchTranslateJob: Job? = null
-    @Volatile
-    private var explicitlyDeletedSurahId: Int? = null
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -165,7 +163,6 @@ class ReaderViewModel(
             ) { sid, wbwLang, enabledSources ->
                 Triple(sid, wbwLang, enabledSources)
             }.collectLatest { (sid, wbwLang, enabledSources) ->
-                if (explicitlyDeletedSurahId == sid) return@collectLatest
                 val surah = quranDao.getSurah(sid)
                 val existingCount = quranDao.countAyahsInSurah(sid)
                 if (surah == null || existingCount < surah.ayahCount) {
@@ -190,7 +187,7 @@ class ReaderViewModel(
                 Triple(sid, showInline to tafsirId, sources)
             }.collectLatest { (sid, inlinePair, sources) ->
                 val (showInline, tafsirId) = inlinePair
-                if (!showInline || explicitlyDeletedSurahId == sid) {
+                if (!showInline) {
                     _isLoadingInlineTafsirs.value = false
                     return@collectLatest
                 }
@@ -436,7 +433,6 @@ class ReaderViewModel(
     fun loadSurah(surahId: Int) {
         val targetId = surahId.coerceIn(1, 114)
         if (_surahId.value != targetId) {
-            explicitlyDeletedSurahId = null
             batchTranslateJob?.cancel()
             _lineTranslationState.value = LineTranslationUiState()
         }
@@ -450,8 +446,7 @@ class ReaderViewModel(
         assetLoadJob = viewModelScope.launch {
             val surah = quranDao.getSurah(surahId)
             val existingCount = quranDao.countAyahsInSurah(surahId)
-            val isMissingLocally = surah == null ||
-                (existingCount < surah.ayahCount && explicitlyDeletedSurahId != surahId)
+            val isMissingLocally = surah == null || existingCount < surah.ayahCount
             if (isMissingLocally) {
                 seeder?.ensureSurahLoadedFromAssets(surahId, surah?.ayahCount)
             }
@@ -1074,13 +1069,7 @@ class ReaderViewModel(
     fun clearAudioCache() = audioController.clearOfflineAudioCache()
     fun deleteCurrentSurah() {
         val sid = _surahId.value
-        explicitlyDeletedSurahId = sid
-        downloadJob?.cancel()
-        downloadJob = viewModelScope.launch {
-            _isDownloadingSurah.value = true
-            syncRepository.deleteSurahOffline(sid)
-            _isDownloadingSurah.value = false
-        }
+        audioController.deleteSurahAudio(sid)
     }
     fun setAutoPlayWordOnInspect(enabled: Boolean) {
         viewModelScope.launch { preferencesRepository.setAutoPlayWordOnInspect(enabled) }

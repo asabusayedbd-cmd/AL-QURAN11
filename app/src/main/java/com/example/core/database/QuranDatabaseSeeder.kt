@@ -69,11 +69,6 @@ class QuranDatabaseSeeder(
                 if (isFullySeeded) return@withLock
                 try {
                     val savedVersion = seedPrefs.getInt(KEY_SEED_VERSION, 0)
-                    if (savedVersion >= CURRENT_SEED_VERSION && quranDao.getSurah(1) != null) {
-                        isFullySeeded = true
-                        return@withLock
-                    }
-
                     val currentDuaCount = duaDao.countDuas()
                     val hasAllDuas = currentDuaCount >= DuaSeederData.EXPECTED_MIN_DUA_COUNT
                     val hasAllSurahs = quranDao.countSurahs() >= 114
@@ -171,19 +166,20 @@ class QuranDatabaseSeeder(
                         delay(deferBulkDelayMs)
                     }
 
+                    val yieldDelayMs = if (interSurahYieldMs > 0L) interSurahYieldMs else 35L
                     if (!hasAllDuas) {
-                        ensureDuasSeededNow(interChunkDelayMs = interSurahYieldMs)
+                        ensureDuasSeededNow(interChunkDelayMs = yieldDelayMs)
                     }
 
-                    // Stage 2: Batched background seeding for remaining Surahs (~450 ayahs per transaction)
+                    // Stage 2: Gentle memory-safe background seeding for remaining Surahs (~120 ayahs / ~1500 words per transaction)
                     val existingCountsBySurah = quranDao.getAyahCountsBySurah().associate { it.surahId to it.cnt }
-                    val batchAyahs = ArrayList<AyahEntity>(520)
-                    val batchWords = ArrayList<WordEntity>(6000)
-                    val batchWordTrs = ArrayList<WordTranslationEntity>(6000)
-                    val batchAyahTrs = ArrayList<AyahTranslationEntity>(520)
-                    val batchAudio = ArrayList<AudioSegmentEntity>(520)
-                    val partialReplaceIds = ArrayList<Int>(16)
-                    val markDownloadedIds = ArrayList<Int>(16)
+                    val batchAyahs = ArrayList<AyahEntity>(200)
+                    val batchWords = ArrayList<WordEntity>(2200)
+                    val batchWordTrs = ArrayList<WordTranslationEntity>(2200)
+                    val batchAyahTrs = ArrayList<AyahTranslationEntity>(200)
+                    val batchAudio = ArrayList<AudioSegmentEntity>(200)
+                    val partialReplaceIds = ArrayList<Int>(8)
+                    val markDownloadedIds = ArrayList<Int>(8)
 
                     suspend fun flushBatch() {
                         if (batchAyahs.isEmpty() && markDownloadedIds.isEmpty()) return
@@ -207,48 +203,55 @@ class QuranDatabaseSeeder(
                         batchAudio.clear()
                         partialReplaceIds.clear()
                         markDownloadedIds.clear()
-                        if (interSurahYieldMs > 0L) delay(interSurahYieldMs) else yield()
+                        delay(yieldDelayMs)
                     }
 
                     for (surah in surahEntities) {
                         if (surah.id in PRIORITY_SURAH_IDS) continue
-                        if (savedVersion >= CURRENT_SEED_VERSION && !surah.isDownloaded) continue
-                        val existingCount = existingCountsBySurah[surah.id] ?: 0
-                        if (existingCount >= surah.ayahCount) {
+                        val preExistingCount = existingCountsBySurah[surah.id] ?: 0
+                        if (preExistingCount >= surah.ayahCount) {
                             if (!surah.isDownloaded) {
                                 markDownloadedIds.add(surah.id)
                             }
                             continue
                         }
                         getSurahMutex(surah.id).withLock {
-                            val assetPath = "quran_full/s${surah.id.toString().padStart(3, '0')}.qgz"
-                            val parsed = parseCompressedSurah(assetPath, surah.id)
-                            if (parsed.ayahs.isNotEmpty()) {
-                                if (existingCount in 1 until parsed.ayahs.size) {
-                                    partialReplaceIds.add(surah.id)
-                                }
-                                batchAyahs.addAll(parsed.ayahs)
-                                batchWords.addAll(parsed.words)
-                                batchWordTrs.addAll(parsed.wordTranslations)
-                                batchAyahTrs.addAll(parsed.ayahTranslations)
-                                batchAudio.addAll(parsed.audioSegments)
+                            val currentCount = quranDao.countAyahsInSurah(surah.id)
+                            if (currentCount >= surah.ayahCount) {
                                 if (!surah.isDownloaded) {
                                     markDownloadedIds.add(surah.id)
                                 }
+                            } else {
+                                val assetPath = "quran_full/s${surah.id.toString().padStart(3, '0')}.qgz"
+                                val parsed = parseCompressedSurah(assetPath, surah.id)
+                                if (parsed.ayahs.isNotEmpty()) {
+                                    if (currentCount in 1 until parsed.ayahs.size) {
+                                        partialReplaceIds.add(surah.id)
+                                    }
+                                    batchAyahs.addAll(parsed.ayahs)
+                                    batchWords.addAll(parsed.words)
+                                    batchWordTrs.addAll(parsed.wordTranslations)
+                                    batchAyahTrs.addAll(parsed.ayahTranslations)
+                                    batchAudio.addAll(parsed.audioSegments)
+                                    if (!surah.isDownloaded) {
+                                        markDownloadedIds.add(surah.id)
+                                    }
+                                }
                             }
                         }
-                        if (batchAyahs.size >= 450) {
+                        if (batchAyahs.size >= 120 || batchWords.size >= 1500) {
                             flushBatch()
                         }
                     }
                     flushBatch()
 
                     // Overlay rich starter Bangla/Urdu WBW, morphology roots, & Tafsirs using canonical IDs
-                    if (catalogs != null) {
+                    val effectiveCatalogs = catalogs ?: if (savedVersion < CURRENT_SEED_VERSION) readStarterCatalogsStreaming() else null
+                    if (effectiveCatalogs != null) {
                         applyStarterEnrichmentOverlayStreaming(
-                            rawTranslationSources = catalogs.translationSources,
-                            rawTafsirSources = catalogs.tafsirSources,
-                            reciters = catalogs.reciters
+                            rawTranslationSources = effectiveCatalogs.translationSources,
+                            rawTafsirSources = effectiveCatalogs.tafsirSources,
+                            reciters = effectiveCatalogs.reciters
                         )
                     }
 
@@ -270,17 +273,8 @@ class QuranDatabaseSeeder(
                         }
                     }
 
-                    // Persist seed completion version only after full dataset validation
-                    val finalSurahs = quranDao.countSurahs()
-                    val finalAyahs = quranDao.countAllAyahs()
-                    val finalDuas = duaDao.countDuas()
-                    if (finalSurahs >= 114 &&
-                        finalAyahs >= EXPECTED_TOTAL_AYAHS &&
-                        finalDuas >= DuaSeederData.EXPECTED_MIN_DUA_COUNT
-                    ) {
-                        seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
-                        isFullySeeded = true
-                    }
+                    seedPrefs.edit { putInt(KEY_SEED_VERSION, CURRENT_SEED_VERSION) }
+                    isFullySeeded = true
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -914,7 +908,7 @@ class QuranDatabaseSeeder(
 
     private suspend fun seedDuasInChunks(interChunkDelayMs: Long = 0L) {
         val bookmarkedIds = duaDao.getBookmarkedDuaIds().toHashSet()
-        DuaSeederData.readInChunks(context, chunkSize = 90).forEach { chunk ->
+        DuaSeederData.readInChunks(context, chunkSize = 50).forEach { chunk ->
             val merged = if (bookmarkedIds.isEmpty()) {
                 chunk
             } else {

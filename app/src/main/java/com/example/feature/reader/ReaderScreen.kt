@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Fullscreen
@@ -438,18 +437,7 @@ fun ReaderScreen(
                                 )
                             }
                         }
-                        if (state.surah?.isDownloaded == true) {
-                            IconButton(
-                                onClick = { viewModel.deleteCurrentSurah() },
-                                modifier = Modifier.testTag("reader_delete_surah_button")
-                            ) {
-                                Icon(
-                                    Icons.Default.DeleteOutline,
-                                    contentDescription = "Delete Surah",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        } else {
+                        if (state.surah?.isDownloaded != true) {
                             IconButton(
                                 onClick = { viewModel.downloadCurrentSurah() },
                                 modifier = Modifier.testTag("reader_download_surah_button")
@@ -1654,7 +1642,10 @@ fun ReaderScreen(
     }
 
     if (showTajweedGuide) {
-        TajweedGuideSheet(onDismiss = { showTajweedGuide = false })
+        TajweedGuideSheet(
+            uiLanguageCode = state.preferences.uiLanguageCode,
+            onDismiss = { showTajweedGuide = false }
+        )
     }
 
     if (showRecitationSettings) {

@@ -202,6 +202,189 @@ object WordMorphologyAnalyzer {
         "الم", "المص", "الر", "المر", "كهيعص", "طه", "طسم", "طس", "يس", "ص", "حم", "عسق", "ق", "ن"
     )
 
+    private val NON_PLURAL_IN_EEN_OON = setOf(
+        "دين", "الدين", "دينه", "ديني", "دينكم", "دينهم", "دينا",
+        "حين", "الحين", "حينا", "حينه",
+        "طين", "الطين", "طينا",
+        "يقين", "اليقين", "يقينا",
+        "مبين", "المبين", "مبينا",
+        "مسكين", "المسكين", "مسكينا",
+        "قرين", "القرين", "قرينه", "قريني",
+        "أمين", "الأمين", "أمينه", "أميني", "أمينا",
+        "فرعون", "فرعون",
+        "هارون", "هارون",
+        "قارون", "قارون",
+        "ماعون", "الماعون",
+        "موزون", "موزونا",
+        "ممنون",
+        "زيتون", "الزيتون",
+        "دون", "دونه", "دونهم", "دونكم", "دونا",
+        "عون", "عونا",
+        "عين", "العين", "عينا", "أعين", "أعينهم",
+        "بين", "بينهم", "بينكم", "بيننا", "بيني", "بينه",
+        "يمين", "اليمين", "يمينا", "يمينه", "أيمان", "أيمانكم",
+        "تين", "التين",
+        "سنين", "طور سينين",
+        "مهين", "مهينا",
+        "حميم", "حنين",
+        "مكين", "مكينا",
+        "سجين",
+        "شياطين", "الشياطين", "شياطينهم",
+        "مساكين", "المساكين",
+        "سلاطين",
+        "ثعابين",
+        "دواوين",
+        "رياحين",
+        "قوانين"
+    )
+
+    private val NON_PLURAL_IN_AAT = setOf(
+        "نبات", "النبات", "نباتا", "بيات", "بياتا",
+        "قوت", "أقوات", "أقواتها", "موت", "الموت", "موتا", "أموات",
+        "فرات", "فراتا", "شتات", "حصاة", "تابوت", "التابوت",
+        "طالوت", "جالوت", "عفريت"
+    )
+
+    private val ROOT_WAW_WORDS = setOf(
+        "ولد", "ولدا", "ولدك", "ولده", "ولدهم", "ولدنا", "ولدت", "والد", "والدة", "والدين", "والديك",
+        "وجد", "وجدا", "وجدتم", "وجدت", "وجدنا", "وجده", "وجدهم",
+        "وقف", "وقفت", "وقفوهم",
+        "وقت", "وقتا", "وقتها", "موقوت", "ميقات",
+        "وعد", "وعدا", "وعدك", "وعده", "وعدهم", "وعدنا", "وعدت", "وعدتم", "وعدوا",
+        "ورث", "ورثك", "ورثه", "ورثنا", "ورثة", "وارث", "وارثين",
+        "وصل", "وصلنا", "وصلت",
+        "وضع", "وضعت", "وضعنا", "وضعه", "وضعت",
+        "وسع", "وسعها", "وسعت", "واسع", "واسعة",
+        "وفى", "وفيت", "وفاء", "توفى", "توفيت", "توفاهم",
+        "وجوه", "وجوها", "وجوهكم", "وجوههم", "وجه", "وجهه", "وجهي", "وجهك",
+        "وحيد", "وحيدا",
+        "وتر", "وترا",
+        "ود", "ودا", "ودوا", "وددت", "ودود",
+        "وراء", "وراءكم", "وراءهم", "ورائي",
+        "وسط", "وسطا", "وسطهم", "أوسط", "أوسطهم",
+        "ويل", "ويلا", "ويلك", "ويلكم", "ويلنا",
+        "واحد", "واحدا", "واحدة", "واحدين",
+        "وزن", "وزنوا", "وزنا", "ميزان",
+        "وقى", "وقاهم", "وقنا", "وقاية",
+        "ورق", "ورقكم", "ورقة",
+        "ورد", "وردا", "وردوا", "وارد",
+        "وسوس", "وسوست",
+        "وثق", "وثاق", "موثق", "وثاقا",
+        "وقود", "وقودها",
+        "وهب", "وهبنا", "وهبت", "وهاب",
+        "وزر", "وزرا", "وزرها", "أوزار",
+        "وجل", "وجلت", "وجلون",
+        "وطر", "وطرا",
+        "وعظ", "وعظت", "موعظة",
+        "وفد", "وفدا",
+        "وقع", "وقعت", "واقع", "مواقع",
+        "وكل", "وكيل", "توكل",
+        "ولي", "وليا", "وليهم", "ولينا", "وليه", "ولاء", "أولياء",
+        "وهن", "وهنا"
+    )
+
+    private val ROOT_FA_WORDS = setOf(
+        "فتح", "فتحنا", "فتحا", "فتحت", "فاتح", "مفتاح", "فاتحة",
+        "فلق", "فلقنا", "فالق", "الفلق",
+        "فجر", "فجرنا", "فجرا", "فاجر", "فجار", "الفجر",
+        "فرض", "فرضنا", "فرضا", "فريضة",
+        "فرح", "فرحوا", "فرحا", "فرحين",
+        "فصل", "فصلنا", "فصلا", "تفصيل", "فاصل",
+        "فهم", "فهمناها", "فهما",
+        "فوق", "فوقهم", "فوقكم", "فوقنا", "فوقه", "فوقها",
+        "فوز", "فوزا", "فازوا", "فائز", "فائزون",
+        "فعل", "فعلوا", "فعلت", "فعلنا", "فعلا", "فاعل",
+        "فكر", "فكروا", "فكرا", "مفكر",
+        "فرغ", "فرغت", "فارغ",
+        "فطر", "فطرنا", "فطرت", "فطرة", "فاطر",
+        "فلك", "فلكا", "الفلك",
+        "فرد", "فردا", "فرادى",
+        "فور", "فورهم", "فورا",
+        "فضل", "فضلنا", "فضلا", "فضله", "فضلك",
+        "فواكه", "فاكهة",
+        "فاسق", "فاسقا", "فاسقين", "فاسقون", "فسق",
+        "فتنة", "فتنتهم", "فتنتك", "مفتون",
+        "فتى", "فتيان", "فتيانهم", "فتيات",
+        "فخر", "فخورا", "فخار",
+        "فداء", "فدية", "فديناه",
+        "فراش", "فراشا",
+        "فرقان", "الفرقان",
+        "فريق", "فريقا", "فريقان",
+        "فساد", "فسادا", "مفسد", "مفسدون", "مفسدين",
+        "فقر", "فقيرا", "فقراء",
+        "فلاح", "أفلح", "مفلحون",
+        "فم", "أفواه", "أفواههم", "أفواهكم",
+        "فؤاد", "أفئدة", "أفئدتهم",
+        "فاحشة", "فواحش"
+    )
+
+    private val ROOT_BA_WORDS = setOf(
+        "بنت", "بنات", "بناتك", "بناتنا", "بناتهم",
+        "بئر", "بئار", "بئرا",
+        "بضع", "بضعة", "بضائع", "بضاعة",
+        "بطانة",
+        "بلاد", "بلدة", "بلد",
+        "بيت", "بيوت", "بيوتكم", "بيوتهم", "بيتي",
+        "بحر", "بحرين", "بحار",
+        "بر", "أبرار", "بررة",
+        "بطن", "بطون", "بطونكم", "بطونهم",
+        "بصر", "أبصار", "أبصارهم", "أبصاركم", "بصير",
+        "بطل", "باطل", "باطلا",
+        "بني", "بنين", "بنو", "بنيك", "بنيكم",
+        "باب", "أبواب", "أبوابها",
+        "بأس", "بأسنا", "بأسهم", "بئيس",
+        "باطن", "باطنة",
+        "باق", "باقية", "باقيات",
+        "بال", "بالهم",
+        "بدء", "بدأ", "بديع",
+        "بدر",
+        "برق", "برقة", "تبارك", "بركة", "بركات",
+        "بستان", "بساتين",
+        "بشر", "بشرا", "بشير", "بشارة",
+        "بطش", "بطشت", "بطشة",
+        "بعث", "بعثنا", "مبعوثون",
+        "بعض", "بعضكم", "بعضهم", "بعضا",
+        "بعل", "بعلي",
+        "بغتة", "بغض", "بغضاء",
+        "بغل", "بغال",
+        "بقر", "بقرة", "بقرات",
+        "بقل", "بقلها", "بقية", "بقيت",
+        "بكاء", "بكيا", "بكر", "أبكار", "بكرة",
+        "بلاء", "بلاءا", "مبتلى", "بلغ", "بلغنا", "بالغ",
+        "بناء", "بنيان", "بهتان", "بهتانا", "بهجة", "بهيج",
+        "بوار", "بياض", "بيض", "بيضاء"
+    )
+
+    private val ROOT_LAM_WORDS = setOf(
+        "لسان", "لسانا", "ألسنتكم", "ألسنتهم", "ألسنة",
+        "لحية",
+        "لقاء", "لقاءنا", "لقائه",
+        "لواء",
+        "لباس", "لباسا", "لبوس",
+        "لبث", "لبثتم", "لبثت", "لابثين",
+        "لوح", "ألواح",
+        "ليل", "ليلا", "ليال", "ليالي",
+        "لؤلؤ", "لؤلؤا",
+        "لهب", "ألهب",
+        "لحم", "لحما", "لحوم", "لحومها",
+        "لبن", "لبنا",
+        "لوط", "لوطا",
+        "لقمان",
+        "لهو", "لهوا",
+        "لغو", "لغوا",
+        "لمس", "لامستم", "لمسنا",
+        "لمح", "لمحة",
+        "لمز", "لمزة",
+        "لوام", "لوامة",
+        "لون", "ألوان", "ألوانها", "ألوانكم",
+        "لظى",
+        "لطيف", "لطيفا",
+        "لجام",
+        "لجأ", "ملجأ",
+        "لحظ", "لحاظ",
+        "لحن", "لحنها"
+    )
+
     data class ClassicalLexiconDetail(
         val classicalIrabAr: String,
         val classicalIrabBn: String,
@@ -237,7 +420,7 @@ object WordMorphologyAnalyzer {
             classicalIrabBn = "দ্বিতীয় সিফাত বা বিশেষণ হিসেবে মাজরুর (জেরযুক্ত), শেষ বর্ণে কাসরাহ স্পষ্ট।",
             classicalIrabEn = "Second attribute (Na't Thani) in the genitive case, marked with explicit terminal kasrah.",
             classicalSarfAr = "اسْمٌ مُذَكَّرٌ مُفْرَدٌ مُشْتَقٌّ صِفَةٌ مُشَبَّهَةٌ بِاسْمِ الْفَاعِلِ أَوْ صِيغَةُ مُبَالَغَةٍ عَلَى وَزْنِ: (فَعِيل) مِنَ الْفِعْلِ الثَّلَاثِي: (رَحِمَ) مِنْ مَادَّةِ: (رحم)",
-            classicalSarfBn = "স্থায়ী গুণবাচক বিশেষণ (সিফাতে মুশাব্বাহা) বা অতিশয় গুণবাচক পদ; (فَعِيل) ওযনে সুলাসী ধাতু (ر-ح-ম) থেকে সাধিত।",
+            classicalSarfBn = "স্থায়ী গুণবাচক বিশেষণ (সিফাতে মুশাব্বাহা) বা অতিশয় গুণবাচক পদ; (فَعِيل) ওযনে সুলাসী ধাতু (رحم) থেকে সাধিত।",
             classicalSarfEn = "Permanent descriptive adjective (Sifah Mushabbahah) on pattern (Fa'il) from triliteral root (r-h-m), indicating continuous and specific mercy.",
             rootLetters = "رحم",
             derivedFormArabic = "رحيم (فَعِيل)",
@@ -541,7 +724,7 @@ object WordMorphologyAnalyzer {
         val enMeaning = translations.firstOrNull { it.languageCode.equals("en", true) }?.meaningText.orEmpty()
         val bnMeaning = translations.firstOrNull { it.languageCode.equals("bn", true) }?.meaningText.orEmpty()
 
-        val extraction = deriveWordSegments(rawArabic, lower)
+        val extraction = deriveWordSegments(rawArabic, lower, word.rootArabic)
         val known = KNOWN_FUNCTION_WORDS[bareWord]
             ?: KNOWN_FUNCTION_WORDS[stripDiacriticsAndAlefWasla(extraction.stem)]
 
@@ -1151,20 +1334,29 @@ object WordMorphologyAnalyzer {
         val suffixes: List<String>
     )
 
-    private fun deriveWordSegments(arabic: String, lowerGrammar: String): SegmentExtractionResult {
+    private fun deriveWordSegments(arabic: String, lowerGrammar: String, rootArabic: String = ""): SegmentExtractionResult {
         val parts = mutableListOf<WordSegmentPart>()
         val prefixTags = mutableListOf<String>()
         val suffixTags = mutableListOf<String>()
         var stem = arabic.trim().replace(WAQF_MARKS_REGEX, "")
         val bareFull = stripDiacriticsAndAlefWasla(stem)
+        val rootBare = stripDiacriticsAndAlefWasla(rootArabic)
+
+        val isRootWaw = (rootBare.startsWith("و") && rootBare.length in 3..4) || bareFull in ROOT_WAW_WORDS
+        val isRootFa = (rootBare.startsWith("ف") && rootBare.length in 3..4) || bareFull in ROOT_FA_WORDS
+        val isRootBa = (rootBare.startsWith("ب") && rootBare.length in 3..4) || bareFull in ROOT_BA_WORDS
+        val isRootLam = (rootBare.startsWith("ل") && rootBare.length in 3..4) || bareFull in ROOT_LAM_WORDS
 
         val isKnownStandalonePrepositionOrWord = bareFull in setOf("في", "من", "على", "إلى", "عن", "بين", "كل", "بل", "كان", "قال", "قل", "لم", "لن", "قد", "لا", "ما")
 
         if (!isKnownStandalonePrepositionOrWord) {
             // 1. Conjunction proclitics: وَـ / فَـ (explicit grammar OR high-confidence diacritic check with enough remaining base letters)
-            val hasExplicitConj = lowerGrammar.contains("conjunction")
-            if ((hasExplicitConj && (stem.startsWith("و") || stem.startsWith("ف"))) ||
-                ((stem.startsWith("وَ") || stem.startsWith("فَ")) && countArabicBaseLetters(stem) >= 3)
+            val hasExplicitConj = lowerGrammar.contains("conjunction") || lowerGrammar.contains("harf atf")
+            val canStripWa = !isRootWaw && (hasExplicitConj || (stem.startsWith("وَ") && countArabicBaseLetters(stem) >= 4))
+            val canStripFa = !isRootFa && (hasExplicitConj || (stem.startsWith("فَ") && countArabicBaseLetters(stem) >= 4))
+
+            if ((canStripWa && (stem.startsWith("وَ") || stem.startsWith("و"))) ||
+                (canStripFa && (stem.startsWith("فَ") || stem.startsWith("ف")))
             ) {
                 var cut = 1
                 while (cut < stem.length && stem[cut] in '\u064B'..'\u065F') cut++
@@ -1184,7 +1376,7 @@ object WordMorphologyAnalyzer {
             }
 
             // 2. Special merged لِلْـ / لِلَّـ -> لِـ + الْـ
-            if (stem.startsWith("لِلْ") || stem.startsWith("لِلَّ") || stem.startsWith("لِل")) {
+            if (!isRootLam && (stem.startsWith("لِلْ") || stem.startsWith("لِلَّ") || stem.startsWith("لِل"))) {
                 if (countArabicBaseLetters(stem) >= 4) {
                     parts.add(
                         WordSegmentPart(
@@ -1200,16 +1392,15 @@ object WordMorphologyAnalyzer {
                 }
             } else {
                 // 3. Preposition / Particle proclitics: بِـ / لِـ / كَـ / سَـ
-                val hasExplicitPrep = lowerGrammar.contains("preposition")
-                val minRemaining = if (hasExplicitPrep) 2 else 3
+                val hasExplicitPrep = lowerGrammar.contains("preposition") || lowerGrammar.contains("harf jarr")
                 val procliticMatch: Triple<String, String, Pair<String, String>>? = when {
-                    stem.startsWith("بِ") && (hasExplicitPrep || countArabicBaseLetters(stem) >= minRemaining || bareFull.startsWith("به")) ->
+                    !isRootBa && stem.startsWith("بِ") && (hasExplicitPrep || countArabicBaseLetters(stem) >= 4 || bareFull.startsWith("به")) ->
                         Triple("بِ", "Prefix: Preposition (with/in/by)", "حرف جر: الباء" to "উপসর্গ: بِـ (দ্বারা/নামে)")
-                    stem.startsWith("لِ") && (hasExplicitPrep || countArabicBaseLetters(stem) >= minRemaining) ->
+                    !isRootLam && stem.startsWith("لِ") && (hasExplicitPrep || countArabicBaseLetters(stem) >= 4) ->
                         Triple("لِ", "Prefix: Preposition (for/to)", "حرف جر: اللام" to "উপসর্গ: لِـ (জন্য)")
-                    stem.startsWith("لَ") && countArabicBaseLetters(stem) >= 3 && !bareFull.startsWith("لكن") ->
+                    !isRootLam && stem.startsWith("لَ") && countArabicBaseLetters(stem) >= 4 && !bareFull.startsWith("لكن") ->
                         Triple("لَ", "Prefix: Emphatic Lam (surely)", "لام التوكيد" to "উপসর্গ: নিশ্চয়তাবোধক (অবশ্যই)")
-                    stem.startsWith("كَ") && countArabicBaseLetters(stem) >= 3 ->
+                    stem.startsWith("كَ") && countArabicBaseLetters(stem) >= 4 ->
                         Triple("كَ", "Prefix: Preposition (like/as)", "حرف تشبيه وجر" to "উপসর্গ: كَـ (মত)")
                     stem.startsWith("سَ") && countArabicBaseLetters(stem) >= 4 ->
                         Triple("سَ", "Prefix: Future Particle (will)", "حرف استقبال" to "উপসর্গ: سَـ (শীঘ্রই)")
@@ -1260,7 +1451,7 @@ object WordMorphologyAnalyzer {
         }
 
         // 5. Enclitic Suffix extraction (Pronouns, Plural/Feminine endings)
-        val suffixRule = detectSuffix(stem, lowerGrammar)
+        val suffixRule = detectSuffix(stem, lowerGrammar, rootArabic)
         if (suffixRule != null) {
             stem = suffixRule.remainingStem
         }
@@ -1293,7 +1484,10 @@ object WordMorphologyAnalyzer {
         val segment: WordSegmentPart
     )
 
-    private fun detectSuffix(stem: String, lowerGrammar: String): SuffixMatch? {
+    private fun detectSuffix(stem: String, lowerGrammar: String, rootArabic: String = ""): SuffixMatch? {
+        val bareStem = stripDiacriticsAndAlefWasla(stem)
+        val rootBare = stripDiacriticsAndAlefWasla(rootArabic)
+
         val rules = listOf(
             Triple(listOf("كُمَا"), "ـكُمَا", Triple("Pronoun Suffix: you two (2nd Dual)", "ضمير متصل (مثنى)", "সর্বনাম: তোমাদের দুজনের")),
             Triple(listOf("هُمَا", "هِمَا"), "ـهُمَا", Triple("Pronoun Suffix: both of them (3rd Dual)", "ضمير متصل (مثنى)", "সর্বনাম: তাদের দুজনের")),
@@ -1318,9 +1512,34 @@ object WordMorphologyAnalyzer {
         for ((endings, displaySfx, labels) in rules) {
             for (end in endings) {
                 if (stem.endsWith(end)) {
+                    // Non-plural check: prevent chopping words like دين, حين, طين, يقين, مبين, فرعون
+                    if (end in listOf("ونَ", "ينَ") && bareStem in NON_PLURAL_IN_EEN_OON) continue
+                    if (end.startsWith("ات") && bareStem in NON_PLURAL_IN_AAT) continue
+
                     val remainder = stem.removeSuffix(end)
                     val remBases = countArabicBaseLetters(remainder)
-                    // Ensure stem still has valid base letters (e.g., بِهِ has stem بِـ with 1 base letter, normal nouns need >=2)
+                    val remBare = stripDiacriticsAndAlefWasla(remainder)
+
+                    // For masculine plural marker (ونَ / ينَ): remainder MUST have at least 3 base letters (triliteral root)
+                    if (end in listOf("ونَ", "ينَ")) {
+                        if (remBases < 3 || remBare.length < 3) continue
+                        if (remBare in setOf("مب", "يق", "قر", "مسك", "فرع", "هار", "قار", "ماع", "موز", "ممن", "زيت", "شياط", "مساك", "سلاط")) continue
+                    }
+
+                    // For pronoun 'ka'/'ki': do not strip if 'k' is a root letter (e.g. malik, malik/maliki, taraka, salaka, halaka, tabaraka)
+                    val isFinalKafRoot = bareStem in setOf(
+                        "ملك", "مالك", "مليك", "ترك", "تارك", "سلك", "سالك", "هلك", "هالك",
+                        "تبارك", "برك", "بارك", "مبارك", "شرك", "شريك", "درك", "أدرك", "دارك",
+                        "سبك", "حلك", "فلك", "سمك", "ضنك", "أولئك", "ذلك", "تلك", "هنالك"
+                    )
+                    if (end in setOf("كَ", "كِ") && (rootBare.endsWith("ك") || isFinalKafRoot) && !forcePronoun) continue
+                    // For pronoun 'hu'/'hi': do not strip if 'h' is a root letter (e.g. faqiha, kariha, safiha, ilah, allah, wajh)
+                    val isFinalHaRoot = bareStem in setOf("فقه", "كره", "سفه", "وجه", "شبه", "فوه", "إله", "الله", "تاه", "جاه")
+                    if (end in setOf("هُ", "هِ") && (rootBare.endsWith("ه") || isFinalHaRoot) && !forcePronoun) continue
+                    // For 'na': do not strip on triliteral Alif-final roots/particles (e.g. ana, huna, zina, bina, fana)
+                    val isFinalNaRoot = bareStem in setOf("أنا", "هنا", "بنا", "دنا", "زنا", "غنا", "فنا", "سنا", "قنا")
+                    if (end == "نَا" && (rootBare.endsWith("ن") || isFinalNaRoot) && !forcePronoun) continue
+
                     val minRem = if (forcePronoun || end in setOf("هُمْ", "هِمْ", "كُمْ", "هَا", "هُ", "هِ", "نَا")) 1 else 2
                     if (remBases >= minRem && baseCount >= 2) {
                         return SuffixMatch(

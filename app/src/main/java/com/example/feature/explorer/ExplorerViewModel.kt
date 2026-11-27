@@ -230,9 +230,9 @@ class ExplorerViewModel(
             _downloadMessage.value = null
             val res = syncRepository.deleteSurahOffline(surahId)
             res.onSuccess {
-                _downloadMessage.value = "Deleted Surah $surahId offline cache"
+                _downloadMessage.value = "Cleared audio cache for Surah $surahId — Mushaf text is protected"
             }.onFailure { err ->
-                _downloadMessage.value = err.localizedMessage ?: "Delete failed"
+                _downloadMessage.value = err.localizedMessage ?: "Audio cleanup failed"
             }
             _downloadingSurahId.value = null
         }

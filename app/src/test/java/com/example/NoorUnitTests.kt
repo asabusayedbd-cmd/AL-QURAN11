@@ -273,9 +273,10 @@ class NoorUnitTests {
             container.database.quranDao().getTranslationsForAyah(kursi.id).any { it.sourceId == 20 }
         )
 
-        // Verify delete + on-demand offline restore of Surah 18 works without network
+        // Verify permanent Mushaf protection: deleteSurahOffline only cleans audio files and NEVER deletes Quran Surahs/Ayahs
         container.quranSyncRepository.deleteSurahOffline(18)
-        assertEquals(0, container.database.quranDao().countAyahsInSurah(18))
+        assertEquals(110, container.database.quranDao().countAyahsInSurah(18))
+        assertTrue(container.database.quranDao().getSurah(18)?.isDownloaded == true)
         assertTrue(container.seeder.ensureSurahLoadedFromAssets(18))
         assertEquals(110, container.database.quranDao().countAyahsInSurah(18))
 
@@ -706,5 +707,42 @@ class NoorUnitTests {
         assertTrue(generalAnalysis.classicalDefinitionAr.isNotBlank())
         assertEquals("", generalAnalysis.spacedRoot)
         assertEquals("", generalAnalysis.rootLetters)
+    }
+
+    // 17. Morphology triliteral root-letter protection & zero-hallucination regression tests
+    @Test
+    fun testMorphologyRootProtectionAndSuffixGuards() {
+        val protectedWords = listOf(
+            WordEntity(4001L, 1, 4, "مَـٰلِكِ", "مٰلِكِ", "maliki", "", "", "", ""),
+            WordEntity(4002L, 113, 1, "ٱلْفَلَقِ", "الْفَلَقِ", "al-falaq", "", "", "", ""),
+            WordEntity(4003L, 18, 65, "وَجَدْنَا", "وَجَدْنَا", "wajadna", "", "", "", ""),
+            WordEntity(4004L, 12, 1, "مُّبِينٍ", "مُبِيْنٍ", "mubeen", "", "", "", ""),
+            WordEntity(4005L, 2, 49, "فِرْعَوْنَ", "فِرْعَوْنَ", "fir'awn", "", "", "", ""),
+            WordEntity(4006L, 1, 4, "ٱلدِّينِ", "الدِّيْنِ", "ad-deen", "", "", "", ""),
+            WordEntity(4007L, 1, 4, "مَلِكِ", "مَلِكِ", "malik", "", "", "", "")
+        )
+        protectedWords.forEach { w ->
+            val analysis = WordMorphologyAnalyzer.analyze(w, listOf(WordTranslationEntity(w.id, "en", "meaning")))
+            // Zero hallucination when rootArabic is blank
+            assertEquals("Expected empty spacedRoot for ${w.textUthmani}", "", analysis.spacedRoot)
+            assertEquals("Expected empty rootLetters for ${w.textUthmani}", "", analysis.rootLetters)
+            assertTrue("Expected valid STEM segment for ${w.textUthmani}", analysis.segments.any { it.roleType == SegmentRoleType.STEM })
+        }
+
+        // Specifically ensure "مَلِكِ" is not erroneously stripped of final ك as a pronoun suffix
+        val malikAnalysis = WordMorphologyAnalyzer.analyze(protectedWords.last(), emptyList())
+        assertFalse(
+            "Final root kaf in مَلِكِ must not be stripped as pronoun suffix",
+            malikAnalysis.segments.any { it.roleType == SegmentRoleType.SUFFIX && it.arabicPrefixOrPart.contains("ك") }
+        )
+
+        // When DB root IS provided ("م ل ك"), both spacedRoot and rootLetters work cleanly
+        val malikWithRoot = protectedWords.first().copy(rootArabic = "م ل ك", lemmaArabic = "مَالِك", grammarTagJson = "Noun, Genitive")
+        val rootedAnalysis = WordMorphologyAnalyzer.analyze(
+            malikWithRoot,
+            listOf(WordTranslationEntity(4001L, "bn", "অধিপতি"))
+        )
+        assertEquals("م ل ك", rootedAnalysis.spacedRoot)
+        assertEquals("ملك", rootedAnalysis.rootLetters)
     }
 }

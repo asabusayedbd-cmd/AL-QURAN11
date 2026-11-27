@@ -215,7 +215,8 @@ fun NoorAppRoot(
                                                 database = appContainer.database,
                                                 okHttpClient = appContainer.okHttpClient,
                                                 seeder = appContainer.seeder,
-                                                lineTranslator = appContainer.lineTranslator
+                                                lineTranslator = appContainer.lineTranslator,
+                                                preferencesRepository = appContainer.preferencesRepository
                                             )
                                         }
                                     }
@@ -297,7 +298,8 @@ fun NoorAppRoot(
                                                 syncRepository = appContainer.quranSyncRepository,
                                                 audioController = appContainer.audioController,
                                                 seeder = appContainer.seeder,
-                                                lineTranslator = appContainer.lineTranslator
+                                                lineTranslator = appContainer.lineTranslator,
+                                                onSyncLanguageContent = appContainer::syncLanguageContent
                                             )
                                         }
                                     }

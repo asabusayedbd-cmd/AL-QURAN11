@@ -675,18 +675,10 @@ class QuranSyncRepository(
                     }
                 }
             }
-            database.withTransaction {
-                quranDao.deleteAudioSegmentsBySurah(surahId)
-                quranDao.deleteAyahTafsirsBySurah(surahId)
-                quranDao.deleteAyahTranslationsBySurah(surahId)
-                quranDao.deleteWordTranslationsBySurah(surahId)
-                quranDao.deleteWordsBySurah(surahId)
-                quranDao.deleteAyahsBySurah(surahId)
-                quranDao.markSurahDownloaded(surahId, false)
-            }
+            // Sacred Mushaf text (Surahs, Ayahs, Words) and word-highlighting metadata are permanently protected
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e("QuranSync", "Failed to delete Surah $surahId offline data", e)
+            Log.e("QuranSync", "Failed to clear Surah $surahId audio cache", e)
             Result.failure(e)
         }
     }
@@ -697,23 +689,11 @@ class QuranSyncRepository(
                 val audioRoot = File(ctx.filesDir, "audio")
                 audioRoot.deleteRecursively()
             }
-            val downloadedIds = quranDao.getDownloadedSurahIds()
-            var count = 0
-            database.withTransaction {
-                for (id in downloadedIds) {
-                    quranDao.deleteAudioSegmentsBySurah(id)
-                    quranDao.deleteAyahTafsirsBySurah(id)
-                    quranDao.deleteAyahTranslationsBySurah(id)
-                    quranDao.deleteWordTranslationsBySurah(id)
-                    quranDao.deleteWordsBySurah(id)
-                    quranDao.deleteAyahsBySurah(id)
-                    quranDao.markSurahDownloaded(id, false)
-                    count++
-                }
-            }
+            // Sacred Mushaf text (Surahs, Ayahs, Words) is permanently protected and never deleted
+            val count = quranDao.getDownloadedSurahIds().size
             Result.success(count)
         } catch (e: Exception) {
-            Log.e("QuranSync", "Failed to delete all downloaded surahs", e)
+            Log.e("QuranSync", "Failed to clear downloaded audio cache", e)
             Result.failure(e)
         }
     }
