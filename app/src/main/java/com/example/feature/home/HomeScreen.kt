@@ -1,9 +1,8 @@
 package com.example.feature.home
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.location.LocationManager
+import android.os.CancellationSignal
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -50,6 +50,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedCard
@@ -59,9 +60,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -88,13 +93,19 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.R
+import com.example.core.ibadah.BangladeshVillageSearchService
+import com.example.core.ibadah.CityLocationPreset
 import com.example.core.ibadah.PrayerTimeCalculator
 import com.example.core.ibadah.PrayerTimesSummary
+import com.example.core.ibadah.SavedBangladeshLocationsStore
 import com.example.core.localization.BidiUtils
 import com.example.feature.ibadah.QiblaFinderOverlay
+import com.example.feature.ibadah.fetchActiveCoarseLocation
 import com.example.ui.components.ShareCardGenerator
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.math.roundToInt
 
@@ -131,18 +142,46 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    val coroutineScope = rememberCoroutineScope()
+    var savedBdPlaces by remember(context) {
+        mutableStateOf(SavedBangladeshLocationsStore.getSavedLocations(context))
+    }
+
     var showQiblaSheet by remember { mutableStateOf(false) }
     var showTasbeehSheet by remember { mutableStateOf(false) }
     var showCityPicker by remember { mutableStateOf(false) }
     var showPrayerScheduleSheet by remember { mutableStateOf(false) }
+    var gpsAltitudeMeters by remember { mutableFloatStateOf(0f) }
+    var activeLocationSignal by remember { mutableStateOf<CancellationSignal?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            activeLocationSignal?.cancel()
+            activeLocationSignal = null
+        }
+    }
+
+    val requestActiveLocation = {
+        activeLocationSignal?.cancel()
+        activeLocationSignal = fetchActiveCoarseLocation(context) { lat, lon, altMeters ->
+            gpsAltitudeMeters = altMeters
+            val immediateFallback = PrayerTimeCalculator.findNearestBangladeshPlace(lat, lon)?.first?.let { nearest ->
+                "Near ${nearest.name.removeSuffix(", Bangladesh")}, Bangladesh"
+            } ?: "GPS Location"
+            viewModel.updateLocation(immediateFallback, lat, lon)
+            coroutineScope.launch {
+                val resolved = BangladeshVillageSearchService.reverseGeocodeBangladeshPlace(context, lat, lon)
+                viewModel.updateLocation(resolved.name, resolved.latitude, resolved.longitude)
+                savedBdPlaces = SavedBangladeshLocationsStore.saveLocation(context, resolved)
+            }
+        }
+    }
 
     val locationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            fetchLastCoarseLocation(context) { lat, lon ->
-                viewModel.updateLocation("GPS Location", lat, lon)
-            }
+            requestActiveLocation()
         }
     }
 
@@ -714,9 +753,7 @@ fun HomeScreen(
                                         Manifest.permission.ACCESS_COARSE_LOCATION
                                     ) == PackageManager.PERMISSION_GRANTED
                                     if (granted) {
-                                        fetchLastCoarseLocation(context) { lat, lon ->
-                                            viewModel.updateLocation("GPS Location", lat, lon)
-                                        }
+                                        requestActiveLocation()
                                     } else {
                                         locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                                     }
@@ -801,19 +838,74 @@ fun HomeScreen(
     if (showCityPicker) {
         var cityQuery by remember { mutableStateOf("") }
         var selectedRegion by remember { mutableStateOf("All") }
-        val divisionChips = remember {
-            listOf("All", "Dhaka", "Chattogram", "Rajshahi", "Khulna", "Barishal", "Sylhet", "Rangpur", "Mymensingh", "Global")
+        var selectedDistrict by remember { mutableStateOf("All") }
+        var onlineVillageResults by remember { mutableStateOf<List<CityLocationPreset>>(emptyList()) }
+        var isSearchingOnlineVillages by remember { mutableStateOf(false) }
+
+        val divisionChips = remember(savedBdPlaces.isNotEmpty()) {
+            buildList {
+                add("All")
+                if (savedBdPlaces.isNotEmpty()) add("Saved")
+                addAll(listOf("Dhaka", "Chattogram", "Rajshahi", "Khulna", "Barishal", "Sylhet", "Rangpur", "Mymensingh", "Global"))
+            }
         }
-        val filteredPresets = remember(cityQuery, selectedRegion) {
+        val districtChips = remember(selectedRegion) {
+            PrayerTimeCalculator.districtsInDivision(selectedRegion)
+        }
+
+        LaunchedEffect(cityQuery, selectedRegion, selectedDistrict) {
+            val trimmed = cityQuery.trim()
+            if (trimmed.length < 2 || selectedRegion == "Global" || selectedRegion == "Saved") {
+                onlineVillageResults = emptyList()
+                isSearchingOnlineVillages = false
+            } else {
+                isSearchingOnlineVillages = true
+                delay(350)
+                val response = BangladeshVillageSearchService.searchVillagesOnline(
+                    context = context,
+                    query = trimmed,
+                    divisionHint = selectedRegion,
+                    districtHint = selectedDistrict
+                )
+                onlineVillageResults = response.places
+                isSearchingOnlineVillages = false
+            }
+        }
+
+        val offlineFilteredPresets = remember(cityQuery, selectedRegion, selectedDistrict, savedBdPlaces) {
             PrayerTimeCalculator.searchLocations(
                 query = cityQuery,
-                divisionFilter = if (selectedRegion == "All") null else selectedRegion
+                divisionFilter = if (selectedRegion == "All") null else selectedRegion,
+                districtFilter = if (selectedDistrict == "All") null else selectedDistrict,
+                extraSavedPlaces = savedBdPlaces
             )
         }
+
+        val combinedPresets = remember(offlineFilteredPresets, onlineVillageResults) {
+            if (onlineVillageResults.isEmpty()) {
+                offlineFilteredPresets
+            } else {
+                val seen = HashSet<String>(offlineFilteredPresets.size + onlineVillageResults.size)
+                buildList(offlineFilteredPresets.size + onlineVillageResults.size) {
+                    offlineFilteredPresets.forEach { if (seen.add(it.name.lowercase())) add(it) }
+                    onlineVillageResults.forEach { if (seen.add(it.name.lowercase())) add(it) }
+                }
+            }
+        }
+
+        val anchorForCustomVillage = remember(selectedDistrict, selectedRegion, offlineFilteredPresets, state.preferences.latitude, state.preferences.longitude) {
+            when {
+                selectedDistrict != "All" -> PrayerTimeCalculator.searchLocations(selectedDistrict, selectedRegion).firstOrNull()
+                offlineFilteredPresets.isNotEmpty() -> offlineFilteredPresets.first()
+                else -> PrayerTimeCalculator.findNearestBangladeshPlace(state.preferences.latitude, state.preferences.longitude)?.first
+            } ?: PrayerTimeCalculator.CITY_PRESETS.first()
+        }
+
         ModalBottomSheet(onDismissRequest = { showCityPicker = false }) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -837,10 +929,8 @@ fun HomeScreen(
                                 Manifest.permission.ACCESS_COARSE_LOCATION
                             ) == PackageManager.PERMISSION_GRANTED
                             if (granted) {
-                                fetchLastCoarseLocation(context) { lat, lon ->
-                                    viewModel.updateLocation("GPS Location", lat, lon)
-                                    showCityPicker = false
-                                }
+                                requestActiveLocation()
+                                showCityPicker = false
                             } else {
                                 locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                             }
@@ -879,26 +969,71 @@ fun HomeScreen(
                     items(divisionChips, key = { it }) { region ->
                         FilterChip(
                             selected = selectedRegion == region,
-                            onClick = { selectedRegion = region },
+                            onClick = {
+                                selectedRegion = region
+                                selectedDistrict = "All"
+                            },
                             label = { Text(region) },
                             modifier = Modifier.testTag("region_chip_$region")
                         )
                     }
                 }
 
-                Text(
-                    text = stringResource(R.string.places_found_fmt, filteredPresets.size),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (districtChips.isNotEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        item(key = "district_all") {
+                            FilterChip(
+                                selected = selectedDistrict == "All",
+                                onClick = { selectedDistrict = "All" },
+                                label = { Text(stringResource(R.string.all_districts_chip)) },
+                                modifier = Modifier.testTag("district_chip_All")
+                            )
+                        }
+                        items(districtChips, key = { it }) { district ->
+                            FilterChip(
+                                selected = selectedDistrict == district,
+                                onClick = { selectedDistrict = district },
+                                label = { Text(district) },
+                                modifier = Modifier.testTag("district_chip_$district")
+                            )
+                        }
+                    }
+                }
+
+                if (isSearchingOnlineVillages) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        LinearProgressIndicator(modifier = Modifier.weight(1f))
+                        Text(
+                            text = stringResource(R.string.village_searching_status),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.places_found_fmt, combinedPresets.size),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(320.dp),
+                        .height(310.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(filteredPresets, key = { "${it.region}_${it.name}" }) { preset ->
+                    items(
+                        items = combinedPresets,
+                        key = { "${it.sourceLabel}_${it.region}_${it.name}_${it.latitude}" }
+                    ) { preset ->
                         Surface(
                             shape = MaterialTheme.shapes.medium,
                             color = if (preset.name == state.preferences.locationName) {
@@ -911,6 +1046,9 @@ fun HomeScreen(
                                 .testTag("city_preset_${preset.name}")
                                 .clickable {
                                     viewModel.updateLocation(preset.name, preset.latitude, preset.longitude)
+                                    if (preset.sourceLabel.isNotBlank() || !PrayerTimeCalculator.CITY_PRESETS.any { it.name == preset.name }) {
+                                        savedBdPlaces = SavedBangladeshLocationsStore.saveLocation(context, preset)
+                                    }
                                     showCityPicker = false
                                 }
                         ) {
@@ -930,8 +1068,9 @@ fun HomeScreen(
                                     val utcLabel = preset.utcOffsetHours?.let { h ->
                                         " • UTC${if (h >= 0) "+" else ""}${if (h % 1.0 == 0.0) h.toInt().toString() else h.toString()}"
                                     }.orEmpty()
+                                    val badgePrefix = if (preset.sourceLabel.isNotBlank()) "${preset.sourceLabel} • " else ""
                                     Text(
-                                        text = "${preset.region}$utcLabel",
+                                        text = "$badgePrefix${preset.region}$utcLabel",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -949,8 +1088,74 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    val trimmedVillage = cityQuery.trim()
+                    val hasExactVillageMatch = combinedPresets.any {
+                        it.name.startsWith(trimmedVillage, ignoreCase = true) ||
+                            it.banglaName.startsWith(trimmedVillage, ignoreCase = true)
+                    }
+                    if (trimmedVillage.length >= 2 && selectedRegion != "Global" && !hasExactVillageMatch) {
+                        item(key = "custom_village_pin") {
+                            val areaClean = anchorForCustomVillage.name.removeSuffix(", Bangladesh").trim()
+                            OutlinedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("save_custom_village_card")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.village_custom_save_title_fmt, trimmedVillage),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = stringResource(
+                                                R.string.village_custom_save_desc_fmt,
+                                                areaClean,
+                                                anchorForCustomVillage.region
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    FilledTonalButton(
+                                        onClick = {
+                                            val customName = "$trimmedVillage ($areaClean), Bangladesh"
+                                            val customPreset = CityLocationPreset(
+                                                name = customName,
+                                                latitude = anchorForCustomVillage.latitude,
+                                                longitude = anchorForCustomVillage.longitude,
+                                                banglaName = if (trimmedVillage.any { it in '\u0980'..'\u09FF' }) trimmedVillage else "",
+                                                region = anchorForCustomVillage.region,
+                                                aliases = "$trimmedVillage $areaClean",
+                                                utcOffsetHours = 6.0,
+                                                sourceLabel = "Custom Village"
+                                            )
+                                            savedBdPlaces = SavedBangladeshLocationsStore.saveLocation(context, customPreset)
+                                            viewModel.updateLocation(customPreset.name, customPreset.latitude, customPreset.longitude)
+                                            showCityPicker = false
+                                        },
+                                        modifier = Modifier.testTag("save_custom_village_button")
+                                    ) {
+                                        Text(stringResource(R.string.village_custom_save_btn))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -963,6 +1168,7 @@ fun HomeScreen(
             longitude = state.preferences.longitude,
             distanceKm = state.distanceToKaabaKm,
             uiLanguageCode = state.preferences.uiLanguageCode,
+            altitudeMeters = gpsAltitudeMeters,
             onDismiss = { showQiblaSheet = false },
             onOpenCityPicker = { showCityPicker = true },
             onUseGps = {
@@ -971,9 +1177,7 @@ fun HomeScreen(
                     Manifest.permission.ACCESS_COARSE_LOCATION
                 ) == PackageManager.PERMISSION_GRANTED
                 if (granted) {
-                    fetchLastCoarseLocation(context) { lat, lon ->
-                        viewModel.updateLocation("GPS Location", lat, lon)
-                    }
+                    requestActiveLocation()
                 } else {
                     locationLauncher.launch(Manifest.permission.ACCESS_COARSE_LOCATION)
                 }
@@ -1092,24 +1296,6 @@ private fun PrayerCell(name: String, time: String) {
         Text(text = localizedPrayerName(name), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(2.dp))
         Text(text = time, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-private fun fetchLastCoarseLocation(context: Context, onResult: (Double, Double) -> Unit) {
-    val hasPermission = ContextCompat.checkSelfPermission(
-        context,
-        Manifest.permission.ACCESS_COARSE_LOCATION
-    ) == PackageManager.PERMISSION_GRANTED
-    if (!hasPermission) return
-    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
-    val loc = try {
-        lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            ?: lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER)
-    } catch (_: SecurityException) {
-        null
-    }
-    if (loc != null) {
-        onResult(loc.latitude, loc.longitude)
     }
 }
 

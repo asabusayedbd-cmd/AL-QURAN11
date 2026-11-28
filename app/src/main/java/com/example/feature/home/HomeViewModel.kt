@@ -1,5 +1,6 @@
 package com.example.feature.home
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.database.AyahEntity
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Immutable
 data class VerseOfTheDayItem(
     val ayah: AyahEntity,
     val surahName: String,
@@ -37,6 +39,7 @@ data class VerseOfTheDayItem(
     val isBookmarked: Boolean = false
 )
 
+@Immutable
 data class HomeUiState(
     val preferences: UserPreferences = UserPreferences(),
     val progress: ReadingProgressEntity = ReadingProgressEntity(),

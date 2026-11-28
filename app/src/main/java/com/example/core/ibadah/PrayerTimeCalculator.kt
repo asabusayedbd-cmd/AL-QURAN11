@@ -1,5 +1,6 @@
 package com.example.core.ibadah
 
+import androidx.compose.runtime.Immutable
 import java.util.Calendar
 import java.util.TimeZone
 import kotlin.math.acos
@@ -11,6 +12,7 @@ import kotlin.math.sin
 import kotlin.math.tan
 import kotlin.math.roundToInt
 
+@Immutable
 data class PrayerTimesSummary(
     val fajr: String,
     val imsak: String,
@@ -27,6 +29,7 @@ data class PrayerTimesSummary(
     val countdownText: String
 )
 
+@Immutable
 data class CityLocationPreset(
     val name: String,
     val latitude: Double,
@@ -34,7 +37,8 @@ data class CityLocationPreset(
     val banglaName: String = "",
     val region: String = "",
     val aliases: String = "",
-    val utcOffsetHours: Double? = null
+    val utcOffsetHours: Double? = null,
+    val sourceLabel: String = ""
 ) {
     fun matchesQuery(query: String): Boolean {
         val q = query.trim()
@@ -89,17 +93,81 @@ object PrayerTimeCalculator {
 
     val CITY_PRESETS: List<CityLocationPreset> = BangladeshLocations.ALL_PLACES + WORLD_CITIES
 
-    fun searchLocations(query: String, divisionFilter: String? = null): List<CityLocationPreset> {
+    fun searchLocations(
+        query: String,
+        divisionFilter: String? = null,
+        districtFilter: String? = null,
+        extraSavedPlaces: List<CityLocationPreset> = emptyList()
+    ): List<CityLocationPreset> {
         val trimmed = query.trim()
-        val pool = if (divisionFilter.isNullOrBlank() || divisionFilter == "All") {
+        val combinedCatalog = if (extraSavedPlaces.isEmpty()) {
             CITY_PRESETS
-        } else if (divisionFilter == "Global") {
-            WORLD_CITIES
         } else {
-            CITY_PRESETS.filter { it.region.contains(divisionFilter, ignoreCase = true) }
+            val seen = HashSet<String>(CITY_PRESETS.size + extraSavedPlaces.size)
+            buildList(CITY_PRESETS.size + extraSavedPlaces.size) {
+                for (item in extraSavedPlaces) {
+                    if (seen.add(item.name.lowercase())) add(item)
+                }
+                for (item in CITY_PRESETS) {
+                    if (seen.add(item.name.lowercase())) add(item)
+                }
+            }
         }
-        if (trimmed.isEmpty()) return pool
-        return pool.filter { it.matchesQuery(trimmed) }
+        val divisionPool = when {
+            divisionFilter.isNullOrBlank() || divisionFilter == "All" -> combinedCatalog
+            divisionFilter == "Saved" -> extraSavedPlaces
+            divisionFilter == "Global" -> WORLD_CITIES
+            else -> combinedCatalog.filter { it.region.contains(divisionFilter, ignoreCase = true) }
+        }
+        val districtPool = if (districtFilter.isNullOrBlank() || districtFilter == "All") {
+            divisionPool
+        } else {
+            divisionPool.filter { preset ->
+                preset.name.contains(districtFilter, ignoreCase = true) ||
+                    preset.aliases.contains(districtFilter, ignoreCase = true) ||
+                    preset.region.contains(districtFilter, ignoreCase = true)
+            }
+        }
+        if (trimmed.isEmpty()) return districtPool
+        return districtPool.filter { it.matchesQuery(trimmed) }
+    }
+
+    fun districtsInDivision(division: String): List<String> {
+        if (division.isBlank() || division == "All" || division == "Global" || division == "Saved") {
+            return emptyList()
+        }
+        return BangladeshLocations.DISTRICTS_BY_DIVISION[division].orEmpty()
+    }
+
+    fun isInsideBangladesh(latitude: Double, longitude: Double): Boolean {
+        return latitude in 20.30..26.75 && longitude in 87.95..92.85
+    }
+
+    fun haversineDistanceKm(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Double {
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+        val rLat1 = Math.toRadians(lat1)
+        val rLat2 = Math.toRadians(lat2)
+        val a = sin(dLat / 2.0) * sin(dLat / 2.0) +
+            cos(rLat1) * cos(rLat2) * sin(dLon / 2.0) * sin(dLon / 2.0)
+        val c = 2.0 * atan2(kotlin.math.sqrt(a), kotlin.math.sqrt((1.0 - a).coerceAtLeast(0.0)))
+        return EARTH_RADIUS_KM * c
+    }
+
+    fun findNearestBangladeshPlace(
+        latitude: Double,
+        longitude: Double
+    ): Pair<CityLocationPreset, Double>? {
+        val best = BangladeshLocations.ALL_PLACES.minByOrNull { place ->
+            haversineDistanceKm(latitude, longitude, place.latitude, place.longitude)
+        } ?: return null
+        val distKm = haversineDistanceKm(latitude, longitude, best.latitude, best.longitude)
+        return best to distKm
     }
 
     fun resolveUtcOffsetForLocation(locationName: String, latitude: Double, longitude: Double): Double? {
@@ -107,8 +175,8 @@ object PrayerTimeCalculator {
             it.name.equals(locationName, ignoreCase = true)
         }?.utcOffsetHours
         if (exact != null) return exact
-        // Approximate Bangladesh bounding box when GPS detects inside Bangladesh
-        if (latitude in 20.5..26.7 && longitude in 88.0..92.7) {
+        // Cover all villages, chars, and border areas across Bangladesh (UTC+6)
+        if (isInsideBangladesh(latitude, longitude)) {
             return 6.0
         }
         return null

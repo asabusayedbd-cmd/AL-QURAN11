@@ -1,5 +1,6 @@
 package com.example.feature.reader
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.audio.AudioPlaybackState
@@ -60,6 +61,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
+@Immutable
 data class AyahDisplayBundle(
     val ayah: AyahEntity,
     val words: List<WordDisplayItem>,
@@ -69,6 +71,7 @@ data class AyahDisplayBundle(
     val inlineTafsir: AyahTafsirEntity? = null
 )
 
+@Immutable
 data class WordInspectorState(
     val word: WordEntity,
     val localizedMeaning: String,
@@ -86,6 +89,7 @@ data class WordInspectorState(
     val wordTranslationError: String? = null
 )
 
+@Immutable
 data class ActivePlaybackCursor(
     val surahId: Int = 0,
     val ayahNumber: Int = 0,
@@ -93,6 +97,7 @@ data class ActivePlaybackCursor(
     val isPlaying: Boolean = false
 )
 
+@Immutable
 data class LineTranslationUiState(
     val ayahLines: Map<Int, Pair<String, String>> = emptyMap(), // ayahId -> (langCode, text)
     val translatingAyahIds: Set<Int> = emptySet(),
@@ -103,6 +108,7 @@ data class LineTranslationUiState(
     val errorMessage: String? = null
 )
 
+@Immutable
 data class ReaderUiState(
     val surah: SurahEntity? = null,
     val allSurahs: List<SurahEntity> = emptyList(),

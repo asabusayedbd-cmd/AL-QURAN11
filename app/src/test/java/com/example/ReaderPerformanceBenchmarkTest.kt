@@ -252,7 +252,8 @@ class ReaderPerformanceBenchmarkTest {
             .addMigrations(
                 NoorDatabase.MIGRATION_1_2,
                 NoorDatabase.MIGRATION_2_3,
-                NoorDatabase.MIGRATION_3_4
+                NoorDatabase.MIGRATION_3_4,
+                NoorDatabase.MIGRATION_4_5
             )
             .allowMainThreadQueries()
         if (hasPrepopAsset) {

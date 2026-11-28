@@ -59,6 +59,28 @@ interface QuranDao {
     @Query("SELECT * FROM ayahs WHERE id IN (:ayahIds) ORDER BY surahId ASC, ayahNumber ASC")
     suspend fun getAyahsByIds(ayahIds: List<Int>): List<AyahEntity>
 
+    @Query(
+        """
+        SELECT a.* FROM ayahs a
+        INNER JOIN ayahs_fts f ON a.id = f.rowid
+        WHERE ayahs_fts MATCH :ftsQuery
+        ORDER BY a.surahId ASC, a.ayahNumber ASC
+        LIMIT 50
+        """
+    )
+    suspend fun searchAyahsByFts(ftsQuery: String): List<AyahEntity>
+
+    @Query(
+        """
+        SELECT DISTINCT t.ayahId FROM ayah_translations t
+        INNER JOIN ayah_translations_fts f ON t.rowid = f.rowid
+        WHERE ayah_translations_fts MATCH :ftsQuery
+        ORDER BY t.ayahId ASC
+        LIMIT 60
+        """
+    )
+    suspend fun searchAyahIdsByTranslationFts(ftsQuery: String): List<Int>
+
     @Query("SELECT * FROM ayahs WHERE normalizedArabic LIKE '%' || :normalizedQuery || '%' ORDER BY surahId ASC, ayahNumber ASC LIMIT 50")
     suspend fun searchAyahsByNormalizedArabic(normalizedQuery: String): List<AyahEntity>
 

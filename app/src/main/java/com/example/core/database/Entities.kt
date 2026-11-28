@@ -1,10 +1,13 @@
 package com.example.core.database
 
+import androidx.compose.runtime.Immutable
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Fts4
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+@Immutable
 @Entity(tableName = "surahs")
 data class SurahEntity(
     @PrimaryKey val id: Int,
@@ -19,6 +22,7 @@ data class SurahEntity(
     val isDownloaded: Boolean = false
 )
 
+@Immutable
 @Entity(
     tableName = "ayahs",
     foreignKeys = [
@@ -53,6 +57,7 @@ data class AyahEntity(
     val sajdahType: String? = null
 )
 
+@Immutable
 @Entity(
     tableName = "words",
     foreignKeys = [
@@ -85,6 +90,7 @@ data class WordEntity(
     val normalizedText: String = ""
 )
 
+@Immutable
 @Entity(
     tableName = "word_translations",
     primaryKeys = ["wordId", "languageCode"],
@@ -104,6 +110,7 @@ data class WordTranslationEntity(
     val meaningText: String
 )
 
+@Immutable
 @Entity(tableName = "translation_sources")
 data class TranslationSourceEntity(
     @PrimaryKey val id: Int,
@@ -115,6 +122,7 @@ data class TranslationSourceEntity(
     val fileSizeKb: Int
 )
 
+@Immutable
 @Entity(
     tableName = "ayah_translations",
     primaryKeys = ["sourceId", "ayahId"],
@@ -137,6 +145,7 @@ data class AyahTranslationEntity(
     val footnotesJson: String = "[]"
 )
 
+@Immutable
 @Entity(tableName = "tafsir_sources")
 data class TafsirSourceEntity(
     @PrimaryKey val id: Int,
@@ -148,6 +157,7 @@ data class TafsirSourceEntity(
     val fileSizeKb: Int
 )
 
+@Immutable
 @Entity(
     tableName = "ayah_tafsirs",
     primaryKeys = ["sourceId", "ayahId"],
@@ -169,6 +179,7 @@ data class AyahTafsirEntity(
     val tafsirHtmlOrMarkdown: String
 )
 
+@Immutable
 @Entity(tableName = "audio_reciters")
 data class AudioReciterEntity(
     @PrimaryKey val id: Int,
@@ -179,6 +190,7 @@ data class AudioReciterEntity(
     val isDownloaded: Boolean
 )
 
+@Immutable
 @Entity(
     tableName = "audio_segments",
     primaryKeys = ["reciterId", "ayahId"],
@@ -192,6 +204,7 @@ data class AudioSegmentEntity(
     val wordTimestampSegmentsJson: String
 )
 
+@Immutable
 @Entity(tableName = "user_collections")
 data class UserCollectionEntity(
     @PrimaryKey val id: String,
@@ -200,6 +213,7 @@ data class UserCollectionEntity(
     val createdAtEpochMs: Long
 )
 
+@Immutable
 @Entity(tableName = "user_bookmarks", indices = [Index("verseKey"), Index("collectionId")])
 data class UserBookmarkEntity(
     @PrimaryKey val id: String,
@@ -212,6 +226,7 @@ data class UserBookmarkEntity(
     val updatedAtEpochMs: Long
 )
 
+@Immutable
 @Entity(tableName = "user_notes", indices = [Index("verseKey")])
 data class UserNoteEntity(
     @PrimaryKey val id: String,
@@ -223,6 +238,7 @@ data class UserNoteEntity(
     val updatedAtEpochMs: Long
 )
 
+@Immutable
 @Entity(tableName = "reading_progress")
 data class ReadingProgressEntity(
     @PrimaryKey val id: String = "main",
@@ -237,6 +253,7 @@ data class ReadingProgressEntity(
     val updatedAtEpochMs: Long = System.currentTimeMillis()
 )
 
+@Immutable
 @Entity(tableName = "habit_streaks")
 data class HabitStreakEntity(
     @PrimaryKey val dateKey: String,
@@ -244,4 +261,18 @@ data class HabitStreakEntity(
     val minutesSpent: Int = 0,
     val tasbeehCount: Int = 0,
     val updatedAtEpochMs: Long = System.currentTimeMillis()
+)
+
+@Fts4(contentEntity = AyahEntity::class)
+@Entity(tableName = "ayahs_fts")
+data class AyahFtsEntity(
+    val verseKey: String,
+    val textUthmani: String,
+    val normalizedArabic: String
+)
+
+@Fts4(contentEntity = AyahTranslationEntity::class)
+@Entity(tableName = "ayah_translations_fts")
+data class AyahTranslationFtsEntity(
+    val translatedText: String
 )

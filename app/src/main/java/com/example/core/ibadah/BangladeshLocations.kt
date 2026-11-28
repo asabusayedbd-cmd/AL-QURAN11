@@ -7,6 +7,34 @@ package com.example.core.ibadah
  */
 object BangladeshLocations {
 
+    val DISTRICTS_BY_DIVISION: Map<String, List<String>> = mapOf(
+        "Dhaka" to listOf(
+            "Dhaka", "Gazipur", "Narayanganj", "Narsingdi", "Munshiganj", "Manikganj",
+            "Tangail", "Kishoreganj", "Faridpur", "Gopalganj", "Madaripur", "Rajbari", "Shariatpur"
+        ),
+        "Chattogram" to listOf(
+            "Chattogram", "Cox's Bazar", "Cumilla", "Chandpur", "Brahmanbaria", "Noakhali",
+            "Feni", "Lakshmipur", "Bandarban", "Rangamati", "Khagrachhari"
+        ),
+        "Sylhet" to listOf("Sylhet", "Moulvibazar", "Habiganj", "Sunamganj"),
+        "Rajshahi" to listOf(
+            "Rajshahi", "Bogura", "Pabna", "Sirajganj", "Natore", "Naogaon",
+            "Chapainawabganj", "Joypurhat"
+        ),
+        "Khulna" to listOf(
+            "Khulna", "Jashore", "Satkhira", "Bagerhat", "Kushtia", "Jhenaidah",
+            "Chuadanga", "Meherpur", "Magura", "Narail"
+        ),
+        "Barishal" to listOf(
+            "Barishal", "Patuakhali", "Bhola", "Pirojpur", "Jhalokati", "Barguna"
+        ),
+        "Rangpur" to listOf(
+            "Rangpur", "Dinajpur", "Thakurgaon", "Panchagarh", "Nilphamari",
+            "Lalmonirhat", "Kurigram", "Gaibandha"
+        ),
+        "Mymensingh" to listOf("Mymensingh", "Jamalpur", "Netrokona", "Sherpur")
+    )
+
     private fun bd(
         en: String,
         bn: String,

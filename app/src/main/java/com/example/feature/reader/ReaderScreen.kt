@@ -12,24 +12,32 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.roundToInt
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
@@ -45,6 +53,8 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Tune
@@ -72,6 +82,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -81,7 +92,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -111,11 +121,13 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.rememberCoroutineScope
+import com.example.core.database.TafsirSourceEntity
 import com.example.core.localization.BidiUtils
 import com.example.core.localization.LineTranslator
 import com.example.core.localization.QuranScriptType
 import com.example.core.localization.ReaderCardStyle
 import com.example.core.localization.ReaderViewMode
+import com.example.core.localization.UserPreferences
 import com.example.feature.settings.TafsirsPickerModalSheet
 import com.example.feature.settings.TajweedGuideSheet
 import com.example.feature.settings.TranslationsPickerModalSheet
@@ -127,7 +139,9 @@ import com.example.ui.components.RecitationSettingsModalSheet
 import com.example.ui.components.ShareCardGenerator
 import com.example.ui.components.TajweedTextFormatter
 import com.example.ui.components.WordByWordFlowRow
+import com.example.ui.components.WordDisplayItem
 import com.example.ui.theme.LocalTajweedPalette
+import com.example.ui.theme.TajweedPalette
 import com.example.ui.theme.arabicLineHeightMultiplier
 import com.example.ui.theme.arabicScriptFont
 import com.example.ui.theme.banglaSafeBodyStyle
@@ -810,8 +824,10 @@ fun ReaderScreen(
                         }
                     }
                 } else {
-                    LazyColumn(
-                        state = listState,
+                    val activeTafsirMeta = remember(state.tafsirSources, state.preferences.activeTafsirSourceId) {
+                        state.tafsirSources.firstOrNull { it.id == state.preferences.activeTafsirSourceId }
+                    }
+                    BoxWithConstraints(
                         modifier = Modifier
                             .fillMaxSize()
                             .onGloballyPositioned {
@@ -819,10 +835,14 @@ fun ReaderScreen(
                                     surahId = activeSurahId,
                                     mushafGroupingSkipped = !isMushafMode
                                 )
-                            },
-                        contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            }
                     ) {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
                         if (showTopBismillah) {
                             item(key = "bismillah_${activeSurahId}", contentType = "bismillah") {
                                 Surface(
@@ -917,375 +937,24 @@ fun ReaderScreen(
                                     remember { mutableStateOf<Int?>(null) }
                                 }
 
-                                AyahStyleContainer(
-                                    cardStyle = state.preferences.readerCardStyle,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .testTag("ayah_card_${bundle.ayah.verseKey}")
-                                ) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        // Ayah Header Action Bar
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.primaryContainer,
-                                                shape = MaterialTheme.shapes.small
-                                            ) {
-                                                Text(
-                                                    text = BidiUtils.wrapVerseKey(bundle.ayah.verseKey),
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                                )
-                                            }
-
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                IconButton(
-                                                    onClick = { playAyahWithBackgroundPermission(bundle.ayah) },
-                                                    modifier = Modifier.testTag("play_ayah_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.PlayArrow,
-                                                        contentDescription = stringResource(R.string.cd_play_ayah)
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = { viewModel.toggleBookmark(bundle.ayah) },
-                                                    modifier = Modifier.testTag("bookmark_ayah_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    Icon(
-                                                        if (bundle.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                                                        contentDescription = stringResource(R.string.cd_bookmark_ayah),
-                                                        tint = if (bundle.isBookmarked) {
-                                                            MaterialTheme.colorScheme.secondary
-                                                        } else {
-                                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                                        }
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = { viewModel.openTafsir(bundle.ayah) },
-                                                    modifier = Modifier.testTag("open_tafsir_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    Icon(
-                                                        if (bundle.hasNote) Icons.Default.EditNote else Icons.AutoMirrored.Filled.MenuBook,
-                                                        contentDescription = stringResource(R.string.cd_open_tafsir)
-                                                    )
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        val tr = bundle.translations.firstOrNull()
-                                                        ShareCardGenerator.shareAyahAsImageCard(
-                                                            context = context,
-                                                            surahName = state.localizedSurahName,
-                                                            verseKey = bundle.ayah.verseKey,
-                                                            arabicText = bundle.ayah.textUthmani,
-                                                            translationText = tr?.translatedText.orEmpty(),
-                                                            translatorName = tr?.translatorName ?: "Quran Translation"
-                                                        )
-                                                    },
-                                                    modifier = Modifier.testTag("share_card_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Share,
-                                                        contentDescription = stringResource(R.string.cd_share_ayah)
-                                                    )
-                                                }
-                                                val isTranslatingThisAyah = bundle.ayah.id in lineState.translatingAyahIds
-                                                IconButton(
-                                                    onClick = { lineTranslateAyah = bundle },
-                                                    modifier = Modifier.testTag("translate_ayah_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    if (isTranslatingThisAyah) {
-                                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                                    } else {
-                                                        Icon(
-                                                            Icons.Default.Translate,
-                                                            contentDescription = stringResource(R.string.translate_line_action),
-                                                            tint = if (bundle.ayah.id in lineState.ayahLines) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                }
-                                                IconButton(
-                                                    onClick = {
-                                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                                        val firstTr = bundle.translations.firstOrNull()?.translatedText.orEmpty()
-                                                        val clip = "${bundle.ayah.textUthmani}\n$firstTr\n[${state.localizedSurahName} ${bundle.ayah.verseKey}]"
-                                                        clipboard.setPrimaryClip(ClipData.newPlainText("Quran Ayah", clip))
-                                                        Toast.makeText(context, context.getString(R.string.ayah_copied_toast), Toast.LENGTH_SHORT).show()
-                                                    },
-                                                    modifier = Modifier.testTag("copy_ayah_${bundle.ayah.verseKey}")
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.ContentCopy,
-                                                        contentDescription = stringResource(R.string.cd_copy_ayah)
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        // Full Arabic Ayah (Memoized, supports Uthmani Tajweed and preserves sanitized IndoPak script)
-                                        val isIndoPak = state.preferences.scriptType == QuranScriptType.INDOPAK
-                                        val arabicRaw = if (isIndoPak) {
-                                            BidiUtils.sanitizeIndoPakArabic(bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani })
-                                        } else {
-                                            bundle.ayah.textUthmani
-                                        }
-                                        val formattedArabic = remember(
-                                            arabicRaw,
-                                            bundle.ayah.textTajweedHtml,
-                                            state.preferences.tajweedColorsEnabled,
-                                            isIndoPak,
-                                            tajweedPalette,
-                                            bundle.ayah.ayahNumber
-                                        ) {
-                                            TajweedTextFormatter.formatArabicVerse(
-                                                rawText = arabicRaw,
-                                                tajweedHtml = bundle.ayah.textTajweedHtml,
-                                                tajweedEnabled = state.preferences.tajweedColorsEnabled,
-                                                palette = tajweedPalette,
-                                                ayahEndMarker = BidiUtils.formatAyahMarker(bundle.ayah.ayahNumber, useArabicDigits = true),
-                                                useTajweedMarkup = !isIndoPak
-                                            )
-                                        }
-                                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                                            Text(
-                                                text = formattedArabic,
-                                                fontFamily = arabicScriptFont(state.preferences.scriptType, state.preferences.arabicFontFamily),
-                                                fontSize = state.preferences.arabicFontSizeSp.sp,
-                                                lineHeight = (state.preferences.arabicFontSizeSp * arabicLineHeightMultiplier(state.preferences.scriptType, state.preferences.arabicFontFamily)).sp,
-                                                textAlign = TextAlign.Start,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
-                                        // Word-by-Word RTL FlowRow (independently toggleable in Reader Sidebar)
-                                        if (state.preferences.showWordByWord && bundle.words.isNotEmpty()) {
-                                            WordByWordFlowRow(
-                                                words = bundle.words,
-                                                scriptType = state.preferences.scriptType,
-                                                wbwLanguageCode = state.preferences.wbwLanguageCode,
-                                                arabicFontSizeSp = (state.preferences.arabicFontSizeSp * 0.72f).coerceAtLeast(18f),
-                                                wbwFontSizeSp = state.preferences.wbwFontSizeSp,
-                                                showTransliteration = state.preferences.showTransliteration,
-                                                activeWordPosition = activeWordPos,
-                                                ayahNumber = bundle.ayah.ayahNumber,
-                                                onWordClick = { wItem ->
-                                                    viewModel.inspectWord(wItem, bundle.ayah.verseKey)
-                                                },
-                                                arabicFontFamily = state.preferences.arabicFontFamily
-                                            )
-                                        }
-
-                                        val lineTr = lineState.ayahLines[bundle.ayah.id]
-                                        val hasVisibleTranslation = state.preferences.showTranslation &&
-                                            (bundle.translations.isNotEmpty() || lineTr != null)
-
-                                        if (hasVisibleTranslation || state.preferences.showInlineTafsir) {
-                                            HorizontalDivider(thickness = 0.6.dp)
-                                        }
-
-                                        // Multi-translation Stack (hidden cleanly when reading Arabic + WBW only)
-                                        if (state.preferences.showTranslation) {
-                                            bundle.translations.forEach { tr ->
-                                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    Text(
-                                                        text = tr.translatedText,
-                                                        style = banglaSafeBodyStyle(
-                                                            state.preferences.translationFontSizeSp,
-                                                            tr.languageCode
-                                                        ),
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = tr.translatorName,
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.secondary,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                }
-                                            }
-
-                                            // Dynamic Line Translation (Instant বাংলা or Any Selected Language)
-                                            if (lineTr != null) {
-                                                Surface(
-                                                    shape = MaterialTheme.shapes.small,
-                                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                                                    modifier = Modifier.fillMaxWidth()
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.Top
-                                                    ) {
-                                                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                            Text(
-                                                                text = LineTranslator.languageLabel(lineTr.first),
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                fontWeight = FontWeight.Bold
-                                                            )
-                                                            Text(
-                                                                text = lineTr.second,
-                                                                style = banglaSafeBodyStyle(
-                                                                    state.preferences.translationFontSizeSp,
-                                                                    lineTr.first
-                                                                ),
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            )
-                                                        }
-                                                        IconButton(
-                                                            onClick = { viewModel.clearAyahLineTranslation(bundle.ayah.id) },
-                                                            modifier = Modifier.size(24.dp)
-                                                        ) {
-                                                            Icon(
-                                                                Icons.Default.Close,
-                                                                contentDescription = stringResource(R.string.action_clear),
-                                                                modifier = Modifier.size(16.dp),
-                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Inline Tafsir directly at the bottom of each Ayah card (toggled from Reader Sidebar)
-                                        if (state.preferences.showInlineTafsir) {
-                                            val activeTafsirMeta = state.tafsirSources.firstOrNull {
-                                                it.id == state.preferences.activeTafsirSourceId
-                                            }
-                                            val inlineTafsir = bundle.inlineTafsir
-                                            Surface(
-                                                shape = MaterialTheme.shapes.medium,
-                                                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
-                                                border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .testTag("inline_tafsir_card_${bundle.ayah.verseKey}")
-                                            ) {
-                                                Column(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                            modifier = Modifier.weight(1f)
-                                                        ) {
-                                                            Icon(
-                                                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                                                contentDescription = null,
-                                                                tint = MaterialTheme.colorScheme.primary,
-                                                                modifier = Modifier.size(15.dp)
-                                                            )
-                                                            Text(
-                                                                text = inlineTafsir?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
-                                                                    ?: activeTafsirMeta?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
-                                                                    ?: stringResource(R.string.tafsir_title),
-                                                                style = MaterialTheme.typography.labelMedium,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                maxLines = 1,
-                                                                overflow = TextOverflow.Ellipsis
-                                                            )
-                                                        }
-                                                        TextButton(
-                                                            onClick = { viewModel.openTafsir(bundle.ayah) },
-                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                                            modifier = Modifier.testTag("inline_tafsir_open_${bundle.ayah.verseKey}")
-                                                        ) {
-                                                            Text(
-                                                                text = stringResource(R.string.inline_tafsir_full_btn),
-                                                                style = MaterialTheme.typography.labelSmall
-                                                            )
-                                                        }
-                                                    }
-
-                                                    if (inlineTafsir != null) {
-                                                        val cleanTafsirBody = remember(inlineTafsir.tafsirHtmlOrMarkdown) {
-                                                            formatInlineTafsirText(inlineTafsir.tafsirHtmlOrMarkdown)
-                                                        }
-                                                        var isTafsirExpanded by remember(bundle.ayah.id, inlineTafsir.sourceId) {
-                                                            mutableStateOf(false)
-                                                        }
-                                                        val isRtlTafsir = inlineTafsir.languageCode.lowercase() in setOf("ar", "ur", "fa", "ps")
-                                                        CompositionLocalProvider(
-                                                            LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr
-                                                        ) {
-                                                            Text(
-                                                                text = cleanTafsirBody,
-                                                                style = banglaSafeBodyStyle(
-                                                                    (state.preferences.translationFontSizeSp - 1f).coerceAtLeast(12f),
-                                                                    inlineTafsir.languageCode
-                                                                ),
-                                                                color = MaterialTheme.colorScheme.onSurface,
-                                                                maxLines = if (isTafsirExpanded) Int.MAX_VALUE else 5,
-                                                                overflow = TextOverflow.Ellipsis,
-                                                                textAlign = TextAlign.Start,
-                                                                modifier = Modifier.fillMaxWidth()
-                                                            )
-                                                        }
-                                                        if (cleanTafsirBody.length > 260) {
-                                                            TextButton(
-                                                                onClick = { isTafsirExpanded = !isTafsirExpanded },
-                                                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
-                                                                modifier = Modifier.testTag("inline_tafsir_expand_${bundle.ayah.verseKey}")
-                                                            ) {
-                                                                Text(
-                                                                    text = if (isTafsirExpanded) {
-                                                                        stringResource(R.string.inline_tafsir_show_less)
-                                                                    } else {
-                                                                        stringResource(R.string.inline_tafsir_read_more)
-                                                                    },
-                                                                    style = MaterialTheme.typography.labelMedium
-                                                                )
-                                                            }
-                                                        }
-                                                    } else if (state.isLoadingInlineTafsirs) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                                        ) {
-                                                            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                                            Text(
-                                                                text = stringResource(R.string.inline_tafsir_loading),
-                                                                style = MaterialTheme.typography.bodySmall,
-                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                            )
-                                                        }
-                                                    } else {
-                                                        FilledTonalButton(
-                                                            onClick = { viewModel.fetchInlineTafsirForAyah(bundle.ayah) },
-                                                            modifier = Modifier.testTag("inline_tafsir_fetch_${bundle.ayah.verseKey}")
-                                                        ) {
-                                                            Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                            Spacer(modifier = Modifier.width(6.dp))
-                                                            Text(stringResource(R.string.inline_tafsir_fetch_btn))
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                ReaderAyahCard(
+                                    bundle = bundle,
+                                    localizedSurahName = state.localizedSurahName,
+                                    preferences = state.preferences,
+                                    activeWordPos = activeWordPos,
+                                    lineTr = lineState.ayahLines[bundle.ayah.id],
+                                    isTranslatingThisAyah = bundle.ayah.id in lineState.translatingAyahIds,
+                                    activeTafsirMeta = activeTafsirMeta,
+                                    isLoadingInlineTafsirs = state.isLoadingInlineTafsirs,
+                                    tajweedPalette = tajweedPalette,
+                                    onPlayAyah = playAyahWithBackgroundPermission,
+                                    onToggleBookmark = viewModel::toggleBookmark,
+                                    onOpenTafsir = viewModel::openTafsir,
+                                    onRequestLineTranslate = { lineTranslateAyah = it },
+                                    onClearLineTranslation = viewModel::clearAyahLineTranslation,
+                                    onFetchInlineTafsir = viewModel::fetchInlineTafsirForAyah,
+                                    onInspectWord = viewModel::inspectWord
+                                )
                             }
                         }
 
@@ -1336,11 +1005,147 @@ fun ReaderScreen(
 
                         item { Spacer(modifier = Modifier.height(72.dp)) }
                     }
+
+                    // PDF-Style Draggable Fast Scroll Crawler Thumb on Fixed Right Side
+                    val totalItems = listState.layoutInfo.totalItemsCount
+                    if (totalItems > 1) {
+                        var isDraggingThumb by remember { mutableStateOf(false) }
+                        val firstVisible = listState.firstVisibleItemIndex
+
+                        val scrollFraction by remember {
+                            derivedStateOf {
+                                val count = listState.layoutInfo.totalItemsCount
+                                if (count <= 1) 0f
+                                else {
+                                    val itemFraction = listState.firstVisibleItemIndex.toFloat() / (count - 1).toFloat()
+                                    itemFraction.coerceIn(0f, 1f)
+                                }
+                            }
+                        }
+
+                        val thumbHeight = 54.dp
+                        val verticalInset = 16.dp
+                        val usableHeight = (maxHeight - thumbHeight - (verticalInset * 2)).coerceAtLeast(0.dp)
+                        val thumbOffsetY = verticalInset + (usableHeight * scrollFraction)
+
+                        val currentPositionLabel = remember(firstVisible, isMushafMode, mushafPages, state.ayahs) {
+                            if (isMushafMode) {
+                                val pageIdx = (firstVisible - headerOffset).coerceIn(0, (mushafPages.size - 1).coerceAtLeast(0))
+                                val pageNum = mushafPages.getOrNull(pageIdx)?.first ?: (pageIdx + 1)
+                                "Page $pageNum"
+                            } else {
+                                val ayahIdx = (firstVisible - headerOffset).coerceIn(0, (state.ayahs.size - 1).coerceAtLeast(0))
+                                val ayahNum = state.ayahs.getOrNull(ayahIdx)?.ayah?.ayahNumber ?: (ayahIdx + 1)
+                                "Ayah $ayahNum / ${state.ayahs.size}"
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                                .width(40.dp)
+                                .testTag("pdf_fast_scroll_crawler")
+                                .pointerInput(totalItems) {
+                                    detectVerticalDragGestures(
+                                        onDragStart = { offset ->
+                                            isDraggingThumb = true
+                                            val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                            val targetIdx = (fraction * (totalItems - 1)).roundToInt().coerceIn(0, totalItems - 1)
+                                            coroutineScope.launch {
+                                                listState.scrollToItem(targetIdx)
+                                            }
+                                        },
+                                        onDragEnd = { isDraggingThumb = false },
+                                        onDragCancel = { isDraggingThumb = false },
+                                        onVerticalDrag = { change, _ ->
+                                            val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                                            val targetIdx = (fraction * (totalItems - 1)).roundToInt().coerceIn(0, totalItems - 1)
+                                            coroutineScope.launch {
+                                                listState.scrollToItem(targetIdx)
+                                            }
+                                        }
+                                    )
+                                },
+                            contentAlignment = Alignment.TopCenter
+                        ) {
+                            // Track rail indicator
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .width(3.dp)
+                                    .fillMaxHeight()
+                                    .padding(vertical = 16.dp)
+                                    .clip(RoundedCornerShape(1.5.dp))
+                                    .background(
+                                        if (isDraggingThumb) MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                                    )
+                            )
+
+                            // Draggable Crawler Thumb
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(y = thumbOffsetY)
+                                    .padding(end = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // PDF-style floating pill / tooltip while dragging
+                                AnimatedVisibility(visible = isDraggingThumb) {
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.inverseSurface,
+                                        contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+                                        shape = RoundedCornerShape(8.dp),
+                                        shadowElevation = 6.dp,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = currentPositionLabel,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    color = if (isDraggingThumb) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+                                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                                    shape = RoundedCornerShape(12.dp),
+                                    shadowElevation = if (isDraggingThumb) 8.dp else 3.dp,
+                                    modifier = Modifier.size(width = if (isDraggingThumb) 14.dp else 10.dp, height = thumbHeight)
+                                ) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(3.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            repeat(3) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(width = 5.dp, height = 2.dp)
+                                                        .background(
+                                                            MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f),
+                                                            RoundedCornerShape(1.dp)
+                                                        )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-    } // end ModalNavigationDrawer
+}
+}
 
     // Mushaf Ayah Quick Action Bottom Sheet
     selectedMushafAyah?.let { mushafAyah ->
@@ -1796,6 +1601,394 @@ private fun AyahStyleContainer(
                 modifier = modifier
             ) {
                 content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReaderAyahCard(
+    bundle: AyahDisplayBundle,
+    localizedSurahName: String,
+    preferences: UserPreferences,
+    activeWordPos: Int?,
+    lineTr: Pair<String, String>?,
+    isTranslatingThisAyah: Boolean,
+    activeTafsirMeta: TafsirSourceEntity?,
+    isLoadingInlineTafsirs: Boolean,
+    tajweedPalette: TajweedPalette,
+    onPlayAyah: (AyahEntity) -> Unit,
+    onToggleBookmark: (AyahEntity) -> Unit,
+    onOpenTafsir: (AyahEntity) -> Unit,
+    onRequestLineTranslate: (AyahDisplayBundle) -> Unit,
+    onClearLineTranslation: (Int) -> Unit,
+    onFetchInlineTafsir: (AyahEntity) -> Unit,
+    onInspectWord: (WordDisplayItem, String) -> Unit
+) {
+    val context = LocalContext.current
+    AyahStyleContainer(
+        cardStyle = preferences.readerCardStyle,
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("ayah_card_${bundle.ayah.verseKey}")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Ayah Header Action Bar
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = BidiUtils.wrapVerseKey(bundle.ayah.verseKey),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onPlayAyah(bundle.ayah) },
+                        modifier = Modifier.testTag("play_ayah_${bundle.ayah.verseKey}")
+                    ) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.cd_play_ayah)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onToggleBookmark(bundle.ayah) },
+                        modifier = Modifier.testTag("bookmark_ayah_${bundle.ayah.verseKey}")
+                    ) {
+                        Icon(
+                            if (bundle.isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = stringResource(R.string.cd_bookmark_ayah),
+                            tint = if (bundle.isBookmarked) {
+                                MaterialTheme.colorScheme.secondary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        )
+                    }
+                    IconButton(
+                        onClick = { onOpenTafsir(bundle.ayah) },
+                        modifier = Modifier.testTag("open_tafsir_${bundle.ayah.verseKey}")
+                    ) {
+                        Icon(
+                            if (bundle.hasNote) Icons.Default.EditNote else Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = stringResource(R.string.cd_open_tafsir)
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            val tr = bundle.translations.firstOrNull()
+                            ShareCardGenerator.shareAyahAsImageCard(
+                                context = context,
+                                surahName = localizedSurahName,
+                                verseKey = bundle.ayah.verseKey,
+                                arabicText = bundle.ayah.textUthmani,
+                                translationText = tr?.translatedText.orEmpty(),
+                                translatorName = tr?.translatorName ?: "Quran Translation"
+                            )
+                        },
+                        modifier = Modifier.testTag("share_card_${bundle.ayah.verseKey}")
+                    ) {
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = stringResource(R.string.cd_share_ayah)
+                        )
+                    }
+                    IconButton(
+                        onClick = { onRequestLineTranslate(bundle) },
+                        modifier = Modifier.testTag("translate_ayah_${bundle.ayah.verseKey}")
+                    ) {
+                        if (isTranslatingThisAyah) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(
+                                Icons.Default.Translate,
+                                contentDescription = stringResource(R.string.translate_line_action),
+                                tint = if (lineTr != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    IconButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val firstTr = bundle.translations.firstOrNull()?.translatedText.orEmpty()
+                            val clip = "${bundle.ayah.textUthmani}\n$firstTr\n[$localizedSurahName ${bundle.ayah.verseKey}]"
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Quran Ayah", clip))
+                            Toast.makeText(context, context.getString(R.string.ayah_copied_toast), Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.testTag("copy_ayah_${bundle.ayah.verseKey}")
+                    ) {
+                        Icon(
+                            Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.cd_copy_ayah)
+                        )
+                    }
+                }
+            }
+
+            // Full Arabic Ayah (Memoized, supports Uthmani Tajweed and preserves sanitized IndoPak script)
+            val isIndoPak = preferences.scriptType == QuranScriptType.INDOPAK
+            val arabicRaw = remember(bundle.ayah.id, isIndoPak) {
+                if (isIndoPak) {
+                    BidiUtils.sanitizeIndoPakArabic(bundle.ayah.textIndopak.ifBlank { bundle.ayah.textUthmani })
+                } else {
+                    bundle.ayah.textUthmani
+                }
+            }
+            val formattedArabic = remember(
+                arabicRaw,
+                bundle.ayah.textTajweedHtml,
+                preferences.tajweedColorsEnabled,
+                isIndoPak,
+                tajweedPalette,
+                bundle.ayah.ayahNumber
+            ) {
+                TajweedTextFormatter.formatArabicVerse(
+                    rawText = arabicRaw,
+                    tajweedHtml = bundle.ayah.textTajweedHtml,
+                    tajweedEnabled = preferences.tajweedColorsEnabled,
+                    palette = tajweedPalette,
+                    ayahEndMarker = BidiUtils.formatAyahMarker(bundle.ayah.ayahNumber, useArabicDigits = true),
+                    useTajweedMarkup = !isIndoPak
+                )
+            }
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                Text(
+                    text = formattedArabic,
+                    fontFamily = arabicScriptFont(preferences.scriptType, preferences.arabicFontFamily),
+                    fontSize = preferences.arabicFontSizeSp.sp,
+                    lineHeight = (preferences.arabicFontSizeSp * arabicLineHeightMultiplier(preferences.scriptType, preferences.arabicFontFamily)).sp,
+                    textAlign = TextAlign.Start,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Word-by-Word RTL FlowRow (independently toggleable in Reader Sidebar)
+            if (preferences.showWordByWord && bundle.words.isNotEmpty()) {
+                WordByWordFlowRow(
+                    words = bundle.words,
+                    scriptType = preferences.scriptType,
+                    wbwLanguageCode = preferences.wbwLanguageCode,
+                    arabicFontSizeSp = (preferences.arabicFontSizeSp * 0.72f).coerceAtLeast(18f),
+                    wbwFontSizeSp = preferences.wbwFontSizeSp,
+                    showTransliteration = preferences.showTransliteration,
+                    activeWordPosition = activeWordPos,
+                    ayahNumber = bundle.ayah.ayahNumber,
+                    onWordClick = { wItem ->
+                        onInspectWord(wItem, bundle.ayah.verseKey)
+                    },
+                    arabicFontFamily = preferences.arabicFontFamily
+                )
+            }
+
+            val hasVisibleTranslation = preferences.showTranslation &&
+                (bundle.translations.isNotEmpty() || lineTr != null)
+
+            if (hasVisibleTranslation || preferences.showInlineTafsir) {
+                HorizontalDivider(thickness = 0.6.dp)
+            }
+
+            // Multi-translation Stack (hidden cleanly when reading Arabic + WBW only)
+            if (preferences.showTranslation) {
+                bundle.translations.forEach { tr ->
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = tr.translatedText,
+                            style = banglaSafeBodyStyle(
+                                preferences.translationFontSizeSp,
+                                tr.languageCode
+                            ),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = tr.translatorName,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Dynamic Line Translation (Instant বাংলা or Any Selected Language)
+                if (lineTr != null) {
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = LineTranslator.languageLabel(lineTr.first),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = lineTr.second,
+                                    style = banglaSafeBodyStyle(
+                                        preferences.translationFontSizeSp,
+                                        lineTr.first
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            IconButton(
+                                onClick = { onClearLineTranslation(bundle.ayah.id) },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.action_clear),
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Inline Tafsir directly at the bottom of each Ayah card (toggled from Reader Sidebar)
+            if (preferences.showInlineTafsir) {
+                val inlineTafsir = bundle.inlineTafsir
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+                    border = BorderStroke(0.6.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("inline_tafsir_card_${bundle.ayah.verseKey}")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = inlineTafsir?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
+                                        ?: activeTafsirMeta?.let { "${it.tafsirName} (${it.languageCode.uppercase()})" }
+                                        ?: stringResource(R.string.tafsir_title),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            TextButton(
+                                onClick = { onOpenTafsir(bundle.ayah) },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier.testTag("inline_tafsir_open_${bundle.ayah.verseKey}")
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.inline_tafsir_full_btn),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
+                        }
+
+                        if (inlineTafsir != null) {
+                            val cleanTafsirBody = remember(inlineTafsir.tafsirHtmlOrMarkdown) {
+                                formatInlineTafsirText(inlineTafsir.tafsirHtmlOrMarkdown)
+                            }
+                            var isTafsirExpanded by remember(bundle.ayah.id, inlineTafsir.sourceId) {
+                                mutableStateOf(false)
+                            }
+                            val isRtlTafsir = inlineTafsir.languageCode.lowercase() in setOf("ar", "ur", "fa", "ps")
+                            CompositionLocalProvider(
+                                LocalLayoutDirection provides if (isRtlTafsir) LayoutDirection.Rtl else LayoutDirection.Ltr
+                            ) {
+                                Text(
+                                    text = cleanTafsirBody,
+                                    style = banglaSafeBodyStyle(
+                                        (preferences.translationFontSizeSp - 1f).coerceAtLeast(12f),
+                                        inlineTafsir.languageCode
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = if (isTafsirExpanded) Int.MAX_VALUE else 5,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Start,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            if (cleanTafsirBody.length > 260) {
+                                TextButton(
+                                    onClick = { isTafsirExpanded = !isTafsirExpanded },
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                    modifier = Modifier.testTag("inline_tafsir_expand_${bundle.ayah.verseKey}")
+                                ) {
+                                    Text(
+                                        text = if (isTafsirExpanded) {
+                                            stringResource(R.string.inline_tafsir_show_less)
+                                        } else {
+                                            stringResource(R.string.inline_tafsir_read_more)
+                                        },
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        } else if (isLoadingInlineTafsirs) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                Text(
+                                    text = stringResource(R.string.inline_tafsir_loading),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            FilledTonalButton(
+                                onClick = { onFetchInlineTafsir(bundle.ayah) },
+                                modifier = Modifier.testTag("inline_tafsir_fetch_${bundle.ayah.verseKey}")
+                            ) {
+                                Icon(Icons.Default.CloudDownload, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.inline_tafsir_fetch_btn))
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.core.localization
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.compose.runtime.Immutable
 import androidx.core.os.LocaleListCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
@@ -228,6 +229,7 @@ enum class MushafEditionStyle(
     )
 }
 
+@Immutable
 data class UserPreferences(
     val uiLanguageCode: String = "en",
     val wbwLanguageCode: String = "en",

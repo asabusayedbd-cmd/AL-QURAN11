@@ -281,10 +281,16 @@
     <string name="word_classical_irab_title">বিশুদ্ধ শাস্ত্রীয় ই‘রাব (ব্যাকরণগত কারক ও অবস্থান)</string>
     <string name="word_bab_wazn_title">বাব ও ওযন গঠন (الوزن والباب)</string>
 
-    <string name="location_picker_subtitle">বাংলাদেশের ৬৪ জেলা, উপজেলা ও বিশ্বব্যাপী শহর</string>
+    <string name="location_picker_subtitle">বাংলাদেশের সকল গ্রাম, ইউনিয়ন, উপজেলা ও বিশ্বব্যাপী শহর</string>
     <string name="gps_button">জিপিএস</string>
-    <string name="search_bangladesh_city_hint">জেলা, উপজেলা বা শহর খুঁজুন (ঢাকা, সিলেট, Cumilla…)</string>
+    <string name="search_bangladesh_city_hint">যেকোনো গ্রাম, ইউনিয়ন, উপজেলা বা শহর খুঁজুন…</string>
     <string name="places_found_fmt">%1$dটি স্থান পাওয়া গেছে</string>
+    <string name="all_districts_chip">সকল জেলা</string>
+    <string name="village_searching_status">বাংলাদেশের সকল গ্রাম খোঁজা হচ্ছে…</string>
+    <string name="village_live_results_header">বাংলাদেশের গ্রাম ও ইউনিয়ন (লাইভ)</string>
+    <string name="village_custom_save_title_fmt">নামাজের সময়ের জন্য “%1$s” সংরক্ষণ করুন</string>
+    <string name="village_custom_save_desc_fmt">%1$s (%2$s)-এর নিকটবর্তী অফলাইন স্থানাঙ্ক ব্যবহার হবে।</string>
+    <string name="village_custom_save_btn">গ্রাম সেট করুন</string>
     <string name="qibla_calibrate_hint">কম্পাসের সঠিকতা বাড়াতে ফোনটি ইংরেজি ৮ (figure-8) আকারে ঘোরান</string>
     <string name="qibla_no_sensor_hint">কম্পাস সেন্সর পাওয়া যায়নি। উত্তর দিক থেকে %1$d° ঘড়ির কাঁটার দিকে ফিরুন।</string>
 
@@ -336,6 +342,8 @@
     <string name="prev_page">আগের পৃষ্ঠা</string>
     <string name="next_page">পরের পৃষ্ঠা</string>
     <string name="reader_page_fmt">পৃষ্ঠা %1$s</string>
+    <string name="reader_scroll_up">উপরে যান</string>
+    <string name="reader_scroll_down">নিচে যান</string>
 
     <string name="startup_subtitle">আল-কুরআন • শব্দে-শব্দে অর্থ • তাফসীর ও দোয়া</string>
     <string name="startup_badge_quran">কুরআনের বাণী</string>
@@ -350,4 +358,13 @@
     <string name="qibla_metric_heading">দিক</string>
     <string name="qibla_metric_field">চৌম্বক ক্ষেত্র</string>
     <string name="qibla_metric_declination">ডিক্লিনেশন</string>
+    <string name="qibla_mode_compass">কম্পাস</string>
+    <string name="qibla_mode_ar">এআর ক্যামেরা</string>
+    <string name="qibla_camera_permission_title">লাইভ ক্যামেরা কিবলা ভিউ</string>
+    <string name="qibla_camera_permission_desc">আপনার চারপাশের দৃশ্যের উপর লাইভ কিবলা রেখা ও মক্কার দিক দেখতে ক্যামেরার অনুমতি দিন।</string>
+    <string name="qibla_camera_grant_btn">ক্যামেরা চালু করুন</string>
+    <string name="qibla_sun_check_fmt">সূর্য %1$d° (%2$s) • দিক যাচাই</string>
+    <string name="qibla_sun_below_horizon">সূর্য দিগন্তের নিচে</string>
+    <string name="qibla_globe_arc_label">মক্কার দিকে সংক্ষিপ্ততম বৃত্তাকার পথ</string>
+    <string name="qibla_ar_hold_upright">ফোনটি দিগন্তের দিকে সোজা ধরুন</string>
 </resources>

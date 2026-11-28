@@ -1,5 +1,6 @@
 package com.example.feature.explorer
 
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.core.database.AyahEntity
@@ -26,12 +27,14 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@Immutable
 data class ExplorerSearchResult(
     val ayah: AyahEntity,
     val surahName: String,
     val matchedTranslation: AyahTranslationEntity?
 )
 
+@Immutable
 data class ExplorerUiState(
     val surahs: List<SurahEntity> = emptyList(),
     val preferences: UserPreferences = UserPreferences(),
@@ -148,14 +151,21 @@ class ExplorerViewModel(
                 }
             }
 
-            // Fast split indexed queries in parallel instead of a slow 4-way LEFT JOIN
+            // Fast FTS4 virtual table queries first, with indexed LIKE fallback for infixes / short tokens
+            val arabicFtsQuery = buildFtsPrefixQuery(normalizedArabic)
+            val rawFtsQuery = buildFtsPrefixQuery(trimmed)
             val combinedAyahs = coroutineScope {
                 val exactDef = async {
                     parsedVerseKey?.let { quranDao.getAyahByKey(it) }
                 }
                 val arabicNormDef = async {
                     if (hasArabicScript && normalizedArabic.isNotBlank()) {
-                        quranDao.searchAyahsByNormalizedArabic(normalizedArabic)
+                        val ftsHits = arabicFtsQuery?.let { q ->
+                            runCatching { quranDao.searchAyahsByFts(q) }.getOrDefault(emptyList())
+                        }.orEmpty()
+                        if (ftsHits.size >= 8) ftsHits else {
+                            (ftsHits + quranDao.searchAyahsByNormalizedArabic(normalizedArabic)).distinctBy { it.id }
+                        }
                     } else emptyList()
                 }
                 val arabicRawDef = async {
@@ -165,7 +175,12 @@ class ExplorerViewModel(
                 }
                 val trIdsDef = async {
                     if (trimmed.length >= 2 && parsedVerseKey == null) {
-                        quranDao.searchAyahIdsByTranslation(trimmed)
+                        val ftsIds = rawFtsQuery?.let { q ->
+                            runCatching { quranDao.searchAyahIdsByTranslationFts(q) }.getOrDefault(emptyList())
+                        }.orEmpty()
+                        if (ftsIds.size >= 8) ftsIds else {
+                            (ftsIds + quranDao.searchAyahIdsByTranslation(trimmed)).distinct()
+                        }
                     } else emptyList()
                 }
                 val wordIdsDef = async {
@@ -280,8 +295,20 @@ class ExplorerViewModel(
         _searchResults.update { mapped }
     }
 
+    private fun buildFtsPrefixQuery(raw: String): String? {
+        if (raw.isBlank()) return null
+        val sanitizedTokens = raw.split(FTS_SPLIT_REGEX)
+            .map { token -> token.replace(FTS_UNSAFE_CHARS_REGEX, "").trim() }
+            .filter { it.length >= 2 }
+            .take(6)
+        if (sanitizedTokens.isEmpty()) return null
+        return sanitizedTokens.joinToString(" ") { "$it*" }
+    }
+
     companion object {
         private val VERSE_KEY_REGEX = Regex("^(\\d{1,3})\\s*[:\\-/\\s]\\s*(\\d{1,3})$")
         private val SURAH_NUM_EXTRACT_REGEX = Regex("^(?:surah|sura|সূরা|سورة)\\s*(\\d{1,3})$", RegexOption.IGNORE_CASE)
+        private val FTS_SPLIT_REGEX = Regex("\\s+")
+        private val FTS_UNSAFE_CHARS_REGEX = Regex("[\"'*:()\\-+^~]")
     }
 }

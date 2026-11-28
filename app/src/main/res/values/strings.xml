@@ -281,10 +281,16 @@
     <string name="word_classical_irab_title">Classical I\'rab &amp; Syntax (إعراب القرآن)</string>
     <string name="word_bab_wazn_title">Morphological Pattern &amp; Conjugation (الوزن والباب)</string>
 
-    <string name="location_picker_subtitle">All 64 Bangladesh Districts, Upazilas &amp; Global Cities</string>
+    <string name="location_picker_subtitle">All Bangladesh Villages, Unions, Upazilas &amp; Global Cities</string>
     <string name="gps_button">Use GPS</string>
-    <string name="search_bangladesh_city_hint">Search district, upazila, or city (Dhaka, Sylhet, কুমিল্লা…)</string>
+    <string name="search_bangladesh_city_hint">Search any village, union, upazila, or city…</string>
     <string name="places_found_fmt">%1$d places found</string>
+    <string name="all_districts_chip">All Districts</string>
+    <string name="village_searching_status">Searching all Bangladesh villages…</string>
+    <string name="village_live_results_header">Bangladesh Villages &amp; Unions (Live)</string>
+    <string name="village_custom_save_title_fmt">Save “%1$s” for Prayer Times</string>
+    <string name="village_custom_save_desc_fmt">Uses exact coordinates near %1$s (%2$s) offline.</string>
+    <string name="village_custom_save_btn">Save Village</string>
     <string name="qibla_calibrate_hint">Move phone in a figure-8 motion to calibrate compass accuracy</string>
     <string name="qibla_no_sensor_hint">No compass sensor detected. Face %1$d° clockwise from North.</string>
 
@@ -336,6 +342,8 @@
     <string name="prev_page">Prev Page</string>
     <string name="next_page">Next Page</string>
     <string name="reader_page_fmt">Page %1$s</string>
+    <string name="reader_scroll_up">Scroll to Top</string>
+    <string name="reader_scroll_down">Scroll to Bottom</string>
 
     <string name="startup_subtitle">Noble Quran • Word-by-Word • Tafsir &amp; Adhkar</string>
     <string name="startup_badge_quran">Quranic Inspiration</string>
@@ -350,4 +358,13 @@
     <string name="qibla_metric_heading">Heading</string>
     <string name="qibla_metric_field">Magnetic Field</string>
     <string name="qibla_metric_declination">True North Offset</string>
+    <string name="qibla_mode_compass">Compass</string>
+    <string name="qibla_mode_ar">AR Camera</string>
+    <string name="qibla_camera_permission_title">Live Camera Qibla View</string>
+    <string name="qibla_camera_permission_desc">Allow camera access to overlay the live Qibla beam and Makkah beacon onto your surroundings.</string>
+    <string name="qibla_camera_grant_btn">Enable AR Camera</string>
+    <string name="qibla_sun_check_fmt">Sun %1$d° (%2$s) • Verify</string>
+    <string name="qibla_sun_below_horizon">Sun below horizon</string>
+    <string name="qibla_globe_arc_label">Great-Circle Path to Makkah</string>
+    <string name="qibla_ar_hold_upright">Hold phone upright toward horizon</string>
 </resources>

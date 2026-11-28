@@ -900,7 +900,8 @@ class NoorUnitTests {
             .addMigrations(
                 com.example.core.database.NoorDatabase.MIGRATION_1_2,
                 com.example.core.database.NoorDatabase.MIGRATION_2_3,
-                com.example.core.database.NoorDatabase.MIGRATION_3_4
+                com.example.core.database.NoorDatabase.MIGRATION_3_4,
+                com.example.core.database.NoorDatabase.MIGRATION_4_5
             )
             .allowMainThreadQueries()
         if (hasPrepopAsset) {
@@ -929,6 +930,150 @@ class NoorUnitTests {
             db.close()
             appContext.getDatabasePath(dbName).delete()
         }
+    }
+
+    // 25. Room MIGRATION_4_5 FTS4 virtual tables & prefix search validation
+    @Test
+    fun testMigration4To5FtsSearch() = runBlocking<Unit> {
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        val dbName = "fts_verify_${System.nanoTime()}.db"
+        val db = androidx.room.Room.databaseBuilder(
+            appContext,
+            com.example.core.database.NoorDatabase::class.java,
+            dbName
+        )
+            .addMigrations(
+                com.example.core.database.NoorDatabase.MIGRATION_1_2,
+                com.example.core.database.NoorDatabase.MIGRATION_2_3,
+                com.example.core.database.NoorDatabase.MIGRATION_3_4,
+                com.example.core.database.NoorDatabase.MIGRATION_4_5
+            )
+            .allowMainThreadQueries()
+            .build()
+
+        try {
+            val seeder = com.example.core.database.QuranDatabaseSeeder(appContext, db)
+            seeder.ensureSurahLoadedFromAssets(1, 2)
+            val quranDao = db.quranDao()
+
+            // Rebuild FTS indexes after seeding and verify FTS4 prefix query works instantaneously
+            db.openHelper.writableDatabase.execSQL("INSERT INTO `ayahs_fts`(`ayahs_fts`) VALUES('rebuild')")
+            db.openHelper.writableDatabase.execSQL("INSERT INTO `ayah_translations_fts`(`ayah_translations_fts`) VALUES('rebuild')")
+
+            val ftsTrIds = quranDao.searchAyahIdsByTranslationFts("Merciful*")
+            assertTrue("Expected FTS4 translation hits for 'Merciful*'", ftsTrIds.isNotEmpty())
+
+            val ftsAyahs = quranDao.searchAyahsByFts("الرحمن*")
+            assertTrue("Expected FTS4 Arabic hits for normalized 'الرحمن*'", ftsAyahs.isNotEmpty())
+        } finally {
+            db.close()
+            appContext.getDatabasePath(dbName).delete()
+        }
+    }
+
+    // 26. Bangladesh Village Search Parsing, 64-District Drill-Down & Offline Saved Villages Store
+    @Test
+    fun testBangladeshVillageSearchParsingDistrictDrilldownAndSavedStore() {
+        val sampleJson = """
+            [
+              {
+                "lat": "23.7815",
+                "lon": "90.5678",
+                "name": "ভুলতা",
+                "addresstype": "village",
+                "display_name": "ভুলতা, রূপগঞ্জ উপজেলা, নারায়ণগঞ্জ জেলা, ঢাকা বিভাগ, বাংলাদেশ",
+                "address": {
+                  "village": "ভুলতা",
+                  "county": "রূপগঞ্জ উপজেলা",
+                  "state_district": "নারায়ণগঞ্জ জেলা",
+                  "state": "ঢাকা বিভাগ",
+                  "country_code": "bd"
+                }
+              },
+              {
+                "lat": "23.6850",
+                "lon": "90.3563",
+                "name": "Bangladesh",
+                "addresstype": "country",
+                "display_name": "Bangladesh"
+              },
+              {
+                "lat": "51.5074",
+                "lon": "-0.1278",
+                "name": "Outside",
+                "addresstype": "village",
+                "display_name": "Outside BD"
+              }
+            ]
+        """.trimIndent()
+
+        val parsed = com.example.core.ibadah.BangladeshVillageSearchService.parseNominatimSearchJson(sampleJson)
+        assertEquals(1, parsed.size)
+        val bhulta = parsed.first()
+        assertTrue(bhulta.name.contains("ভুলতা"))
+        assertTrue(bhulta.name.contains("রূপগঞ্জ"))
+        assertTrue(bhulta.name.contains("নারায়ণগঞ্জ"))
+        assertEquals("Village", bhulta.sourceLabel)
+        assertEquals(6.0, bhulta.utcOffsetHours ?: 0.0, 0.01)
+
+        val reverseJson = """
+            {
+              "lat": "23.4622",
+              "lon": "91.1815",
+              "name": "Kachua",
+              "addresstype": "village",
+              "display_name": "Kachua, Chandpur, Chattogram Division, Bangladesh",
+              "address": {
+                "village": "Kachua",
+                "county": "Kachua Upazila",
+                "state_district": "Chandpur District",
+                "state": "Chattogram Division"
+              }
+            }
+        """.trimIndent()
+        val reversed = com.example.core.ibadah.BangladeshVillageSearchService.parseNominatimReverseJson(
+            reverseJson,
+            23.4622,
+            91.1815
+        )
+        assertNotNull(reversed)
+        assertTrue(reversed!!.name.contains("Kachua"))
+        assertTrue(reversed.name.contains("Chandpur"))
+
+        // Verify all 8 divisions map to all 64 districts cleanly
+        val totalDistricts = listOf(
+            "Dhaka", "Chattogram", "Rajshahi", "Khulna", "Barishal", "Sylhet", "Rangpur", "Mymensingh"
+        ).sumOf { PrayerTimeCalculator.districtsInDivision(it).size }
+        assertEquals(64, totalDistricts)
+
+        // Verify District filtering & Nearest Place Haversine lookup
+        val cumillaHits = PrayerTimeCalculator.searchLocations(
+            query = "",
+            divisionFilter = "Chattogram",
+            districtFilter = "Cumilla"
+        )
+        assertTrue(cumillaHits.isNotEmpty())
+        assertTrue(cumillaHits.all { it.name.contains("Cumilla") || it.aliases.contains("Cumilla") })
+
+        val nearest = PrayerTimeCalculator.findNearestBangladeshPlace(23.8580, 90.2670)
+        assertNotNull(nearest)
+        assertTrue(nearest!!.first.name.contains("Savar"))
+
+        // Verify SavedBangladeshLocationsStore persistence & deduplication
+        val appContext = ApplicationProvider.getApplicationContext<android.app.Application>()
+        com.example.core.ibadah.SavedBangladeshLocationsStore.saveLocation(appContext, bhulta)
+        com.example.core.ibadah.SavedBangladeshLocationsStore.saveLocation(appContext, reversed)
+        val saved = com.example.core.ibadah.SavedBangladeshLocationsStore.getSavedLocations(appContext)
+        assertTrue(saved.any { it.name == reversed.name })
+        assertTrue(saved.any { it.name == bhulta.name })
+
+        val withSaved = PrayerTimeCalculator.searchLocations(
+            query = "Kachua",
+            divisionFilter = "Saved",
+            extraSavedPlaces = saved
+        )
+        assertEquals(1, withSaved.size)
+        assertEquals(reversed.name, withSaved.first().name)
     }
 }
 

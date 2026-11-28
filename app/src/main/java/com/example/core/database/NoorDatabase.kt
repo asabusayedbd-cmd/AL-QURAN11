@@ -24,9 +24,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         UserNoteEntity::class,
         ReadingProgressEntity::class,
         HabitStreakEntity::class,
-        DuaEntity::class
+        DuaEntity::class,
+        AyahFtsEntity::class,
+        AyahTranslationFtsEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class NoorDatabase : RoomDatabase() {
@@ -80,6 +82,19 @@ abstract class NoorDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS `ayahs_fts` USING FTS4(`verseKey` TEXT NOT NULL, `textUthmani` TEXT NOT NULL, `normalizedArabic` TEXT NOT NULL, content=`ayahs`)"
+                )
+                db.execSQL(
+                    "CREATE VIRTUAL TABLE IF NOT EXISTS `ayah_translations_fts` USING FTS4(`translatedText` TEXT NOT NULL, content=`ayah_translations`)"
+                )
+                db.execSQL("INSERT INTO `ayahs_fts`(`ayahs_fts`) VALUES('rebuild')")
+                db.execSQL("INSERT INTO `ayah_translations_fts`(`ayah_translations_fts`) VALUES('rebuild')")
+            }
+        }
+
         private val FAST_PRAGMAS_CALLBACK = object : Callback() {
             override fun onOpen(db: SupportSQLiteDatabase) {
                 super.onOpen(db)
@@ -103,7 +118,7 @@ abstract class NoorDatabase : RoomDatabase() {
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                     .addCallback(FAST_PRAGMAS_CALLBACK)
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 if (hasPrepopAsset) {
                     builder.createFromAsset(PREPOPULATED_ASSET_DB)
                 }

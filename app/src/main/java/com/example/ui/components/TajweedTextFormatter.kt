@@ -23,10 +23,11 @@ object TajweedTextFormatter {
         ayahEndMarker: String = "",
         useTajweedMarkup: Boolean = true
     ): AnnotatedString {
-        val cleanedRaw = END_SPAN_REGEX.replace(rawText, "").trim()
-        val cleanedTajweedHtml = END_SPAN_REGEX.replace(tajweedHtml, "").trim()
+        val cleanedRaw = if ('<' in rawText) END_SPAN_REGEX.replace(rawText, "").trim() else rawText.trim()
+        val hasTajweedHtml = tajweedEnabled && useTajweedMarkup && '<' in tajweedHtml
+        val cleanedTajweedHtml = if (hasTajweedHtml) END_SPAN_REGEX.replace(tajweedHtml, "").trim() else ""
 
-        if (!tajweedEnabled || !useTajweedMarkup || !cleanedTajweedHtml.contains("<tajweed", ignoreCase = true)) {
+        if (!hasTajweedHtml || !cleanedTajweedHtml.contains("<tajweed", ignoreCase = true)) {
             return buildAnnotatedString {
                 append(cleanedRaw)
                 if (ayahEndMarker.isNotEmpty()) {
