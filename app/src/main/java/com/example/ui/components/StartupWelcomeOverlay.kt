@@ -152,7 +152,7 @@ fun StartupWelcomeOverlay(
     visible: Boolean,
     uiLanguageCode: String,
     inspiration: StartupInspiration = remember { StartupInspirationCatalog.pickForLaunch() },
-    autoDismissDelayMs: Long = 2200L,
+    autoDismissDelayMs: Long = 550L,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -169,7 +169,7 @@ fun StartupWelcomeOverlay(
     AnimatedVisibility(
         visible = visible,
         enter = EnterTransition.None,
-        exit = fadeOut(tween(200)),
+        exit = fadeOut(tween(110)),
         modifier = modifier.fillMaxSize()
     ) {
         val isBangla = uiLanguageCode.equals("bn", ignoreCase = true)

@@ -341,4 +341,13 @@
     <string name="startup_badge_quran">কুরআনের বাণী</string>
     <string name="startup_badge_hadith">সহীহ হাদীস</string>
     <string name="startup_enter_app">পড়া শুরু করুন</string>
+
+    <string name="qibla_fixed_bearing">উত্তর দিক সাপেক্ষে স্থির কোণ</string>
+    <string name="qibla_aligned_status">কিবলার দিকে মুখ করা হয়েছে</string>
+    <string name="qibla_hold_flat">ফোনটি সমতলে ধরুন</string>
+    <string name="qibla_turn_right_fmt">ডানে %1$d° ঘুরুন →</string>
+    <string name="qibla_turn_left_fmt">← বামে %1$d° ঘুরুন</string>
+    <string name="qibla_metric_heading">দিক</string>
+    <string name="qibla_metric_field">চৌম্বক ক্ষেত্র</string>
+    <string name="qibla_metric_declination">ডিক্লিনেশন</string>
 </resources>

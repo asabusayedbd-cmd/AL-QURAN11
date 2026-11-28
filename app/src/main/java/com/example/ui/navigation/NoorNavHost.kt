@@ -94,6 +94,14 @@ fun NoorAppRoot(
     val currentRoute = backStackEntry?.destination?.route
     val pendingPlaybackJump by appContainer.pendingPlaybackJump.collectAsStateWithLifecycle()
     var showLaunchWelcome by rememberSaveable { mutableStateOf(true) }
+    var mountLaunchWelcome by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(showLaunchWelcome) {
+        if (!showLaunchWelcome && mountLaunchWelcome) {
+            kotlinx.coroutines.delay(140L)
+            mountLaunchWelcome = false
+        }
+    }
 
     ReportDrawn()
     LaunchedEffect(Unit) {
@@ -201,10 +209,10 @@ fun NoorAppRoot(
                         NavHost(
                             navController = navController,
                             startDestination = ROUTE_HOME,
-                            enterTransition = { fadeIn(animationSpec = tween(140)) },
-                            exitTransition = { fadeOut(animationSpec = tween(120)) },
-                            popEnterTransition = { fadeIn(animationSpec = tween(140)) },
-                            popExitTransition = { fadeOut(animationSpec = tween(120)) }
+                            enterTransition = { fadeIn(animationSpec = tween(85)) },
+                            exitTransition = { fadeOut(animationSpec = tween(65)) },
+                            popEnterTransition = { fadeIn(animationSpec = tween(85)) },
+                            popExitTransition = { fadeOut(animationSpec = tween(65)) }
                         ) {
                             composable(ROUTE_HOME) {
                                 val vm: HomeViewModel = viewModel(
@@ -390,11 +398,14 @@ fun NoorAppRoot(
                 }
             }
 
-            StartupWelcomeOverlay(
-                visible = showLaunchWelcome,
-                uiLanguageCode = uiLanguageCode,
-                onDismiss = { showLaunchWelcome = false }
-            )
+            if (mountLaunchWelcome) {
+                StartupWelcomeOverlay(
+                    visible = showLaunchWelcome,
+                    uiLanguageCode = uiLanguageCode,
+                    autoDismissDelayMs = 550L,
+                    onDismiss = { showLaunchWelcome = false }
+                )
+            }
             }
         }
     }

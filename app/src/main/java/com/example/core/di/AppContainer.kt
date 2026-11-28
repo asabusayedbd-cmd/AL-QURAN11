@@ -122,7 +122,8 @@ class AppContainer(context: Context) {
             }
         }
         warmScope.launch {
-            seeder.seedIfNeeded(deferBulkDelayMs = 1800L, interSurahYieldMs = 45L)
+            runCatching { database.openHelper.writableDatabase }
+            seeder.seedIfNeeded(deferBulkDelayMs = 120L, interSurahYieldMs = 0L)
         }
     }
 

@@ -80,6 +80,16 @@ abstract class NoorDatabase : RoomDatabase() {
             }
         }
 
+        private val FAST_PRAGMAS_CALLBACK = object : Callback() {
+            override fun onOpen(db: SupportSQLiteDatabase) {
+                super.onOpen(db)
+                runCatching { db.query("PRAGMA synchronous = NORMAL").close() }
+                runCatching { db.query("PRAGMA temp_store = MEMORY").close() }
+                runCatching { db.query("PRAGMA cache_size = -4000").close() }
+                runCatching { db.query("PRAGMA mmap_size = 8388608").close() }
+            }
+        }
+
         fun getInstance(context: Context): NoorDatabase {
             return INSTANCE ?: synchronized(this) {
                 val appCtx = context.applicationContext
@@ -92,6 +102,7 @@ abstract class NoorDatabase : RoomDatabase() {
                     "noor_al_quran.db"
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                    .addCallback(FAST_PRAGMAS_CALLBACK)
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 if (hasPrepopAsset) {
                     builder.createFromAsset(PREPOPULATED_ASSET_DB)

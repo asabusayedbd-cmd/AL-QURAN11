@@ -185,7 +185,7 @@ class QuranDatabaseSeeder(
                         delay(deferBulkDelayMs)
                     }
 
-                    val yieldDelayMs = if (interSurahYieldMs > 0L) interSurahYieldMs else 35L
+                    val yieldDelayMs = interSurahYieldMs.coerceAtLeast(0L)
                     if (!hasAllDuas) {
                         ensureDuasSeededNow(interChunkDelayMs = yieldDelayMs)
                     }
@@ -222,7 +222,7 @@ class QuranDatabaseSeeder(
                         batchAudio.clear()
                         partialReplaceIds.clear()
                         markDownloadedIds.clear()
-                        delay(yieldDelayMs)
+                        if (yieldDelayMs > 0L) delay(yieldDelayMs) else yield()
                     }
 
                     for (surah in surahEntities) {

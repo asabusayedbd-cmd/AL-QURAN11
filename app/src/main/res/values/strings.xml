@@ -341,4 +341,13 @@
     <string name="startup_badge_quran">Quranic Inspiration</string>
     <string name="startup_badge_hadith">Sahih Hadith</string>
     <string name="startup_enter_app">Start Reading</string>
+
+    <string name="qibla_fixed_bearing">Fixed North Bearing</string>
+    <string name="qibla_aligned_status">Aligned with Qibla</string>
+    <string name="qibla_hold_flat">Hold phone flat</string>
+    <string name="qibla_turn_right_fmt">Turn %1$d° Right →</string>
+    <string name="qibla_turn_left_fmt">← Turn %1$d° Left</string>
+    <string name="qibla_metric_heading">Heading</string>
+    <string name="qibla_metric_field">Magnetic Field</string>
+    <string name="qibla_metric_declination">True North Offset</string>
 </resources>
