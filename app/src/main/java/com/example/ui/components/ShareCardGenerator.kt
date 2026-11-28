@@ -125,12 +125,15 @@ object ShareCardGenerator {
 
             val arabicTypeface = ResourcesCompat.getFont(context, R.font.amiri)
             val latinTypeface = ResourcesCompat.getFont(context, R.font.plus_jakarta_sans)
+            val banglaTypeface = ResourcesCompat.getFont(context, R.font.hind_siliguri) ?: latinTypeface
+            val translationTypeface = if (translationText.any { it.code in 0x0980..0x09FF }) banglaTypeface else latinTypeface
 
             val headerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#0F5C4D")
                 textSize = 36f * scale
                 typeface = latinTypeface
                 textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
             }
             canvas.drawText("$surahName • $verseKey", width / 2f, 150f * scale, headerPaint)
 
@@ -157,7 +160,7 @@ object ShareCardGenerator {
             val translationPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#35403B")
                 textSize = 34f * scale
-                typeface = latinTypeface
+                typeface = translationTypeface
             }
             val translationY = (arabicY + arabicLayout.height + 70f * scale).coerceAtMost(height - 320f * scale)
             val translationLayout = StaticLayout.Builder
@@ -281,6 +284,8 @@ object ShareCardGenerator {
 
             val arabicTypeface = ResourcesCompat.getFont(context, R.font.amiri)
             val latinTypeface = ResourcesCompat.getFont(context, R.font.plus_jakarta_sans)
+            val banglaTypeface = ResourcesCompat.getFont(context, R.font.hind_siliguri) ?: latinTypeface
+            val translationTypeface = if (translationText.any { it.code in 0x0980..0x09FF }) banglaTypeface else latinTypeface
 
             val headerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#0F5C4D")
@@ -314,7 +319,7 @@ object ShareCardGenerator {
             val translationPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.parseColor("#35403B")
                 textSize = 32f * scale
-                typeface = latinTypeface
+                typeface = translationTypeface
             }
             val translationY = (arabicY + arabicLayout.height + 60f * scale).coerceAtMost(height - 350f * scale)
             val translationLayout = StaticLayout.Builder

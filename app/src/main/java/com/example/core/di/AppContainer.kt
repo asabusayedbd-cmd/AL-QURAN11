@@ -107,6 +107,8 @@ class AppContainer(context: Context) {
                     com.example.core.localization.ArabicFontFamilyOption.ALKALAMI -> R.font.alkalami
                     com.example.core.localization.ArabicFontFamilyOption.IBM_PLEX_ARABIC -> R.font.ibm_plex_sans_arabic
                     com.example.core.localization.ArabicFontFamilyOption.NOTO_KUFI -> R.font.noto_kufi_arabic
+                    com.example.core.localization.ArabicFontFamilyOption.HIND_SILIGURI -> R.font.hind_siliguri
+                    com.example.core.localization.ArabicFontFamilyOption.NOTO_SANS_BENGALI -> R.font.noto_sans_bengali
                     else -> if (prefs?.scriptType == com.example.core.localization.QuranScriptType.INDOPAK) {
                         R.font.scheherazade_new
                     } else {

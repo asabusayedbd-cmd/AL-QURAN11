@@ -90,6 +90,11 @@ import com.example.core.localization.ReaderCardStyle
 import com.example.ui.components.QariPickerModalSheet
 import com.example.ui.theme.isDarkTheme
 import com.example.ui.theme.themePreviewSwatches
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import com.example.core.localization.ArabicFontFamilyOption
+import com.example.core.localization.ArabicFontGroup
+import com.example.ui.theme.arabicScriptFont
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -134,6 +139,7 @@ fun SettingsScreen(
     var showTafsirsSheet by remember { mutableStateOf(false) }
     var showDownloadManagerSheet by remember { mutableStateOf(false) }
     var showTajweedGuide by remember { mutableStateOf(false) }
+    var showFontSheet by remember { mutableStateOf(false) }
 
     val activeReciter = remember(state.reciters, state.preferences.activeReciterId) {
         state.reciters.firstOrNull { it.id == state.preferences.activeReciterId }
@@ -338,6 +344,14 @@ fun SettingsScreen(
                         onClick = { showLanguageSheet = true },
                         testTag = "settings_language_button"
                     )
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp)
+                    SettingsActionRow(
+                        icon = Icons.Default.Tune,
+                        title = "App & Translation Font Style",
+                        subtitle = state.preferences.arabicFontFamily.displayName,
+                        onClick = { showFontSheet = true },
+                        testTag = "settings_font_button"
+                    )
                 }
             }
 
@@ -484,6 +498,17 @@ fun SettingsScreen(
         TajweedGuideSheet(
             uiLanguageCode = state.preferences.uiLanguageCode,
             onDismiss = { showTajweedGuide = false }
+        )
+    }
+
+    if (showFontSheet) {
+        FontFamilyPickerSheet(
+            currentOption = state.preferences.arabicFontFamily,
+            onSelectOption = {
+                viewModel.setArabicFontFamily(it)
+                showFontSheet = false
+            },
+            onDismiss = { showFontSheet = false }
         )
     }
 }
@@ -1159,3 +1184,157 @@ fun TafsirsPickerModalSheet(
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FontFamilyPickerSheet(
+    currentOption: ArabicFontFamilyOption,
+    onSelectOption: (ArabicFontFamilyOption) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var selectedGroup by remember { mutableStateOf<ArabicFontGroup?>(currentOption.group) }
+
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "App & Typography Parts (ফন্ট বিভাগ)",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Select by part/category to choose Hind Siliguri, Noto Bengali, Madani, or IndoPak styles.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Category / Part Tabs (horizontal scrollable row of chips)
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedGroup == null,
+                        onClick = { selectedGroup = null },
+                        label = { Text("All Parts (সবগুলো)") }
+                    )
+                }
+                items(ArabicFontGroup.entries) { group ->
+                    FilterChip(
+                        selected = selectedGroup == group,
+                        onClick = { selectedGroup = group },
+                        label = { Text(group.titleBn) }
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+
+            val displayOptions = remember(selectedGroup) {
+                if (selectedGroup == null) {
+                    ArabicFontFamilyOption.entries
+                } else {
+                    ArabicFontFamilyOption.entries.filter { it.group == selectedGroup }
+                }
+            }
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 440.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(displayOptions, key = { it.name }) { option ->
+                    val isSelected = currentOption == option
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectOption(option)
+                                onDismiss()
+                            },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected)
+                                MaterialTheme.colorScheme.primaryContainer
+                            else
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = option.displayName,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer
+                                    ) {
+                                        Text(
+                                            text = option.group.titleBn,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = option.subtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = if (option.group == ArabicFontGroup.BANGLA_FONTS) {
+                                        "বিসমিল্লাহির রাহমানির রাহিম • আল কুরআন"
+                                    } else {
+                                        option.arabicSample
+                                    },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontFamily = arabicScriptFont(com.example.core.localization.QuranScriptType.UTHMANI, option),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = "Selected",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

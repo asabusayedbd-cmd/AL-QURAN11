@@ -1128,11 +1128,11 @@ private fun QiblaCompassSheet(
                 private fun updateSmoothedHeading(rawMatrix: FloatArray, sourceName: String) {
                     @Suppress("DEPRECATION")
                     val displayRotation = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        runCatching { context.display?.rotation }.getOrNull()
-                            ?: windowManager?.defaultDisplay?.rotation
+                        runCatching { context.display.rotation }.getOrNull()
+                            ?: windowManager?.defaultDisplay?.let { it.rotation }
                             ?: AndroidSurface.ROTATION_0
                     } else {
-                        windowManager?.defaultDisplay?.rotation ?: AndroidSurface.ROTATION_0
+                        windowManager?.defaultDisplay?.let { it.rotation } ?: AndroidSurface.ROTATION_0
                     }
 
                     val (axisX, axisY) = when (displayRotation) {

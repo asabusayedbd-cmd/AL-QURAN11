@@ -47,6 +47,7 @@ enum class ArabicFontGroup(
     val titleEn: String,
     val titleBn: String
 ) {
+    BANGLA_FONTS("Bangla Typography (Siliguri & More)", "বাংলা ফন্ট ও আকর্ষণীয় শিলিগুড়ি"),
     MADANI_UTHMANI("Madani & Uthmani Script", "মাদানী ও উসমানী লিপি"),
     BANGLADESHI_INDOPAK("Bangladeshi & IndoPak Fonts", "বাংলাদেশী ও ইন্দো-পাক ফন্ট"),
     CALLIGRAPHIC_MODERN("Calligraphic & Modern Fonts", "ক্যালিগ্রাফি ও আধুনিক ফন্ট")
@@ -160,6 +161,20 @@ enum class ArabicFontFamilyOption(
         "Clean contemporary Arabic",
         ArabicFontGroup.CALLIGRAPHIC_MODERN,
         1.58f
+    ),
+    HIND_SILIGURI(
+        "Hind Siliguri (শিলিগুড়ি)",
+        "আকর্ষণীয় শিলিগুড়ি বাংলা টাইপোগ্রাফি ও লিপি",
+        ArabicFontGroup.BANGLA_FONTS,
+        1.70f,
+        "بِسْمِ ٱللَّهِ"
+    ),
+    NOTO_SANS_BENGALI(
+        "Noto Sans Bengali (নোটো বাংলা)",
+        "সাবলীল ও আধুনিক বাংলা ফন্ট",
+        ArabicFontGroup.BANGLA_FONTS,
+        1.68f,
+        "بِسْمِ ٱللَّهِ"
     )
 }
 

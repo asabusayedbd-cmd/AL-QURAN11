@@ -137,6 +137,8 @@ fun arabicScriptFont(
     ArabicFontFamilyOption.NOTO_KUFI -> NotoKufiArabicFont
     ArabicFontFamilyOption.AREF_RUQAA -> ArefRuqaaArabicFont
     ArabicFontFamilyOption.CAIRO -> CairoArabicFont
+    ArabicFontFamilyOption.HIND_SILIGURI -> BanglaDisplayFont
+    ArabicFontFamilyOption.NOTO_SANS_BENGALI -> BanglaBodyFont
 }
 
 fun arabicLineHeightMultiplier(

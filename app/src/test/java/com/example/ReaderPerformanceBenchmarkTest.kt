@@ -8,6 +8,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.example.core.audio.QuranAudioController
@@ -133,15 +136,24 @@ class ReaderPerformanceBenchmarkTest {
 
         PerfTracker.markSurahTapped(2)
         val tapNs = System.nanoTime()
-        val vm = ReaderViewModel(
-            initialSurahId = 2,
-            database = db,
-            preferencesRepository = prefsRepo,
-            syncRepository = syncRepo,
-            audioController = audioController,
-            seeder = seeder,
-            lineTranslator = lineTranslator
-        )
+        val store = ViewModelStore()
+        val vm = ViewModelProvider(
+            store,
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return ReaderViewModel(
+                        initialSurahId = 2,
+                        database = db,
+                        preferencesRepository = prefsRepo,
+                        syncRepository = syncRepo,
+                        audioController = audioController,
+                        seeder = seeder,
+                        lineTranslator = lineTranslator
+                    ) as T
+                }
+            }
+        )[ReaderViewModel::class.java]
 
         var stateEmissions = 0
         var firstNonEmptyStateMs = -1.0
@@ -162,83 +174,95 @@ class ReaderPerformanceBenchmarkTest {
             }
         }
 
-        composeRule.setContent {
-            NoorAlQuranTheme {
-                ReaderScreen(
-                    surahId = 2,
-                    targetAyah = 1,
-                    viewModel = vm,
-                    onNavigateBack = {}
-                )
+        try {
+            composeRule.setContent {
+                NoorAlQuranTheme {
+                    ReaderScreen(
+                        surahId = 2,
+                        targetAyah = 1,
+                        viewModel = vm,
+                        onNavigateBack = {}
+                    )
+                }
             }
-        }
 
-        composeRule.waitUntil(timeoutMillis = 15_000) {
-            composeRule.onAllNodesWithTag("ayah_card_2:1").fetchSemanticsNodes().isNotEmpty()
-        }
-        val firstVisibleMs = (System.nanoTime() - tapNs) / 1_000_000.0
+            composeRule.waitUntil(timeoutMillis = 15_000) {
+                composeRule.onAllNodesWithTag("ayah_card_2:1").fetchSemanticsNodes().isNotEmpty()
+            }
+            val firstVisibleMs = (System.nanoTime() - tapNs) / 1_000_000.0
 
-        // Allow deferred optional sync to begin AFTER first visible render
-        delay(350L)
-        val networkCallsAfterRender = networkCallsCount.get()
-        val trace = PerfTracker.lastTrace.value
+            // Allow deferred optional sync to begin AFTER first visible render
+            delay(350L)
+            val networkCallsAfterRender = networkCallsCount.get()
+            val trace = PerfTracker.lastTrace.value
 
-        collectorJob.cancel()
-        traceObserverJob.cancel()
-        audioController.release()
-
-        println(
-            String.format(
-                "PERF_POST_OPT stage1Ms=%.2f firstNonEmptyStateMs=%.2f firstVisibleMs=%.2f " +
-                    "stateEmissionsBeforeVisible=%d networkCallsAtFirstVisible=%d networkCallsAfterRender=%d " +
-                    "traceNavMs=%.2f traceLocalMs=%.2f traceFirstVisibleMs=%.2f traceOptionalSyncStartMs=%.2f mushafSkipped=%s",
-                stage1Ms,
-                firstNonEmptyStateMs,
-                firstVisibleMs,
-                trace?.stateEmissionsBeforeVisible ?: stateEmissions,
-                networkCallsAtFirstVisibleTrace,
-                networkCallsAfterRender,
-                trace?.navToReaderMs ?: -1.0,
-                trace?.localDataReadyMs ?: -1.0,
-                trace?.firstVisibleContentMs ?: -1.0,
-                trace?.optionalSyncStartMs ?: -1.0,
-                trace?.mushafGroupingSkipped.toString()
+            println(
+                String.format(
+                    "PERF_POST_OPT stage1Ms=%.2f firstNonEmptyStateMs=%.2f firstVisibleMs=%.2f " +
+                        "stateEmissionsBeforeVisible=%d networkCallsAtFirstVisible=%d networkCallsAfterRender=%d " +
+                        "traceNavMs=%.2f traceLocalMs=%.2f traceFirstVisibleMs=%.2f traceOptionalSyncStartMs=%.2f mushafSkipped=%s",
+                    stage1Ms,
+                    firstNonEmptyStateMs,
+                    firstVisibleMs,
+                    trace?.stateEmissionsBeforeVisible ?: stateEmissions,
+                    networkCallsAtFirstVisibleTrace,
+                    networkCallsAfterRender,
+                    trace?.navToReaderMs ?: -1.0,
+                    trace?.localDataReadyMs ?: -1.0,
+                    trace?.firstVisibleContentMs ?: -1.0,
+                    trace?.optionalSyncStartMs ?: -1.0,
+                    trace?.mushafGroupingSkipped.toString()
+                )
             )
-        )
 
-        // Verify optional network sync does NOT run before first visible reader content!
-        assertEquals(0, networkCallsAtFirstVisibleTrace)
-        assertTrue("Expected optional sync to run after render", networkCallsAfterRender > 0)
-        assertNotNull(trace)
-        assertTrue("Expected mushafGroupingSkipped in WBW mode", trace!!.mushafGroupingSkipped)
-        assertNotNull(trace.optionalSyncStartMs)
-        assertTrue(
-            "Optional sync (${trace.optionalSyncStartMs}ms) must start after first visible (${trace.firstVisibleContentMs}ms)",
-            trace.optionalSyncStartMs!! >= trace.firstVisibleContentMs!!
-        )
-        assertTrue(
-            "Expected no top-bar or empty-state Download Surah button flash",
-            composeRule.onAllNodesWithTag("download_current_surah_button").fetchSemanticsNodes().isEmpty() &&
-                composeRule.onAllNodesWithTag("reader_download_surah_button").fetchSemanticsNodes().isEmpty()
-        )
-        composeRule.waitUntil(timeoutMillis = 10_000) {
-            vm.uiState.value.ayahs.size == 286
+            // Verify optional network sync does NOT run before first visible reader content!
+            assertEquals(0, networkCallsAtFirstVisibleTrace)
+            assertTrue("Expected optional sync to run after render", networkCallsAfterRender > 0)
+            assertNotNull(trace)
+            assertTrue("Expected mushafGroupingSkipped in WBW mode", trace!!.mushafGroupingSkipped)
+            assertNotNull(trace.optionalSyncStartMs)
+            assertTrue(
+                "Optional sync (${trace.optionalSyncStartMs}ms) must start after first visible (${trace.firstVisibleContentMs}ms)",
+                trace.optionalSyncStartMs!! >= trace.firstVisibleContentMs!!
+            )
+            assertTrue(
+                "Expected no top-bar or empty-state Download Surah button flash",
+                composeRule.onAllNodesWithTag("download_current_surah_button").fetchSemanticsNodes().isEmpty() &&
+                    composeRule.onAllNodesWithTag("reader_download_surah_button").fetchSemanticsNodes().isEmpty()
+            )
+            composeRule.waitUntil(timeoutMillis = 10_000) {
+                vm.uiState.value.ayahs.size == 286
+            }
+        } finally {
+            collectorJob.cancel()
+            traceObserverJob.cancel()
+            store.clear()
+            delay(100L)
+            audioController.release()
         }
     }
 
     @Test
     fun measurePrepopulatedAssetDbSurah2ColdOpenAndNoDownloadFlash() = runBlocking {
+        val hasPrepopAsset = runCatching {
+            app.assets.open(NoorDatabase.PREPOPULATED_ASSET_DB).use { true }
+        }.getOrDefault(false)
         val prepopName = "prepop_bench_${System.nanoTime()}.db"
-        val prepopDb = Room.databaseBuilder(app, NoorDatabase::class.java, prepopName)
-            .createFromAsset(NoorDatabase.PREPOPULATED_ASSET_DB)
+        val prepopBuilder = Room.databaseBuilder(app, NoorDatabase::class.java, prepopName)
             .addMigrations(
                 NoorDatabase.MIGRATION_1_2,
                 NoorDatabase.MIGRATION_2_3,
                 NoorDatabase.MIGRATION_3_4
             )
             .allowMainThreadQueries()
-            .build()
+        if (hasPrepopAsset) {
+            prepopBuilder.createFromAsset(NoorDatabase.PREPOPULATED_ASSET_DB)
+        }
+        val prepopDb = prepopBuilder.build()
 
+        val store = ViewModelStore()
+        var audioController: QuranAudioController? = null
+        var collectorJob: kotlinx.coroutines.Job? = null
         try {
             val prepopSeeder = QuranDatabaseSeeder(app, prepopDb)
             val tSeed0 = System.nanoTime()
@@ -246,7 +270,8 @@ class ReaderPerformanceBenchmarkTest {
             val seedFastPathMs = (System.nanoTime() - tSeed0) / 1_000_000.0
 
             val (syncRepo, okHttp) = buildSyncRepo(simulatedLatencyMs = 200L)
-            val audioController = QuranAudioController(app, prepopDb, okHttp, prefsRepo)
+            val createdAudio = QuranAudioController(app, prepopDb, okHttp, prefsRepo)
+            audioController = createdAudio
             val lineTranslator = LineTranslator(app, okHttp)
 
             prefsRepo.setReaderViewMode(ReaderViewMode.WORD_BY_WORD)
@@ -257,18 +282,26 @@ class ReaderPerformanceBenchmarkTest {
             PerfTracker.markSurahTapped(2)
             val tapNs = System.nanoTime()
 
-            val vm = ReaderViewModel(
-                initialSurahId = 2,
-                database = prepopDb,
-                preferencesRepository = prefsRepo,
-                syncRepository = syncRepo,
-                audioController = audioController,
-                seeder = prepopSeeder,
-                lineTranslator = lineTranslator
-            )
+            val vm = ViewModelProvider(
+                store,
+                object : ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        return ReaderViewModel(
+                            initialSurahId = 2,
+                            database = prepopDb,
+                            preferencesRepository = prefsRepo,
+                            syncRepository = syncRepo,
+                            audioController = createdAudio,
+                            seeder = prepopSeeder,
+                            lineTranslator = lineTranslator
+                        ) as T
+                    }
+                }
+            )[ReaderViewModel::class.java]
 
             var downloadFlashDetected = false
-            val collectorJob = launch(Dispatchers.Default) {
+            collectorJob = launch(Dispatchers.Default) {
                 vm.uiState.collect { st ->
                     if (!st.isLoadingSurah && st.ayahs.isEmpty() && st.surah != null) {
                         downloadFlashDetected = true
@@ -313,10 +346,11 @@ class ReaderPerformanceBenchmarkTest {
                     fullExpandMs
                 )
             )
-
-            collectorJob.cancel()
-            audioController.release()
         } finally {
+            collectorJob?.cancel()
+            store.clear()
+            delay(100L)
+            audioController?.release()
             prepopDb.close()
             app.getDatabasePath(prepopName).delete()
         }

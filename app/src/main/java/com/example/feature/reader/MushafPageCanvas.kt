@@ -110,7 +110,7 @@ fun MushafPageCard(
 
     val juzNumber = pageAyahs.firstOrNull()?.ayah?.juzNumber ?: surah?.startJuz ?: 1
     val hizbNumber = ((juzNumber - 1) * 2 + 1).coerceIn(1, 60)
-    val isFirstPageOfSurah = pageAyahs.any { it.ayah.ayahNumber == 1 } && surah != null
+    val hasFirstAyah = pageAyahs.any { it.ayah.ayahNumber == 1 }
     val isIndoPak = scriptType == QuranScriptType.INDOPAK
     val fontFamily = remember(scriptType, arabicFontFamily) {
         arabicScriptFont(scriptType, arabicFontFamily)
@@ -315,7 +315,7 @@ fun MushafPageCard(
                 )
 
                 // Ornate Surah Header Cartouche + Bismillah on Surah opening page
-                if (isFirstPageOfSurah && surah != null) {
+                if (hasFirstAyah && surah != null) {
                     Surface(
                         color = ornamentColor.copy(alpha = if (isDark) 0.16f else 0.09f),
                         shape = RoundedCornerShape(14.dp),

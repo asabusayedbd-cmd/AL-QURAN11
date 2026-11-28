@@ -1,5 +1,6 @@
 package com.example.feature.dua
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,14 +20,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
@@ -115,20 +115,23 @@ fun DuaScreen(
     val context = LocalContext.current
     val duas by viewModel.duas.collectAsStateWithLifecycle()
     val categories by viewModel.categories.collectAsStateWithLifecycle(initialValue = emptyList())
-    val expandedCategories by viewModel.expandedCategories.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val audioState by viewModel.audioState.collectAsStateWithLifecycle()
     val translationState by viewModel.translationState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    var selectedTopic by remember { mutableStateOf<String?>(null) }
     var showBatchLangPicker by remember { mutableStateOf(false) }
     var translateTargetDua by remember { mutableStateOf<DuaEntity?>(null) }
 
-    // If search query is active, auto-expand categories that have matching duas
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank()) {
-            val matchedCats = duas.map { it.category }.distinct()
-            viewModel.expandAllCategories(matchedCats)
+    // Group all duas by category
+    val duasByCategory = remember(duas) {
+        duas.groupBy { it.category }
+    }
+
+    if (selectedTopic != null) {
+        BackHandler {
+            selectedTopic = null
         }
     }
 
@@ -161,47 +164,42 @@ fun DuaScreen(
         }
     }
 
-    // Group duas by category
-    val duasByCategory = remember(duas) {
-        duas.groupBy { it.category }
-    }
-
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text(stringResource(R.string.dua_header_title), fontWeight = FontWeight.Bold)
                         Text(
-                            stringResource(R.string.dua_header_subtitle_fmt, duas.size),
+                            text = if (selectedTopic != null) getDuaCategoryLabel(selectedTopic!!) else stringResource(R.string.dua_header_title),
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (selectedTopic != null) {
+                                "${duasByCategory[selectedTopic]?.size ?: 0} Duas & Parts"
+                            } else {
+                                stringResource(R.string.dua_header_subtitle_fmt, duas.size)
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
                 navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier.testTag("dua_back_button")
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                        }
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = { viewModel.expandAllCategories(categories) },
-                        modifier = Modifier.testTag("dua_expand_all_button")
+                    IconButton(
+                        onClick = {
+                            if (selectedTopic != null) {
+                                selectedTopic = null
+                            } else {
+                                onBack?.invoke()
+                            }
+                        },
+                        modifier = Modifier.testTag("dua_back_button")
                     ) {
-                        Text("Expand All", style = MaterialTheme.typography.labelMedium)
-                    }
-                    TextButton(
-                        onClick = { viewModel.collapseAllCategories() },
-                        modifier = Modifier.testTag("dua_collapse_all_button")
-                    ) {
-                        Text("Collapse", style = MaterialTheme.typography.labelMedium)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.cd_back)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -238,225 +236,223 @@ fun DuaScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Quick Batch Translation Toolbar
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+            if (selectedTopic == null) {
+                // Topic List View
+                val displayCategories = if (searchQuery.isNotBlank()) {
+                    categories.filter { cat ->
+                        (duasByCategory[cat]?.any {
+                            it.title.contains(searchQuery, true) ||
+                            it.translation.contains(searchQuery, true) ||
+                            it.arabicText.contains(searchQuery, true)
+                        } == true)
+                    }
+                } else {
+                    categories
+                }
+
+                if (displayCategories.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Translate,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
                         Text(
-                            text = if (translationState.activeLanguage != null) {
-                                stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(translationState.activeLanguage!!))
-                            } else {
-                                stringResource(R.string.translate_line_action)
-                            },
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
+                            stringResource(R.string.dua_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (translationState.isBatchTranslating) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        }
-                        if (translationState.translatedById.isNotEmpty()) {
-                            TextButton(
-                                onClick = viewModel::clearAllDuaTranslations,
-                                modifier = Modifier.height(32.dp).testTag("dua_clear_all_translations_button")
-                            ) {
-                                Text(stringResource(R.string.action_clear), style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                        FilledTonalButton(
-                            onClick = { viewModel.translateVisibleDuas("bn") },
-                            modifier = Modifier.height(32.dp).testTag("dua_translate_bn_button")
-                        ) {
-                            Text(stringResource(R.string.translate_all_bangla), style = MaterialTheme.typography.labelSmall)
-                        }
-                        OutlinedButton(
-                            onClick = { showBatchLangPicker = true },
-                            modifier = Modifier.height(32.dp).testTag("dua_translate_any_button")
-                        ) {
-                            Text(stringResource(R.string.translate_any_language), style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            if (duas.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        stringResource(R.string.dua_empty),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                // Vertical scrolling list of Topics / Categories that expand to reveal their parts / duas
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(categories, key = { it }) { category ->
-                        val categoryDuas = duasByCategory[category] ?: emptyList()
-                        // Only show categories that have duas matching current search/filter
-                        if (categoryDuas.isNotEmpty()) {
-                            val isExpanded = category in expandedCategories
-                            Column(
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(displayCategories, key = { it }) { category ->
+                            val catDuas = duasByCategory[category] ?: emptyList()
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .testTag("dua_topic_card_${category.lowercase().replace(" ", "_")}")
+                                    .clickable { selectedTopic = category }
+                                    .testTag("dua_topic_card_${category.lowercase().replace(" ", "_")}"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                )
                             ) {
-                                // Topic Header Card
-                                Card(
+                                Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { viewModel.toggleCategoryExpansion(category) },
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isExpanded)
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        else
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                                    )
+                                        .padding(18.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.weight(1f)
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer
                                         ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = if (isExpanded)
-                                                    MaterialTheme.colorScheme.primary
-                                                else
-                                                    MaterialTheme.colorScheme.surface
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Folder,
-                                                    contentDescription = null,
-                                                    modifier = Modifier
-                                                        .padding(8.dp)
-                                                        .size(22.dp),
-                                                    tint = if (isExpanded)
-                                                        MaterialTheme.colorScheme.onPrimary
-                                                    else
-                                                        MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                            Column {
-                                                Text(
-                                                    text = getDuaCategoryLabel(category),
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isExpanded)
-                                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                                    else
-                                                        MaterialTheme.colorScheme.onSurface
-                                                )
-                                                Text(
-                                                    text = "${categoryDuas.size} Duas & Parts available",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (isExpanded)
-                                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                                    else
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.Folder,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .padding(10.dp)
+                                                    .size(24.dp),
+                                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                            )
                                         }
-
-                                        Icon(
-                                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                            contentDescription = if (isExpanded) "Collapse topic" else "Expand topic",
-                                            tint = if (isExpanded)
-                                                MaterialTheme.colorScheme.onPrimaryContainer
-                                            else
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                // Expanded Parts / Duas List under this Topic
-                                if (isExpanded) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(start = 8.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        categoryDuas.forEachIndexed { index, dua ->
-                                            val isDownloaded = dua.id in audioState.downloadedIds
-                                            val isDownloading = dua.id in audioState.downloadingIds
-                                            val isPlaying = audioState.activePlayingId == dua.id || audioState.isTtsSpeakingId == dua.id
-                                            val isTranslating = dua.id in translationState.translatingIds
-                                            val translated = translationState.translatedById[dua.id]
-
-                                            DuaCard(
-                                                displayNumber = index + 1,
-                                                dua = dua,
-                                                isDownloaded = isDownloaded,
-                                                isDownloading = isDownloading,
-                                                isPlaying = isPlaying,
-                                                isTranslating = isTranslating,
-                                                translated = translated,
-                                                onPlayOrDownload = { viewModel.togglePlayDuaAudio(dua) },
-                                                onDeleteAudio = { viewModel.deleteDuaAudio(dua.id) },
-                                                onBookmarkToggle = { viewModel.toggleBookmark(dua.id, dua.isBookmarked) },
-                                                onTranslateDua = { translateTargetDua = dua },
-                                                onShareCard = {
-                                                    val effectiveTitle = translated?.second?.title ?: dua.title
-                                                    val effectiveTr = translated?.second?.translation ?: dua.translation
-                                                    ShareCardGenerator.shareDuaAsImageCard(
-                                                        context = context,
-                                                        title = effectiveTitle,
-                                                        arabicText = dua.arabicText,
-                                                        translationText = effectiveTr,
-                                                        reference = dua.reference
-                                                    )
-                                                }
+                                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Text(
+                                                text = getDuaCategoryLabel(category),
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "${catDuas.size} Duas & Parts",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Open topic",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
+                        }
+                    }
+                }
+            } else {
+                // Topic Detail View (Opening sub-screen with only duas related to this topic)
+                val topicDuas = duasByCategory[selectedTopic] ?: emptyList()
+
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Translate,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = if (translationState.activeLanguage != null) {
+                                    stringResource(R.string.translate_all_in_lang_fmt, LineTranslator.languageLabel(translationState.activeLanguage!!))
+                                } else {
+                                    stringResource(R.string.translate_line_action)
+                                },
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (translationState.isBatchTranslating) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            }
+                            if (translationState.translatedById.isNotEmpty()) {
+                                TextButton(
+                                    onClick = viewModel::clearAllDuaTranslations,
+                                    modifier = Modifier.height(32.dp).testTag("dua_clear_all_translations_button")
+                                ) {
+                                    Text(stringResource(R.string.action_clear), style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            FilledTonalButton(
+                                onClick = { viewModel.translateVisibleDuas("bn") },
+                                modifier = Modifier.height(32.dp).testTag("dua_translate_bn_button")
+                            ) {
+                                Text(stringResource(R.string.translate_all_bangla), style = MaterialTheme.typography.labelSmall)
+                            }
+                            OutlinedButton(
+                                onClick = { showBatchLangPicker = true },
+                                modifier = Modifier.height(32.dp).testTag("dua_translate_any_button")
+                            ) {
+                                Text(stringResource(R.string.translate_any_language), style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                if (topicDuas.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.dua_empty),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        itemsIndexed(topicDuas, key = { _, d -> d.id }) { index, dua ->
+                            val isDownloaded = dua.id in audioState.downloadedIds
+                            val isDownloading = dua.id in audioState.downloadingIds
+                            val isPlaying = audioState.activePlayingId == dua.id || audioState.isTtsSpeakingId == dua.id
+                            val isTranslating = dua.id in translationState.translatingIds
+                            val translated = translationState.translatedById[dua.id]
+
+                            DuaCard(
+                                displayNumber = index + 1,
+                                dua = dua,
+                                isDownloaded = isDownloaded,
+                                isDownloading = isDownloading,
+                                isPlaying = isPlaying,
+                                isTranslating = isTranslating,
+                                translated = translated,
+                                onPlayOrDownload = { viewModel.togglePlayDuaAudio(dua) },
+                                onDeleteAudio = { viewModel.deleteDuaAudio(dua.id) },
+                                onBookmarkToggle = { viewModel.toggleBookmark(dua.id, dua.isBookmarked) },
+                                onTranslateDua = { translateTargetDua = dua },
+                                onShareCard = {
+                                    val effectiveTitle = translated?.second?.title ?: dua.title
+                                    val effectiveTr = translated?.second?.translation ?: dua.translation
+                                    ShareCardGenerator.shareDuaAsImageCard(
+                                        context = context,
+                                        title = effectiveTitle,
+                                        arabicText = dua.arabicText,
+                                        translationText = effectiveTr,
+                                        reference = dua.reference
+                                    )
+                                }
+                            )
                         }
                     }
                 }

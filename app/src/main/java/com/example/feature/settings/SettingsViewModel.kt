@@ -480,6 +480,13 @@ class SettingsViewModel(
         }
     }
 
+    fun setArabicFontFamily(option: com.example.core.localization.ArabicFontFamilyOption) {
+        viewModelScope.launch {
+            preferencesRepository.setArabicFontFamily(option)
+            _statusMessage.value = "Font style set to ${option.displayName}"
+        }
+    }
+
     fun clearStatusMessage() {
         _statusMessage.value = null
     }
